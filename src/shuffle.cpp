@@ -3,10 +3,10 @@
 Shuffle::Shuffle(size_t _n_rows, size_t _n_rounds, RandomGenerators &_rngs) : rngs(_rngs) {
     n_rows = _n_rows;
     n_rounds = _n_rounds;
-    pis_0 = std::vector<std::shared_ptr<Permutation>>();
-    pis_1 = std::vector<std::shared_ptr<Permutation>>();
-    pis_0_p = std::vector<std::shared_ptr<Permutation>>();
-    pis_1_p = std::vector<std::shared_ptr<Permutation>>();
+    pis_0 = std::vector<std::shared_ptr<Permutation>>(n_rounds);
+    pis_1 = std::vector<std::shared_ptr<Permutation>>(n_rounds);
+    pis_0_p = std::vector<std::shared_ptr<Permutation>>(n_rounds);
+    pis_1_p = std::vector<std::shared_ptr<Permutation>>(n_rounds);
 }
 
 PreprocessingResult Shuffle::preprocess() {

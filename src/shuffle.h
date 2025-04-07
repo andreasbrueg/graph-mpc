@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <iostream>
+#include <memory>
 #include <numeric>
 #include <tuple>
 #include <vector>

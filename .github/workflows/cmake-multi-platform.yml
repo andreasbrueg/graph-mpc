@@ -52,6 +52,22 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install libboost-all-dev
+        wget https://raw.githubusercontent.com/emp-toolkit/emp-readme/master/scripts/install.py
+        python install.py --deps --tool 
+        wget https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.gz
+        gunzip gmp-6.3.0.tar.gz
+        tar xf gmp-6.3.0.tar
+        cd gmp-6.3.0
+        ./configure
+        make
+        sudo make install
+        wget https://libntl.org/ntl-11.5.1.tar.gz
+        gunzip ntl-xxx.tar.gz
+        tar xf ntl-xxx.tar
+        cd ntl-xxx/src
+        ./configure 
+        make
+        sudo make install
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.

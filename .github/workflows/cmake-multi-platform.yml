@@ -82,7 +82,7 @@ jobs:
         make
         sudo make install
     
-    - name: Save Primes
+    - name: Save Dependencies
       id: cache-dependencies-save
       uses: actions/cache/save@v4
       with:

@@ -47,26 +47,18 @@ jobs:
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
-    - name: Restore Dependencies 
-      id: cache-dependencies-restore
-      uses: actions/cache@v4
-      with:
-        path: |
-          /usr/local/include
-          /usr/lib/x86_64-linux-gnu/cmake/Boost-1.83.0/BoostConfig.cmake
-          /usr/lib/x86_64-linux-gnu/libcrypto.so 
-          /usr/local/include
-          /usr/local/lib/libntl.a
-        key: ${{ runner.os }}-dependencies
-
-    - name: Install Dependencies
-      # Install all dependencies needed to build this application.
-      if: steps.cache-dependencies-restore.outputs.cache-hit != 'true'
+    - name: Install Boost 
       run: |
         sudo apt-get update
         sudo apt-get install libboost-all-dev
+    
+    - name: Install emp-tool
+      run: |
         wget https://raw.githubusercontent.com/emp-toolkit/emp-readme/master/scripts/install.py
         python install.py --deps --tool 
+
+    - name: Install GMP
+      run: |
         wget https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.gz
         gunzip gmp-6.3.0.tar.gz
         tar xf gmp-6.3.0.tar
@@ -74,6 +66,9 @@ jobs:
         ./configure
         make
         sudo make install
+    
+    - name: Install NTL
+      run: |
         wget https://libntl.org/ntl-11.5.1.tar.gz
         gunzip ntl-11.5.1.tar.gz
         tar xf ntl-11.5.1.tar

@@ -13,8 +13,11 @@ PreprocessingResult Shuffle::preprocess() {
     /* Sample R_0 and R_1 */
     std::vector<Row> R_0, R_1;
     for (int i = 0; i < n_rows; ++i) {
-        Row rand_0 = rngs.rng_D0()(Row());
-        Row rand_1 = rngs.rng_D1()(Row());
+        Row rand_0;
+        Row rand_1;
+        rngs.rng_D0().random_data(&rand_0, sizeof(Row));
+        rngs.rng_D1().random_data(&rand_0, sizeof(Row));
+
         R_0.push_back(rand_0);
         R_1.push_back(rand_1);
     }
@@ -31,7 +34,8 @@ PreprocessingResult Shuffle::preprocess() {
     pis_0_p.push_back(std::shared_ptr<Permutation>(&pi_0_p));
     pis_1_p.push_back(std::shared_ptr<Permutation>(&pi_1_p));
 
-    Row R = rngs.rng_D()(Row());
+    Row R;
+    rngs.rng_D().random_data(&R, sizeof(Row));
 
     std::vector<Row> B_0 = (pi_0 * pi_1)(R_1);
     std::vector<Row> B_1 = pi_0_p(R_0);

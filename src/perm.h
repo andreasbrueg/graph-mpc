@@ -1,12 +1,12 @@
 #pragma once
 
+#include <emp-tool/emp-tool.h>
+
 #include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <numeric>
 #include <vector>
-
-#include "prng/duthomhas/csprng.hpp"
 
 /***
  * Definition of the Permutation p:
@@ -26,10 +26,11 @@ class Permutation {
 
     Permutation(std::vector<size_t> _perm_vec) : perm_vec(_perm_vec) {};
 
-    [[nodiscard]] static Permutation random(int n_rows, duthomhas::csprng rng) {
+    [[nodiscard]] static Permutation random(int n_rows, emp::PRG rng) {
         Permutation p = Permutation(n_rows);
         for (int i = 0; i < n_rows; ++i) {
-            size_t k = rng(size_t());
+            size_t k;
+            rng.random_data(&k, sizeof(size_t));
             k %= (n_rows - i);
             std::swap(p.perm_vec[i], p.perm_vec[i + k]);
         }

@@ -7,10 +7,9 @@
 enum Party {
     P0,
     P1,
-    P2
+    D
 };
 
-constexpr Party Dealer = P2;
 constexpr uint64_t FIELDSIZE = 4;  // bytes
 using Field = NTL::ZZ_p;
 

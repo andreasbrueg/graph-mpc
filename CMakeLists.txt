@@ -11,6 +11,7 @@ find_package(GMP REQUIRED)
 find_package(Boost 1.72.0 COMPONENTS unit_test_framework program_options system REQUIRED)
 find_package(emp-tool REQUIRED)
 find_package(OpenSSL REQUIRED)
+find_package(nlohmann_json 3.9.0 REQUIRED)
 find_package(NTL 11.0.0 REQUIRED)
 
 if(EMP-TOOL_FOUND)

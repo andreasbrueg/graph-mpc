@@ -44,7 +44,7 @@ std::vector<Row> Shuffle::result() {
 
 void Shuffle::set_input(std::vector<Row> &input) {
     if (input.size() != n_rows) {
-        throw std::invalid_argument("Input vector needs to be of size " + n_rows);
+        throw std::invalid_argument("Input vector has wrong size.");
     }
 }
 

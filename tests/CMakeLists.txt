@@ -10,8 +10,9 @@ set(TEST_HEADERS
     ${PROJECT_SOURCE_DIR}/src/perm.h
 )
 
-set(TEST_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/tests)
-
+set(TEST_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/tests ${PROJECT_SOURCE_DIR}/setup)
 
 add_subdirectory(test_perm)
 add_subdirectory(test_shuffle)
+
+file(COPY ../certs DESTINATION ${PROJECT_BINARY_DIR}/tests/test_shuffle)

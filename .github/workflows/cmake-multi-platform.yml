@@ -47,9 +47,9 @@ jobs:
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
-
-    - name: Install tmux
-      run: sudo apt install tmux
+    - name: Install gnome-terminal 
+      run: |
+        sudo apt-get install gnome-terminal 
 
     - name: Install nlohmann-json
       run: |

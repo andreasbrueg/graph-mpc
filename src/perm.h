@@ -26,7 +26,7 @@ class Permutation {
 
     Permutation(std::vector<size_t> _perm_vec) : perm_vec(_perm_vec) {};
 
-    [[nodiscard]] static Permutation random(int n_rows, emp::PRG rng) {
+    [[nodiscard]] static Permutation random(int n_rows, emp::PRG &rng) {
         Permutation p = Permutation(n_rows);
         for (int i = 0; i < n_rows; ++i) {
             size_t k;
@@ -45,13 +45,9 @@ class Permutation {
         return Permutation(inverse_vec);
     }
 
-    [[nodiscard]] size_t size() const {
-        return perm_vec.size();
-    }
+    [[nodiscard]] size_t size() const { return perm_vec.size(); }
 
-    [[nodiscard]] size_t operator[](size_t idx) {
-        return perm_vec[idx];
-    }
+    [[nodiscard]] size_t operator[](size_t idx) { return perm_vec[idx]; }
 
     template <typename T>
     std::vector<T> operator()(const std::vector<T> &input_vec) const {
@@ -81,9 +77,7 @@ class Permutation {
         return Permutation(operator()(other(base)));
     }
 
-    bool operator==(Permutation other) const {
-        return other.perm_vec == perm_vec;
-    }
+    bool operator==(Permutation other) const { return other.perm_vec == perm_vec; }
 
     void print() {
         std::cout << "{";

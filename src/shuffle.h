@@ -78,12 +78,13 @@ class Shuffle {
     Shuffle(Party pid, size_t n_rows, size_t n_rounds, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network);
     ~Shuffle();
     void set_input(std::vector<Row> &input);
+    std::vector<std::shared_ptr<ShufflePreprocessing<Row>>> get_preproc();
     void run();
     void run_offline();
     void run_online();
-    void evaluate(size_t shuffle_idx);
-    void evaluate_send(size_t shuffle_idx, std::vector<Row> &vals);
-    void evaluate_recv(size_t shuffle_idx, std::vector<Row> &vals);
+    void evaluate();
+    void evaluate_send_vals(std::vector<Row> &vals);
+    void evaluate_recv_vals(std::vector<Row> &vals);
     void preprocess();
     void preprocess_compute(std::vector<Row> &shared_secret_D0, std::vector<Row> &shared_secret_D1);
     std::vector<Row> result();
@@ -91,7 +92,7 @@ class Shuffle {
    private:
     Party pid;
     size_t n_rows, n_rounds;
-    size_t current_round = 0;
+    size_t shuffle_idx = 0;
     const size_t BLOCK_SIZE = 100000000;
     RandomGenerators rngs;
     std::vector<std::shared_ptr<Permutation>> pis_0, pis_1, pis_0_p, pis_1_p;

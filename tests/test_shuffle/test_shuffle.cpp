@@ -16,8 +16,6 @@ void test_shuffle(const bpo::variables_map &opts) {
 
     setup::setupExecution(opts, pid, repeat, threads, network, seeds_h, seeds_l, save_output, save_file);
     output_data["details"] = {{"pid", pid}, {"threads", threads}, {"seeds_h", seeds_h}, {"seeds_l", seeds_l}, {"repeat", repeat}, {"vec-size", vec_size}};
-    output_data["benchmarks_pre"] = json::array();
-    output_data["benchmarks"] = json::array();
 
     std::cout << "--- Details ---\n";
     for (const auto &[key, value] : output_data["details"].items()) {
@@ -27,48 +25,32 @@ void test_shuffle(const bpo::variables_map &opts) {
 
     /* Setting up the input vector */
     std::vector<Row> input_vector(vec_size);
-    for (size_t i = 0; i < vec_size; i++) input_vector[i] = i << 1;
+    for (size_t i = 0; i < vec_size; i++) input_vector[i] = i;
 
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
-    Shuffle shuffle(party, vec_size, 1, rngs, network);
+    Shuffle shuffle(party, vec_size, 10, rngs, network);
     shuffle.set_input(input_vector);
 
     for (size_t r = 0; r < repeat; ++r) {
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
 
-        StatsPoint start_pre(*network);
+        /* Protocol run */
         shuffle.run_offline();
-        StatsPoint end_pre(*network);
-        network->sync();
-        /*
-                auto rbench_pre = end_pre - start_pre;
-                output_data["benchmarks_pre"].push_back(rbench_pre);
-                size_t bytes_sent_pre = 0;
-                for (const auto &val : rbench_pre["communication"]) {
-                    bytes_sent_pre += val.get<int64_t>();
+
+        /* Preprocessing assertions */
+        auto preproc_out = shuffle.get_preproc();
+        for (int i = 0; i < preproc_out.size(); ++i) {
+            ShufflePreprocessing<Row> &pp = *(preproc_out[i]);
+            if (pid == D) {
+                for (int i = 0; i < vec_size; ++i) {
+                    assert((pp.B_0[i] + pp.B_1[i]) == ((pp.pi_0 * pp.pi_1)(pp.R_1)[i] + (pp.pi_0 * pp.pi_1)(pp.R_0)[i]));
                 }
-                std::cout << "setup time: " << rbench_pre["time"] << " ms" << std::endl;
-                std::cout << "setup sent: " << bytes_sent_pre << " bytes" << std::endl;
-        */
-        StatsPoint start(*network);
-        shuffle.run_online();
-        StatsPoint end(*network);
-        std::vector<Row> res = shuffle.result();
-
-        /* Assertions */
-        if (pid != D) {
-            bool shuffled = false;
-            for (int i = 0; i < res.size(); ++i) {
-                Row elem = i << 2;
-                /* Check if vector contains all elements 0, 4, 8, 12, ... */
-                assert(std::find(res.begin(), res.end(), elem) != res.end());
-
-                /* Check if vector is shuffled */
-                shuffled = shuffled || (res[i] != elem);
             }
-            assert(shuffled);
         }
+        network->sync();
+        shuffle.run_online();
+        std::vector<Row> res = shuffle.result();
 
         /* Printing result */
         if (pid != D) {
@@ -79,34 +61,22 @@ void test_shuffle(const bpo::variables_map &opts) {
             std::cout << res[res.size() - 1] << std::endl;
             std::cout << std::endl << std::endl;
         }
-        /*
-                auto rbench = end - start;
-                output_data["benchmarks"].push_back(rbench);
 
-                size_t bytes_sent = 0;
-                for (const auto &val : rbench["communication"]) {
-                    bytes_sent += val.get<int64_t>();
-                }
+        /* Assertions */
+        if (pid != D) {
+            bool shuffled = false;
+            for (int i = 0; i < res.size(); ++i) {
+                Row elem = i << 1;
+                /* Check if vector contains all elements 0, 2, 4, 6, ... */
+                assert(std::find(res.begin(), res.end(), elem) != res.end());
 
-                std::cout << "online time: " << rbench["time"] << " ms" << std::endl;
-                std::cout << "online sent: " << bytes_sent << " bytes" << std::endl;
-
-                std::cout << std::endl;
-        */
+                /* Check if vector is shuffled */
+                shuffled = shuffled || (res[i] != elem);
+            }
+            assert(shuffled);
+        }
     }
-    /*
-        output_data["stats"] = {{"peak_virtual_memory", peakVirtualMemory()}, {"peak_resident_set_size", peakResidentSetSize()}};
 
-        std::cout << "--- Overall Statistics ---\n";
-        for (const auto &[key, value] : output_data["stats"].items()) {
-            std::cout << key << ": " << value << "\n";
-        }
-        std::cout << std::endl;
-
-        if (save_output) {
-            saveJson(output_data, save_file);
-        }
-    */
     exit(0);
 }
 

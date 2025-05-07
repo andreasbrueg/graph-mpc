@@ -66,8 +66,8 @@ void test_shuffle(const bpo::variables_map &opts) {
         if (pid != D) {
             bool shuffled = false;
             for (int i = 0; i < res.size(); ++i) {
-                Row elem = i << 1;
-                /* Check if vector contains all elements 0, 2, 4, 6, ... */
+                Row elem = i << 11;
+                /* Check if vector contains all elements */
                 assert(std::find(res.begin(), res.end(), elem) != res.end());
 
                 /* Check if vector is shuffled */

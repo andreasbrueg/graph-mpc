@@ -17,3 +17,4 @@ CMakeUserPresets.json
 src/main.dSYM
 emp-tool
 emp-tool/** 
+RES.md

@@ -73,9 +73,8 @@ void Shuffle::evaluate() {
 
     evaluate_send_vals(vals);
 
-    int seg_factor = 100000;  // 100000000; // Was 100000 during LAN benchmarks as per Graphiti, optimized to less rounds for WAN here!
-    int num_comm = comm / seg_factor;
-    int last_comm = comm % seg_factor;
+    int num_comm = comm / BLOCK_SIZE_EVAL;
+    int last_comm = comm % BLOCK_SIZE_EVAL;
     std::vector<Row> data_recv(comm);
 
     int partner = (pid == P0 ? 1 : 0);
@@ -83,29 +82,29 @@ void Shuffle::evaluate() {
     /* Send and receive A_0/A_1 */
     for (int i = 0; i < num_comm; ++i) {
         std::vector<Row> data_send_i;
-        data_send_i.resize(seg_factor);
-        for (int j = 0; j < seg_factor; ++j) {
-            data_send_i[j] = vals[i * seg_factor + j];
+        data_send_i.resize(BLOCK_SIZE_EVAL);
+        for (int j = 0; j < BLOCK_SIZE_EVAL; ++j) {
+            data_send_i[j] = vals[i * BLOCK_SIZE_EVAL + j];
         }
-        network->send(partner, data_send_i.data(), sizeof(Row) * seg_factor);
+        network->send(partner, data_send_i.data(), sizeof(Row) * BLOCK_SIZE_EVAL);
 
-        std::vector<Row> data_recv_i(seg_factor);
-        network->recv(partner, data_recv_i.data(), sizeof(Row) * seg_factor);
-        for (int j = 0; j < seg_factor; j++) {
-            data_recv[i * seg_factor + j] = data_recv_i[j];
+        std::vector<Row> data_recv_i(BLOCK_SIZE_EVAL);
+        network->recv(partner, data_recv_i.data(), sizeof(Row) * BLOCK_SIZE_EVAL);
+        for (int j = 0; j < BLOCK_SIZE_EVAL; j++) {
+            data_recv[i * BLOCK_SIZE_EVAL + j] = data_recv_i[j];
         }
     }
 
     std::vector<Row> data_send_last;
     data_send_last.resize(last_comm);
     for (int j = 0; j < last_comm; j++) {
-        data_send_last[j] = vals[num_comm * seg_factor + j];
+        data_send_last[j] = vals[num_comm * BLOCK_SIZE_EVAL + j];
     }
     network->send(partner, data_send_last.data(), sizeof(Row) * last_comm);
     std::vector<Row> data_recv_last(last_comm);
     network->recv(partner, data_recv_last.data(), sizeof(Row) * last_comm);
     for (int j = 0; j < last_comm; j++) {
-        data_recv[num_comm * seg_factor + j] = data_recv_last[j];
+        data_recv[num_comm * BLOCK_SIZE_EVAL + j] = data_recv_last[j];
     }
 
     std::copy(data_recv.begin(), data_recv.end(), vals.begin());
@@ -200,40 +199,40 @@ void Shuffle::preprocess() {
         std::copy(shared_secret_D1.begin(), shared_secret_D1.end(), arithmetic_comm_1_offline.begin());
 
         /* Send to P0 */
-        int n_comm = arithmetic_comm_0 / BLOCK_SIZE;
-        int last_comm = arithmetic_comm_0 % BLOCK_SIZE;
+        int n_comm = arithmetic_comm_0 / BLOCK_SIZE_PRE;
+        int last_comm = arithmetic_comm_0 % BLOCK_SIZE_PRE;
         for (int i = 0; i < n_comm; i++) {
             std::vector<Row> data_send_i;
-            data_send_i.resize(BLOCK_SIZE);
-            for (int j = 0; j < BLOCK_SIZE; j++) {
-                data_send_i[j] = arithmetic_comm_0_offline[i * BLOCK_SIZE + j];
+            data_send_i.resize(BLOCK_SIZE_PRE);
+            for (int j = 0; j < BLOCK_SIZE_PRE; j++) {
+                data_send_i[j] = arithmetic_comm_0_offline[i * BLOCK_SIZE_PRE + j];
             }
-            network->send(0, data_send_i.data(), sizeof(Row) * BLOCK_SIZE);
+            network->send(0, data_send_i.data(), sizeof(Row) * BLOCK_SIZE_PRE);
         }
 
         std::vector<Row> data_send_last;
         data_send_last.resize(last_comm);
         for (int j = 0; j < last_comm; j++) {
-            data_send_last[j] = arithmetic_comm_0_offline[n_comm * BLOCK_SIZE + j];
+            data_send_last[j] = arithmetic_comm_0_offline[n_comm * BLOCK_SIZE_PRE + j];
         }
         network->send(0, data_send_last.data(), sizeof(Row) * last_comm);
 
         /* Send to P1 */
-        n_comm = arithmetic_comm_1 / BLOCK_SIZE;
-        last_comm = arithmetic_comm_1 % BLOCK_SIZE;
+        n_comm = arithmetic_comm_1 / BLOCK_SIZE_PRE;
+        last_comm = arithmetic_comm_1 % BLOCK_SIZE_PRE;
         for (int i = 0; i < n_comm; i++) {
             std::vector<Row> data_send_i;
-            data_send_i.resize(BLOCK_SIZE);
-            for (int j = 0; j < BLOCK_SIZE; j++) {
-                data_send_i[j] = arithmetic_comm_1_offline[i * BLOCK_SIZE + j];
+            data_send_i.resize(BLOCK_SIZE_PRE);
+            for (int j = 0; j < BLOCK_SIZE_PRE; j++) {
+                data_send_i[j] = arithmetic_comm_1_offline[i * BLOCK_SIZE_PRE + j];
             }
-            network->send(1, data_send_i.data(), sizeof(Row) * BLOCK_SIZE);
+            network->send(1, data_send_i.data(), sizeof(Row) * BLOCK_SIZE_PRE);
         }
 
         std::vector<Row> data_send_last_to_1;
         data_send_last_to_1.resize(last_comm);
         for (int j = 0; j < last_comm; j++) {
-            data_send_last_to_1[j] = arithmetic_comm_1_offline[n_comm * BLOCK_SIZE + j];
+            data_send_last_to_1[j] = arithmetic_comm_1_offline[n_comm * BLOCK_SIZE_PRE + j];
         }
         network->send(1, data_send_last_to_1.data(), sizeof(Row) * last_comm);
 
@@ -243,14 +242,14 @@ void Shuffle::preprocess() {
         network->recv(2, &arithmetic_comm, sizeof(size_t));
 
         /* Receive actual data */
-        int n_comm = arithmetic_comm / BLOCK_SIZE;
-        int last_comm = arithmetic_comm % BLOCK_SIZE;
+        int n_comm = arithmetic_comm / BLOCK_SIZE_PRE;
+        int last_comm = arithmetic_comm % BLOCK_SIZE_PRE;
         std::vector<Row> arithmetic_comm_offline(arithmetic_comm);
         for (int i = 0; i < n_comm; i++) {
-            std::vector<Row> data_recv_i(BLOCK_SIZE);
-            network->recv(2, data_recv_i.data(), sizeof(Row) * BLOCK_SIZE);
-            for (int j = 0; j < BLOCK_SIZE; j++) {
-                arithmetic_comm_offline[i * BLOCK_SIZE + j] = data_recv_i[j];
+            std::vector<Row> data_recv_i(BLOCK_SIZE_PRE);
+            network->recv(2, data_recv_i.data(), sizeof(Row) * BLOCK_SIZE_PRE);
+            for (int j = 0; j < BLOCK_SIZE_PRE; j++) {
+                arithmetic_comm_offline[i * BLOCK_SIZE_PRE + j] = data_recv_i[j];
             }
         }
 
@@ -258,7 +257,7 @@ void Shuffle::preprocess() {
         std::vector<Row> data_recv_last(last_comm);
         network->recv(2, data_recv_last.data(), sizeof(Row) * last_comm);
         for (int j = 0; j < last_comm; j++) {
-            arithmetic_comm_offline[n_comm * BLOCK_SIZE + j] = data_recv_last[j];
+            arithmetic_comm_offline[n_comm * BLOCK_SIZE_PRE + j] = data_recv_last[j];
         }
 
         /* Copy shared data to array */

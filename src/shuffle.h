@@ -26,10 +26,13 @@ class Shuffle {
     Party pid;
     size_t n_rows, n_rounds;
     size_t shuffle_idx = 0;
-    const size_t BLOCK_SIZE = 100000000;
+    const size_t BLOCK_SIZE_PRE = 100000000;  // size of one message sent during preprocessing
+    const size_t BLOCK_SIZE_EVAL = 100000;    // size of one message sent during evaluation // 100000000;
+                                              // Was 100000 during LAN benchmarks as per Graphiti,
+                                              // optimized to less rounds for WAN here!
     RandomGenerators rngs;
-    Permutation pi_0;                     // global field for pi_0
-    std::vector<Permutation> pi_1_p_vec;  // vector for storing preprocessed pi_1_p's
+    Permutation pi_0;                     // global field for current pi_0 (used only by P0)
+    std::vector<Permutation> pi_1_p_vec;  // vector for storing preprocessed pi_1_p's (used only by P1)
     std::vector<std::vector<Row>> B_vec;  // vector for storing preprocessed B_0/B_1's
     std::shared_ptr<io::NetIOMP> network;
     std::vector<Row> wire;

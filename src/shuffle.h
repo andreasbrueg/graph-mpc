@@ -37,9 +37,12 @@ class Shuffle {
     std::shared_ptr<io::NetIOMP> network;
     std::vector<Row> wire;
 
+    void send_vec(Party dest, size_t n_elems, std::vector<Row> &data, const size_t BLOCK_SIZE);
+    void recv_vec(Party src, std::vector<Row> &buffer, const size_t BLOCK_SIZE);
+
     void evaluate();
-    void evaluate_send_vals(std::vector<Row> &vals);
-    void evaluate_recv_vals(std::vector<Row> &vals);
+    void evaluate_compute_A(std::vector<Row> &vals);
+    void evaluate_compute_output(std::vector<Row> &vals);
     void preprocess();
     void preprocess_compute(std::vector<Row> &shared_secret_D0, std::vector<Row> &shared_secret_D1);
 };

@@ -9,9 +9,11 @@ target_sources(GraphMPC_lib
     io/netmp.h
     # Add further files if necessary
 )
-target_link_libraries(GraphMPC_lib PUBLIC OpenSSL::SSL EMPTool NTL GMP)
-
+target_link_libraries(GraphMPC_lib PUBLIC OpenSSL::SSL EMPTool NTL GMP OpenMP::OpenMP_CXX)
 target_include_directories(GraphMPC_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+include_directories("opt/homebrew/opt/libomp/include")
+link_directories("/opt/homebrew/opt/libomp/lib/")
 
 add_executable(GraphMPC_src)
 target_sources(GraphMPC_src PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)

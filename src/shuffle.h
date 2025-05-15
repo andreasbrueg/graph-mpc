@@ -1,5 +1,7 @@
 #pragma once
 
+#include <omp.h>
+
 #include <cstdint>
 #include <iostream>
 #include <memory>

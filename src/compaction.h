@@ -17,7 +17,7 @@ class Compaction {
             triple_a[i] = Share::get_random_share(id, rngs);
             triple_b[i] = Share::get_random_share(id, rngs);
             Row c = triple_a[i] * triple_b[i];
-            triple_c[i] = Share::get_random_share_secret(id, rngs, shared_secret_vec, idx_shared_secret_vec, c);
+            triple_c[i] = Share::get_random_share_secret(id, rngs, network, idx_shared_secret_vec, c);
         }
     }
 
@@ -30,7 +30,7 @@ class Compaction {
         if (id == P0) {
             send_vec(partner, network, vals.size(), vals, BLOCK_SIZE);
             recv_vec(partner, network, vals, BLOCK_SIZE);
-        } else {
+        } else if (id == P1) {
             std::vector<Row> data_recv(n_rows);
             recv_vec(partner, network, data_recv, BLOCK_SIZE);
             send_vec(partner, network, vals.size(), vals, BLOCK_SIZE);
@@ -104,10 +104,12 @@ class Compaction {
                 auto b = triple_b[i];
                 auto c = triple_c[i];
 
-                // TODO: check if this is correct
-                wire[i] = s_0[i] + (vals[2 * idx_mult] * vals[2 * idx_mult + 1] * (id)) - (vals[2 * idx_mult] * b) - (vals[2 * idx_mult + 1] * a) + c;
-                idx_mult++;
+                auto xa = vals[2 * idx_mult];
+                auto yb = vals[2 * idx_mult + 1];
+
+                wire[i] = s_0[i] + (xa * yb * (id)) - (xa * b) - (yb * a) + c;
             }
+            idx_mult++;
         }
     }
 

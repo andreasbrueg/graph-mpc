@@ -73,12 +73,13 @@ void test_shuffle(const bpo::variables_map &opts) {
             assert(shuffled);
         }
 
+        shuffle.set_input(share);
         shuffle.repeat();
         res = shuffle.reveal();
 
         /* Printing result */
         if (pid != D) {
-            std::cout << std::endl << "Result of second shuffle: ";
+            std::cout << std::endl << "Result of repeating shuffle: ";
             for (int i = 0; i < res.size() - 1; ++i) {
                 std::cout << res[i] << ", ";
             }
@@ -86,25 +87,13 @@ void test_shuffle(const bpo::variables_map &opts) {
             std::cout << std::endl << std::endl;
         }
 
+        shuffle.set_input(share);
         shuffle.repeat();
         res = shuffle.reveal();
 
         /* Printing result */
         if (pid != D) {
-            std::cout << std::endl << "Result of third shuffle: ";
-            for (int i = 0; i < res.size() - 1; ++i) {
-                std::cout << res[i] << ", ";
-            }
-            std::cout << res[res.size() - 1] << std::endl;
-            std::cout << std::endl << std::endl;
-        }
-
-        shuffle.run();
-        res = shuffle.reveal();
-
-        /* Printing result */
-        if (pid != D) {
-            std::cout << std::endl << "Result of fourth (new) shuffle: ";
+            std::cout << std::endl << "Result of repeating shuffle: ";
             for (int i = 0; i < res.size() - 1; ++i) {
                 std::cout << res[i] << ", ";
             }

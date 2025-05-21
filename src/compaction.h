@@ -17,7 +17,7 @@ class Compaction {
             triple_a[i] = Share::get_random_share(id, rngs);
             triple_b[i] = Share::get_random_share(id, rngs);
             Row c = triple_a[i] * triple_b[i];
-            triple_c[i] = Share::get_random_share_secret(id, rngs, network, idx_shared_secret_vec, c);
+            triple_c[i] = Share::get_random_share_secret(id, rngs, network, c);
         }
     }
 

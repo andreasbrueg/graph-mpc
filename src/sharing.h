@@ -29,7 +29,7 @@ class Share {
     }
 
     // TODO: Instead of pushing and popping secret from vector, send and receive directly
-    static Row get_random_share_secret(Party pid, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t idx_shared_secret_vec, Row &secret) {
+    static Row get_random_share_secret(Party pid, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, Row &secret) {
         switch (pid) {
             case P0: {
                 Row share;

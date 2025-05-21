@@ -8,6 +8,8 @@
 #include <numeric>
 #include <vector>
 
+#include "./utils/types.h"
+
 /***
  * Definition of the Permutation p:
  * --> Let p = {1, 2, 3, 4, 0}
@@ -17,14 +19,14 @@
 
 class Permutation {
    public:
-    Permutation() : perm_vec(std::vector<size_t>()) {};
+    Permutation() : perm_vec(std::vector<Row>()) {};
 
     Permutation(size_t n) {
-        perm_vec = std::vector<size_t>(n);
+        perm_vec = std::vector<Row>(n);
         std::iota(perm_vec.begin(), perm_vec.end(), 0);
     };
 
-    Permutation(std::vector<size_t> _perm_vec) : perm_vec(_perm_vec) {};
+    Permutation(std::vector<Row> _perm_vec) : perm_vec(_perm_vec) {};
 
     [[nodiscard]] static Permutation random(int n_rows, emp::PRG &rng) {
         Permutation p = Permutation(n_rows);
@@ -38,7 +40,7 @@ class Permutation {
     }
 
     [[nodiscard]] Permutation inverse() {
-        std::vector<size_t> inverse_vec(perm_vec.size());
+        std::vector<Row> inverse_vec(perm_vec.size());
         for (size_t i = 0; i < perm_vec.size(); ++i) {
             inverse_vec[perm_vec[i]] = i;
         }
@@ -47,7 +49,9 @@ class Permutation {
 
     [[nodiscard]] size_t size() const { return perm_vec.size(); }
 
-    [[nodiscard]] size_t operator[](size_t idx) { return perm_vec[idx]; }
+    [[nodiscard]] Row operator[](size_t idx) { return perm_vec[idx]; }
+
+    [[nodiscard]] std::vector<Row> get_perm_vec() { return perm_vec; }
 
     template <typename T>
     std::vector<T> operator()(const std::vector<T> &input_vec) const {
@@ -71,7 +75,7 @@ class Permutation {
 
     [[nodiscard]] Permutation operator*(Permutation other) const {
         size_t n = perm_vec.size();
-        std::vector<size_t> base(n);
+        std::vector<Row> base(n);
         std::iota(base.begin(), base.end(), 0);
 
         return Permutation(operator()(other(base)));
@@ -88,5 +92,5 @@ class Permutation {
     }
 
    private:
-    std::vector<size_t> perm_vec;
+    std::vector<Row> perm_vec;
 };

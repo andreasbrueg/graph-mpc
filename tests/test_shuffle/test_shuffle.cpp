@@ -47,10 +47,8 @@ void test_shuffle(const bpo::variables_map &opts) {
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
 
         /* Protocol run */
-        shuffle.run_offline();
-        network->sync();
-        shuffle.run_online();
-        std::vector<Row> res = shuffle.result();
+        shuffle.run();
+        std::vector<Row> res = shuffle.reveal();
 
         /* Printing result */
         if (pid != D) {
@@ -73,6 +71,57 @@ void test_shuffle(const bpo::variables_map &opts) {
                 shuffled = shuffled || (res[i] != i);
             }
             assert(shuffled);
+        }
+
+        shuffle.repeat();
+        res = shuffle.reveal();
+
+        /* Printing result */
+        if (pid != D) {
+            std::cout << std::endl << "Result of second shuffle: ";
+            for (int i = 0; i < res.size() - 1; ++i) {
+                std::cout << res[i] << ", ";
+            }
+            std::cout << res[res.size() - 1] << std::endl;
+            std::cout << std::endl << std::endl;
+        }
+
+        shuffle.repeat();
+        res = shuffle.reveal();
+
+        /* Printing result */
+        if (pid != D) {
+            std::cout << std::endl << "Result of third shuffle: ";
+            for (int i = 0; i < res.size() - 1; ++i) {
+                std::cout << res[i] << ", ";
+            }
+            std::cout << res[res.size() - 1] << std::endl;
+            std::cout << std::endl << std::endl;
+        }
+
+        shuffle.run();
+        res = shuffle.reveal();
+
+        /* Printing result */
+        if (pid != D) {
+            std::cout << std::endl << "Result of fourth (new) shuffle: ";
+            for (int i = 0; i < res.size() - 1; ++i) {
+                std::cout << res[i] << ", ";
+            }
+            std::cout << res[res.size() - 1] << std::endl;
+            std::cout << std::endl << std::endl;
+        }
+
+        shuffle.unshuffle();
+        res = shuffle.reveal();
+
+        if (pid != D) {
+            std::cout << std::endl << "Result of reversing last shuffle: ";
+            for (int i = 0; i < res.size() - 1; ++i) {
+                std::cout << res[i] << ", ";
+            }
+            std::cout << res[res.size() - 1] << std::endl;
+            std::cout << std::endl << std::endl;
         }
     }
 

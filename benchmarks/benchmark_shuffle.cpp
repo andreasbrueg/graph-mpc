@@ -36,7 +36,7 @@ void benchmark(const bpo::variables_map &opts) {
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
 
         StatsPoint start_pre(*network);
-        shuffle.run_offline();
+        shuffle.get_shuffle();
         StatsPoint end_pre(*network);
         network->sync();
 
@@ -50,7 +50,7 @@ void benchmark(const bpo::variables_map &opts) {
         std::cout << "setup sent: " << bytes_sent_pre << " bytes" << std::endl;
 
         StatsPoint start(*network);
-        shuffle.run_online();
+        shuffle.shuffle();
         StatsPoint end(*network);
 
         auto rbench = end - start;

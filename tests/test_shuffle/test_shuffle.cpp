@@ -31,14 +31,15 @@ void test_shuffle(const bpo::variables_map &opts) {
 
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
-    Shuffle shuffle(party, vec_size, shuffle_num, rngs, network);
+    ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
+    Shuffle shuffle(conf, shuffle_num);
 
     std::vector<Row> share(vec_size);
 
     if (pid == 0) {
-        Share::random_share_secret_vec_send(P1, rngs, *network, share, input_vector);
+        share::random_share_secret_vec_send(P1, rngs, *network, share, input_vector);
     } else if (pid == 1) {
-        Share::random_share_secret_vec_recv(P0, *network, share);
+        share::random_share_secret_vec_recv(P0, *network, share);
     }
 
     shuffle.set_input(share);

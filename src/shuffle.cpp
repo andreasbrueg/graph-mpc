@@ -1,7 +1,6 @@
 #include "shuffle.h"
 
-Shuffle::Shuffle(Party pid, size_t n_rows, size_t n_rounds, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network)
-    : rngs(rngs), pid(pid), n_rows(n_rows), n_rounds(n_rounds), network(network) {
+Shuffle::Shuffle(ProtocolConfig &conf, size_t n_rounds) : rngs(conf.rngs), pid(conf.pid), n_rows(conf.n_rows), network(conf.network), n_rounds(n_rounds) {
     wire = std::vector<Row>(n_rows);
 }
 

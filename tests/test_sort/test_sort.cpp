@@ -33,19 +33,18 @@ void test_shuffle(const bpo::variables_map &opts) {
 
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
-    Sort sort(party, input_vector.size(), rngs, network);
+    ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
     std::vector<Row> share(vec_size);
 
     if (pid == 0) {
-        Share::random_share_secret_vec_send(P1, rngs, *network, share, input_vector);
+        share::random_share_secret_vec_send(P1, rngs, *network, share, input_vector);
     } else if (pid == 1) {
-        Share::random_share_secret_vec_recv(P0, *network, share);
+        share::random_share_secret_vec_recv(P0, *network, share);
     }
 
     /* Protocol run */
-    sort.set_input(share);
-    sort.sort_iteration();
-    std::vector<Row> res = sort.reveal();
+    std::vector<Row> res_share = sort::sort_iteration(conf, share);
+    std::vector<Row> res = share::reveal(conf, res_share);
 
     std::cout << "Sorted bit_vec: ";
 

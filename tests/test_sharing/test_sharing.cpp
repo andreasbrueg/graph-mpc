@@ -36,9 +36,9 @@ void test_sharing(const bpo::variables_map &opts) {
 
     Party partner = (pid == P0 ? P1 : P0);
     if (pid == P0) {
-        Share::random_share_secret_vec_send(partner, rngs, *network, share, input_table);
+        share::random_share_secret_vec_send(partner, rngs, *network, share, input_table);
     } else if (pid == P1) {
-        Share::random_share_secret_vec_recv(partner, *network, share);
+        share::random_share_secret_vec_recv(partner, *network, share);
     }
 
     std::cout << "Final share: ";
@@ -47,7 +47,7 @@ void test_sharing(const bpo::variables_map &opts) {
     }
     std::cout << std::endl;
 
-    std::vector<Row> reconstructed = Share::reconstruct_vec(partner, network, share);
+    std::vector<Row> reconstructed = share::reconstruct_vec(partner, network, share);
     assert(input_table == reconstructed);
 
     std::cout << "Reconstructed: ";

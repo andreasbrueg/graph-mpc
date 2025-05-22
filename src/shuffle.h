@@ -10,12 +10,13 @@
 #include "io/comm.h"
 #include "io/netmp.h"
 #include "perm.h"
+#include "protocol_config.h"
 #include "random_generators.h"
 #include "utils/types.h"
 
 class Shuffle {
    public:
-    Shuffle(Party pid, size_t n_rows, size_t n_rounds, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network);
+    Shuffle(ProtocolConfig &conf, size_t n_rounds);
     ~Shuffle();
     void set_input(std::vector<Row> &input);
     void run();
@@ -45,7 +46,7 @@ class Shuffle {
     std::vector<Permutation> pi_1_vec;    // vector for storing preprocessed pi_1's (used only by P1)
     std::vector<Permutation> pi_1_p_vec;  // vector for storing preprocessed pi_1_p's (used only by P1)
     std::vector<std::vector<Row>> B_vec;  // vector for storing preprocessed B_0/B_1's
-    std::vector<std::vector<Row>> R_vec;
+    std::vector<std::vector<Row>> R_vec;  // vector for storing R_0/R_1's
 
     void evaluate();
     void evaluate_compute_A(std::vector<Row> &vals);

@@ -37,9 +37,9 @@ void benchmark(const bpo::variables_map &opts) {
 
     StatsPoint start(*network);
     if (pid == P0) {
-        Share::random_share_secret_vec_send(partner, rngs, *network, share, input_table);
+        share::random_share_secret_vec_send(partner, rngs, *network, share, input_table);
     } else if (pid == P1) {
-        Share::random_share_secret_vec_recv(partner, *network, share);
+        share::random_share_secret_vec_recv(partner, *network, share);
     }
 
     StatsPoint end(*network);

@@ -22,8 +22,8 @@ bool contains_duplicates(Permutation p) {
 }
 
 void test_plausibility() {
-    Permutation swap_4_5({0, 1, 2, 3, 5, 4, 6, 7, 8, 9});
-    Permutation swap_0_9({9, 1, 2, 3, 4, 5, 6, 7, 8, 0});
+    Permutation swap_4_5(std::vector<Row>({0, 1, 2, 3, 5, 4, 6, 7, 8, 9}));
+    Permutation swap_0_9(std::vector<Row>({9, 1, 2, 3, 4, 5, 6, 7, 8, 0}));
     std::vector<Row> test_vec = std::vector<Row>({0, 0, 0, 0, 0, 1, 1, 1, 1, 1});
 
     std::vector<Row> res1 = swap_4_5(test_vec);

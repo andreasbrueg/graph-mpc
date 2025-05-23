@@ -29,14 +29,15 @@ void benchmark(const bpo::variables_map &opts) {
 
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
-    Shuffle shuffle(party, vec_size, shuffle_num, rngs, network);
+    ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
+    Shuffle shuffle(conf, shuffle_num);
     shuffle.set_input(input_vector);
 
     for (size_t r = 0; r < repeat; ++r) {
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
 
         StatsPoint start_pre(*network);
-        shuffle.run_offline();
+        shuffle.get_shuffle();
         StatsPoint end_pre(*network);
         network->sync();
 
@@ -50,7 +51,7 @@ void benchmark(const bpo::variables_map &opts) {
         std::cout << "setup sent: " << bytes_sent_pre << " bytes" << std::endl;
 
         StatsPoint start(*network);
-        shuffle.run_online();
+        shuffle.shuffle();
         StatsPoint end(*network);
 
         auto rbench = end - start;

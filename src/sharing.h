@@ -1,5 +1,6 @@
 #pragma once
 
+#include "perm.h"
 #include "protocol_config.h"
 
 namespace share {
@@ -122,4 +123,42 @@ std::vector<Row> reveal(ProtocolConfig &conf, std::vector<Row> &share) {
         return outvals;
     }
 }
+
+Permutation reveal(ProtocolConfig &conf, Permutation &share) {
+    auto n_rows = conf.n_rows;
+    auto network = conf.network;
+    auto pid = conf.pid;
+
+    std::vector<Row> outvals(n_rows);
+
+    /* Don't throw error, as Dealer also has to execute this */
+    if (share.size() != n_rows) {
+        return outvals;
+    }
+
+    if (pid != D) {
+        std::vector<Row> output_share_self(share.size());
+        std::vector<Row> output_share_other(share.size());
+
+        auto perm_vec = share.get_perm_vec();
+        std::copy(perm_vec.begin(), perm_vec.end(), output_share_self.begin());
+
+        if (pid == P0) {
+            network->send(P1, output_share_self.data(), output_share_self.size() * sizeof(Row));
+            network->recv(P1, output_share_other.data(), output_share_other.size() * sizeof(Row));
+        } else {
+            network->recv(P0, output_share_other.data(), output_share_other.size() * sizeof(Row));
+            network->send(P0, output_share_self.data(), output_share_self.size() * sizeof(Row));
+        }
+
+        for (size_t i = 0; i < n_rows; ++i) {
+            Row outmask = output_share_other[i];
+            outvals[i] = output_share_self[i] + outmask;
+        }
+        return Permutation(outvals);
+    } else {
+        return Permutation(outvals);
+    }
+}
+
 };  // namespace share

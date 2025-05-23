@@ -51,11 +51,9 @@ Permutation sort_iteration(ProtocolConfig &conf, Permutation &perm, std::vector<
     shuffle.set_input(bit_vec_share);
     shuffle.repeat();
     std::vector<Row> input_shuffled = shuffle.get_output();
-    auto input_shuffled_revealed = share::reveal(conf, input_shuffled);
 
     /* Apply revealed permutation to shuffled input */
     std::vector<Row> sorted_share = perm_open(input_shuffled);
-    auto sorted_share_revealed = share::reveal(conf, sorted_share);
 
     /* Compute compaction to stable sort bit_vec_share */
     Permutation sigma_p = compaction::get_compaction(conf, sorted_share);
@@ -71,17 +69,11 @@ Permutation sort_iteration(ProtocolConfig &conf, Permutation &perm, std::vector<
 Permutation get_sort(ProtocolConfig &conf, std::vector<std::vector<Row>> &bit_shares) {
     /* Compute compaction of x_0 */
     Permutation sigma = compaction::get_compaction(conf, bit_shares[0]);
-    auto vec = sigma.get_perm_vec();
-    auto rev = share::reveal(conf, vec);
 
     /* Proceed sorting with x_1, x_2, ... */
     size_t n_bits = sizeof(Row) * 8;
     for (size_t i = 1; i < n_bits; ++i) {
-        auto bits = share::reveal(conf, bit_shares[i]);
         sigma = sort_iteration(conf, sigma, bit_shares[i]);
-        auto vec2 = sigma.get_perm_vec();
-        auto rev2 = share::reveal(conf, vec2);
-        int x = 2; /* Dummy */
     }
     return sigma;
 }

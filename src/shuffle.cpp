@@ -67,6 +67,8 @@ void Shuffle::unshuffle() {
 }
 
 void Shuffle::repeat() {
+    if (shuffle_idx == 0) throw std::runtime_error("Cannot repeat if no previous shuffle has been performed.");
+
     _new_perm = false;
     shuffle_idx -= n_rounds;
 
@@ -373,8 +375,8 @@ void Shuffle::preprocess_compute(std::vector<Row> &shared_secret_D0, std::vector
                 Row R;
                 rngs.rng_D().random_data(&R, sizeof(Row));
 
-                B_0 = (pi_0 * pi_1)(R_0);
-                B_1 = (pi_0 * pi_1)(R_1);
+                B_0 = (pi_0 * pi_1)(R_1);
+                B_1 = (pi_0 * pi_1)(R_0);
 
                 for (size_t i = 0; i < B_0.size(); ++i) B_0[i] -= R;
 

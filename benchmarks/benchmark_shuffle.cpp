@@ -1,5 +1,5 @@
 #include "../setup/setup.h"
-#include "../src/shuffle.h"
+#include "../src/shuffle_new.h"
 
 void benchmark(const bpo::variables_map &opts) {
     auto vec_size = opts["vec-size"].as<size_t>();
@@ -30,14 +30,14 @@ void benchmark(const bpo::variables_map &opts) {
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
     ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
-    Shuffle shuffle(conf, shuffle_num);
-    shuffle.set_input(input_vector);
+    // Shuffle shuffle(conf, shuffle_num);
+    // shuffle.set_input(input_vector);
 
     for (size_t r = 0; r < repeat; ++r) {
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
 
         StatsPoint start_pre(*network);
-        shuffle.get_shuffle();
+        PermShare perm_share = get_shuffle(conf);
         StatsPoint end_pre(*network);
         network->sync();
 
@@ -51,7 +51,7 @@ void benchmark(const bpo::variables_map &opts) {
         std::cout << "setup sent: " << bytes_sent_pre << " bytes" << std::endl;
 
         StatsPoint start(*network);
-        shuffle.shuffle();
+        std::vector<Row> shuffle_share = shuffle(conf, input_vector, perm_share, false);
         StatsPoint end(*network);
 
         auto rbench = end - start;

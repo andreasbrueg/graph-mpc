@@ -5,9 +5,11 @@
 #include "sorting.h"
 
 namespace mp {
-void scatter(ProtocolConfig &conf, SecretSharedGraph &graph);
+std::vector<Row> propagate(ProtocolConfig &conf, std::vector<Row> &input_vector);
 
-void gather(ProtocolConfig &conf, SecretSharedGraph &graph);
+std::vector<Row> gather(ProtocolConfig &conf, std::vector<Row> &input_vector);
 
-void apply(ProtocolConfig &conf, SecretSharedGraph &graph);
-}
+std::vector<Row> apply(ProtocolConfig &conf, std::vector<Row> &in1, std::vector<Row> &in2);
+
+void run(ProtocolConfig &conf, SecretSharedGraph &graph, size_t n_iterations);
+}  // namespace mp

@@ -21,7 +21,7 @@ void random_share_secret_vec_recv(Party src_pid, io::NetIOMP &network, std::vect
 
 SecretSharedGraph random_share_graph(ProtocolConfig &conf, Graph &graph);
 
-Graph reconstruct_shared_graph(ProtocolConfig &conf, SecretSharedGraph &shared_graph);
+Graph reconstruct_graph(ProtocolConfig &conf, SecretSharedGraph &shared_graph);
 
 Row reconstruct(Party partner, std::shared_ptr<io::NetIOMP> network, Row &share);
 

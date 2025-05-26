@@ -72,7 +72,7 @@ void test_sharing(const bpo::variables_map &opts) {
     g.payload = payload;
 
     SecretSharedGraph shared_graph = share::random_share_graph(conf, g);
-    Graph reconstructed_graph = share::reconstruct_shared_graph(conf, shared_graph);
+    Graph reconstructed_graph = share::reconstruct_graph(conf, shared_graph);
 
     std::cout << "Initial graph: " << std::endl;
     g.print();

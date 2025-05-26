@@ -1,9 +1,8 @@
 #include "sorting.h"
 
 Permutation sort::sort_iteration(ProtocolConfig &conf, Permutation &perm, std::vector<Row> &bit_vec_share) {
-    if (bit_vec_share.size() != conf.n_rows) throw std::invalid_argument("Input share has wrong size.");
-
     /* Shuffle perm */
+    conf.n_rows = perm.size();
     PermShare perm_share = shuffle::get_shuffle(conf);
     std::vector<Row> perm_shuffled = shuffle::shuffle(conf, perm, perm_share, true);
 
@@ -12,6 +11,7 @@ Permutation sort::sort_iteration(ProtocolConfig &conf, Permutation &perm, std::v
     Permutation perm_open = Permutation(revealed);
 
     /* Shuffle input using the previous order */
+    conf.n_rows = bit_vec_share.size();
     std::vector<Row> input_shuffled = shuffle::shuffle(conf, bit_vec_share, perm_share, false);
 
     /* Apply revealed permutation to shuffled input */
@@ -31,7 +31,7 @@ Permutation sort::get_sort(ProtocolConfig &conf, std::vector<std::vector<Row>> &
     Permutation sigma = compaction::get_compaction(conf, bit_shares[0]);
 
     /* Proceed sorting with x_1, x_2, ... */
-    size_t n_bits = sizeof(Row) * 8;
+    size_t n_bits = bit_shares.size();
     for (size_t i = 1; i < n_bits; ++i) {
         sigma = sort_iteration(conf, sigma, bit_shares[i]);
     }

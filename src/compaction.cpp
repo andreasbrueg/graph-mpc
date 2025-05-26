@@ -111,10 +111,14 @@ Permutation compaction::evaluate(ProtocolConfig &conf, std::vector<Row> &triple_
 }
 
 Permutation compaction::get_compaction(ProtocolConfig &conf, std::vector<Row> &input_share) {
+    size_t n = input_share.size();
+
     std::vector<Row> triple_a, triple_b, triple_c;
-    triple_a.resize(conf.n_rows);
-    triple_b.resize(conf.n_rows);
-    triple_c.resize(conf.n_rows);
+    triple_a.resize(n);
+    triple_b.resize(n);
+    triple_c.resize(n);
+
+    conf.n_rows = n;
 
     preprocess(conf, triple_a, triple_b, triple_c);
     return evaluate(conf, triple_a, triple_b, triple_c, input_share);

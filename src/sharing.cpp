@@ -73,14 +73,15 @@ SecretSharedGraph share::random_share_graph(ProtocolConfig &conf, Graph &graph) 
     auto pid = conf.pid;
     auto rngs = conf.rngs;
     auto network = conf.network;
+
     auto src = graph.src;
     auto dst = graph.dst;
     auto isV = graph.isV;
     auto payload = graph.payload;
 
-    std::vector<std::vector<Row>> src_bits(sizeof(Row) * 8);
-    std::vector<std::vector<Row>> dst_bits(sizeof(Row) * 8);
-    std::vector<std::vector<Row>> payload_bits(sizeof(Row) * 8);
+    auto src_bits = graph.src_bits();
+    auto dst_bits = graph.dst_bits();
+    auto payload_bits = graph.payload_bits();
 
     std::vector<std::vector<Row>> src_bits_shared(sizeof(Row) * 8);
     std::vector<std::vector<Row>> dst_bits_shared(sizeof(Row) * 8);
@@ -88,27 +89,9 @@ SecretSharedGraph share::random_share_graph(ProtocolConfig &conf, Graph &graph) 
     std::vector<std::vector<Row>> payload_bits_shared(sizeof(Row) * 8);
 
     for (size_t i = 0; i < sizeof(Row) * 8; ++i) {
-        src_bits[i].resize(graph.size);
         src_bits_shared[i].resize(graph.size);
-        for (size_t j = 0; j < graph.size; ++j) {
-            src_bits[i][j] = (src[j] & (1 << i)) >> i;
-        }
-    }
-
-    for (size_t i = 0; i < sizeof(Row) * 8; ++i) {
-        dst_bits[i].resize(graph.size);
         dst_bits_shared[i].resize(graph.size);
-        for (size_t j = 0; j < graph.size; ++j) {
-            dst_bits[i][j] = (dst[j] & (1 << i)) >> i;
-        }
-    }
-
-    for (size_t i = 0; i < sizeof(Row) * 8; ++i) {
-        payload_bits[i].resize(graph.size);
         payload_bits_shared[i].resize(graph.size);
-        for (size_t j = 0; j < graph.size; ++j) {
-            payload_bits[i][j] = (payload[j] & (1 << i)) >> i;
-        }
     }
 
     if (pid == 0) {
@@ -138,7 +121,7 @@ SecretSharedGraph share::random_share_graph(ProtocolConfig &conf, Graph &graph) 
     return shared_graph;
 }
 
-Graph share::reconstruct_shared_graph(ProtocolConfig &conf, SecretSharedGraph &g) {
+Graph share::reconstruct_graph(ProtocolConfig &conf, SecretSharedGraph &g) {
     auto pid = conf.pid;
     auto network = conf.network;
 

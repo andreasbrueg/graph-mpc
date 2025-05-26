@@ -12,7 +12,7 @@ target_sources(GraphMPC_lib
     shuffle.cpp
     compaction.cpp
     protocol_config.h
-    message_passing.h
+    message_passing.cpp
     # Add further files if necessary
 )
 target_link_libraries(GraphMPC_lib PUBLIC OpenSSL::SSL EMPTool NTL GMP)

@@ -7,7 +7,7 @@
 void test_shuffle(const bpo::variables_map &opts) {
     auto vec_size = opts["vec-size"].as<size_t>();
 
-    size_t pid, nP, repeat, threads, shuffle_num;
+    size_t pid, nP, repeat, threads, shuffle_num, nodes;
     std::shared_ptr<io::NetIOMP> network = nullptr;
     uint64_t seeds_h[5];
     uint64_t seeds_l[5];
@@ -15,7 +15,7 @@ void test_shuffle(const bpo::variables_map &opts) {
     bool save_output;
     std::string save_file;
 
-    setup::setupExecution(opts, pid, nP, repeat, threads, shuffle_num, network, seeds_h, seeds_l, save_output, save_file);
+    setup::setupExecution(opts, pid, nP, repeat, threads, shuffle_num, nodes, network, seeds_h, seeds_l, save_output, save_file);
     output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads},  {"seeds_h", seeds_h},
                               {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", vec_size}};
 
@@ -31,49 +31,78 @@ void test_shuffle(const bpo::variables_map &opts) {
 
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
-    Shuffle shuffle(party, vec_size, shuffle_num, rngs, network);
+    ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
 
     std::vector<Row> share(vec_size);
 
     if (pid == 0) {
-        Share::random_share_secret_vec_send(P1, rngs, *network, share, input_vector);
+        share::random_share_secret_vec_send(P1, rngs, *network, share, input_vector);
     } else if (pid == 1) {
-        Share::random_share_secret_vec_recv(P0, *network, share);
+        share::random_share_secret_vec_recv(P0, *network, share);
     }
 
-    shuffle.set_input(share);
+    /* Protocol run */
+    PermShare perm_share = shuffle::get_shuffle(conf);
+    std::vector<Row> shuffle_share = shuffle::shuffle(conf, share, perm_share, true);
+    std::vector<Row> repeat_share = shuffle::shuffle(conf, share, perm_share, false);
+    std::vector<Row> unshuffle_share = shuffle::unshuffle(conf, repeat_share, perm_share);
+    PermShare perm_share_new = shuffle::get_shuffle(conf);
+    std::vector<Row> new_shuffle_share = shuffle::shuffle(conf, share, perm_share_new, true);
+    std::vector<Row> second_unshuffle_share = shuffle::unshuffle(conf, new_shuffle_share, perm_share_new);
 
-    for (size_t r = 0; r < repeat; ++r) {
-        std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
+    std::vector<Row> res = share::reveal(conf, shuffle_share);
 
-        /* Protocol run */
-        shuffle.run_offline();
-        network->sync();
-        shuffle.run_online();
-        std::vector<Row> res = shuffle.result();
-
-        /* Printing result */
-        if (pid != D) {
-            std::cout << std::endl << "Result of shuffle: ";
-            for (int i = 0; i < res.size() - 1; ++i) {
-                std::cout << res[i] << ", ";
-            }
-            std::cout << res[res.size() - 1] << std::endl;
-            std::cout << std::endl << std::endl;
+    if (pid != D) {
+        std::cout << std::endl << "Result of shuffle: ";
+        for (int i = 0; i < res.size() - 1; ++i) {
+            std::cout << res[i] << ", ";
         }
+        std::cout << res[res.size() - 1] << std::endl;
+        std::cout << std::endl << std::endl;
+    }
 
-        /* Assertions */
-        if (pid != D) {
-            bool shuffled = false;
-            for (int i = 0; i < res.size(); ++i) {
-                /* Check if vector contains all elements */
-                assert(std::find(res.begin(), res.end(), i) != res.end());
+    res = share::reveal(conf, repeat_share);
 
-                /* Check if vector is shuffled */
-                shuffled = shuffled || (res[i] != i);
-            }
-            assert(shuffled);
+    if (pid != D) {
+        std::cout << std::endl << "Result of repeat: ";
+        for (int i = 0; i < res.size() - 1; ++i) {
+            std::cout << res[i] << ", ";
         }
+        std::cout << res[res.size() - 1] << std::endl;
+        std::cout << std::endl << std::endl;
+    }
+
+    res = share::reveal(conf, unshuffle_share);
+
+    if (pid != D) {
+        std::cout << std::endl << "Result of unshuffle: ";
+        for (int i = 0; i < res.size() - 1; ++i) {
+            std::cout << res[i] << ", ";
+        }
+        std::cout << res[res.size() - 1] << std::endl;
+        std::cout << std::endl << std::endl;
+    }
+
+    res = share::reveal(conf, new_shuffle_share);
+
+    if (pid != D) {
+        std::cout << std::endl << "Result of new shuffle: ";
+        for (int i = 0; i < res.size() - 1; ++i) {
+            std::cout << res[i] << ", ";
+        }
+        std::cout << res[res.size() - 1] << std::endl;
+        std::cout << std::endl << std::endl;
+    }
+
+    res = share::reveal(conf, second_unshuffle_share);
+
+    if (pid != D) {
+        std::cout << std::endl << "Result of second unshuffle: ";
+        for (int i = 0; i < res.size() - 1; ++i) {
+            std::cout << res[i] << ", ";
+        }
+        std::cout << res[res.size() - 1] << std::endl;
+        std::cout << std::endl << std::endl;
     }
 
     exit(0);

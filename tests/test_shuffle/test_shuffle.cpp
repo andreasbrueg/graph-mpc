@@ -1,8 +1,8 @@
 #include <cassert>
 
 #include "../../setup/setup.h"
-#include "../../src/sharing.h"
-#include "../../src/shuffle.h"
+#include "../../src/protocol/shuffle.h"
+#include "../../src/utils/sharing.h"
 
 void test_shuffle(const bpo::variables_map &opts) {
     auto vec_size = opts["vec-size"].as<size_t>();
@@ -36,9 +36,9 @@ void test_shuffle(const bpo::variables_map &opts) {
     std::vector<Row> share(vec_size);
 
     if (pid == 0) {
-        share::random_share_secret_vec_send(P1, rngs, *network, share, input_vector);
+        share::random_share_secret_vec_send(P1, rngs, network, share, input_vector);
     } else if (pid == 1) {
-        share::random_share_secret_vec_recv(P0, *network, share);
+        share::random_share_secret_vec_recv(P0, network, share);
     }
 
     /* Protocol run */

@@ -1,9 +1,9 @@
 #pragma once
 
+#include "../utils/perm.h"
+#include "../utils/protocol_config.h"
+#include "../utils/sharing.h"
 #include "compaction.h"
-#include "perm.h"
-#include "protocol_config.h"
-#include "sharing.h"
 #include "shuffle.h"
 
 namespace sort {

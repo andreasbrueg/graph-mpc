@@ -1,19 +1,22 @@
 set(TEST_SOURCES 
-    ${PROJECT_SOURCE_DIR}/src/compaction.cpp
-    ${PROJECT_SOURCE_DIR}/src/random_generators.cpp
-    ${PROJECT_SOURCE_DIR}/src/sharing.cpp
-    ${PROJECT_SOURCE_DIR}/src/shuffle.cpp
-    ${PROJECT_SOURCE_DIR}/src/sorting.cpp
+    ${PROJECT_SOURCE_DIR}/src/protocol/compaction.cpp
+    ${PROJECT_SOURCE_DIR}/src/utils/random_generators.cpp
+    ${PROJECT_SOURCE_DIR}/src/utils/sharing.cpp
+    ${PROJECT_SOURCE_DIR}/src/protocol/shuffle.cpp
+    ${PROJECT_SOURCE_DIR}/src/protocol/sorting.cpp
+    ${PROJECT_SOURCE_DIR}/setup/utils.cpp
+
 )
 
 set(TEST_HEADERS 
     ${PROJECT_SOURCE_DIR}/src/utils/types.h 
-    ${PROJECT_SOURCE_DIR}/src/random_generators.h 
-    ${PROJECT_SOURCE_DIR}/src/shuffle.h
-    ${PROJECT_SOURCE_DIR}/src/sorting.h
-    ${PROJECT_SOURCE_DIR}/src/perm.h
-    ${PROJECT_SOURCE_DIR}/src/graph.h
-    ${PROJECT_SOURCE_DIR}/src/sharing.h
+    ${PROJECT_SOURCE_DIR}/src/utils/random_generators.h 
+    ${PROJECT_SOURCE_DIR}/src/protocol/shuffle.h
+    ${PROJECT_SOURCE_DIR}/src/protocol/sorting.h
+    ${PROJECT_SOURCE_DIR}/src/utils/perm.h
+    ${PROJECT_SOURCE_DIR}/src/utils/graph.h
+    ${PROJECT_SOURCE_DIR}/src/utils/sharing.h
+    ${PROJECT_SOURCE_DIR}/setup/utils.h
 )
 
 set(TEST_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/tests ${PROJECT_SOURCE_DIR}/setup)

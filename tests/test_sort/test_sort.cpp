@@ -2,8 +2,8 @@
 #include <random>
 
 #include "../../setup/setup.h"
-#include "../../src/perm.h"
-#include "../../src/sorting.h"
+#include "../../src/protocol/sorting.h"
+#include "../../src/utils/perm.h"
 
 void test_shuffle(const bpo::variables_map &opts) {
     auto vec_size = opts["vec-size"].as<size_t>();
@@ -50,11 +50,11 @@ void test_shuffle(const bpo::variables_map &opts) {
 
     if (pid == 0) {
         for (size_t i = 0; i < bit_shares.size(); ++i) {
-            share::random_share_secret_vec_send(P1, rngs, *network, bit_shares[i], bits[i]);
+            share::random_share_secret_vec_send(P1, rngs, network, bit_shares[i], bits[i]);
         }
     } else if (pid == 1) {
         for (size_t i = 0; i < bit_shares.size(); ++i) {
-            share::random_share_secret_vec_recv(P0, *network, bit_shares[i]);
+            share::random_share_secret_vec_recv(P0, network, bit_shares[i]);
         }
     }
 

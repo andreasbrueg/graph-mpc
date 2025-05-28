@@ -1,9 +1,6 @@
 #pragma once
 
-#include <fstream>
-#include <iostream>
-
-#include "./utils/types.h"
+#include "types.h"
 
 struct Graph {
     std::vector<Row> src;

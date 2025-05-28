@@ -2,9 +2,9 @@
 #include <random>
 
 #include "../../setup/setup.h"
-#include "../../src/perm.h"
-#include "../../src/sharing.h"
-#include "../../src/sorting.h"
+#include "../../src/protocol/sorting.h"
+#include "../../src/utils/perm.h"
+#include "../../src/utils/sharing.h"
 
 void test_shuffle(const bpo::variables_map &opts) {
     auto vec_size = opts["vec-size"].as<size_t>();
@@ -54,14 +54,14 @@ void test_shuffle(const bpo::variables_map &opts) {
     }
 
     if (pid == 0) {
-        share::random_share_secret_vec_send(P1, rngs, *network, input_share, input_vector);
+        share::random_share_secret_vec_send(P1, rngs, network, input_share, input_vector);
         for (size_t i = 0; i < bit_shares.size(); ++i) {
-            share::random_share_secret_vec_send(P1, rngs, *network, bit_shares[i], bits[i]);
+            share::random_share_secret_vec_send(P1, rngs, network, bit_shares[i], bits[i]);
         }
     } else if (pid == 1) {
-        share::random_share_secret_vec_recv(P0, *network, input_share);
+        share::random_share_secret_vec_recv(P0, network, input_share);
         for (size_t i = 0; i < bit_shares.size(); ++i) {
-            share::random_share_secret_vec_recv(P0, *network, bit_shares[i]);
+            share::random_share_secret_vec_recv(P0, network, bit_shares[i]);
         }
     }
 
@@ -81,11 +81,11 @@ void test_shuffle(const bpo::variables_map &opts) {
     /* Sharing again */
     if (pid == 0) {
         for (size_t i = 0; i < bit_shares.size(); ++i) {
-            share::random_share_secret_vec_send(P1, rngs, *network, bit_shares[i], bits[i]);
+            share::random_share_secret_vec_send(P1, rngs, network, bit_shares[i], bits[i]);
         }
     } else if (pid == 1) {
         for (size_t i = 0; i < bit_shares.size(); ++i) {
-            share::random_share_secret_vec_recv(P0, *network, bit_shares[i]);
+            share::random_share_secret_vec_recv(P0, network, bit_shares[i]);
         }
     }
 

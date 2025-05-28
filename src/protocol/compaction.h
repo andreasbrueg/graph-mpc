@@ -3,11 +3,11 @@
 #include <memory>
 #include <vector>
 
+#include "../io/comm.h"
+#include "../utils/perm.h"
+#include "../utils/protocol_config.h"
+#include "../utils/sharing.h"
 #include "./utils/types.h"
-#include "io/comm.h"
-#include "perm.h"
-#include "protocol_config.h"
-#include "sharing.h"
 
 namespace compaction {
 

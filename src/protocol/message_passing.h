@@ -3,8 +3,8 @@
 #include <algorithm>
 
 #include "../setup/utils.h"
-#include "graph.h"
-#include "protocol_config.h"
+#include "../utils/graph.h"
+#include "../utils/protocol_config.h"
 #include "sorting.h"
 
 namespace mp {

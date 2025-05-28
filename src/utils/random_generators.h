@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <random>
 
-#include "utils/types.h"
+#include "types.h"
 
 class RandomGenerators {
     emp::PRG _rng_01;

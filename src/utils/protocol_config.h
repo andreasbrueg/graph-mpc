@@ -1,8 +1,8 @@
 #pragma once
 
-#include "io/netmp.h"
+#include "../io/netmp.h"
 #include "random_generators.h"
-#include "utils/types.h"
+#include "types.h"
 
 struct ProtocolConfig {
    public:

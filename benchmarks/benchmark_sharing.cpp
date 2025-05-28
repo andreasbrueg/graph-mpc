@@ -1,6 +1,6 @@
 #include "../setup/setup.h"
-#include "../src/sharing.h"
-#include "../src/shuffle.h"
+#include "../src/protocol/shuffle.h"
+#include "../src/utils/sharing.h"
 
 void benchmark(const bpo::variables_map &opts) {
     auto vec_size = opts["vec-size"].as<size_t>();
@@ -37,9 +37,9 @@ void benchmark(const bpo::variables_map &opts) {
 
     StatsPoint start(*network);
     if (pid == P0) {
-        share::random_share_secret_vec_send(partner, rngs, *network, share, input_table);
+        share::random_share_secret_vec_send(partner, rngs, network, share, input_table);
     } else if (pid == P1) {
-        share::random_share_secret_vec_recv(partner, *network, share);
+        share::random_share_secret_vec_recv(partner, network, share);
     }
 
     StatsPoint end(*network);

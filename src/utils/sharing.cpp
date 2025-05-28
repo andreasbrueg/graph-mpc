@@ -1,6 +1,8 @@
 #include "sharing.h"
 
-Row share::get_random_share(Party pid, RandomGenerators &rngs) {
+#include "../setup/utils.h"
+
+Row share::random_share(Party pid, RandomGenerators &rngs) {
     switch (pid) {
         case P0: {
             Row share;
@@ -22,7 +24,7 @@ Row share::get_random_share(Party pid, RandomGenerators &rngs) {
     }
 }
 
-Row share::get_random_share_secret(Party pid, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, Row &secret) {
+Row share::random_share_secret(Party pid, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, Row &secret) {
     switch (pid) {
         case P0: {
             Row share;
@@ -44,26 +46,26 @@ Row share::get_random_share_secret(Party pid, RandomGenerators &rngs, std::share
     }
 }
 
-void share::random_share_secret_send(Party dst_pid, RandomGenerators &rngs, io::NetIOMP &network, Row &share, Row &secret) {
+void share::random_share_secret_send(Party dst_pid, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, Row &share, Row &secret) {
     Row val_1;
     Row val_2;
 
     rngs.rng_self().random_data(&val_1, sizeof(Row));
     share = val_1;
     val_2 = secret - val_1;
-    network.send(dst_pid, &val_2, sizeof(Row));
+    network->send(dst_pid, &val_2, sizeof(Row));
 }
 
-void share::random_share_secret_recv(Party src_pid, io::NetIOMP &network, Row &share) { network.recv(src_pid, &share, sizeof(Row)); }
+void share::random_share_secret_recv(Party src_pid, std::shared_ptr<io::NetIOMP> network, Row &share) { network->recv(src_pid, &share, sizeof(Row)); }
 
-void share::random_share_secret_vec_send(Party dst_pid, RandomGenerators &rngs, io::NetIOMP &network, std::vector<Row> &share_vec,
+void share::random_share_secret_vec_send(Party dst_pid, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, std::vector<Row> &share_vec,
                                          std::vector<Row> &secret_vec) {
     for (size_t i = 0; i < secret_vec.size(); ++i) {
         random_share_secret_send(dst_pid, rngs, network, share_vec[i], secret_vec[i]);
     }
 }
 
-void share::random_share_secret_vec_recv(Party src_pid, io::NetIOMP &network, std::vector<Row> &share_vec) {
+void share::random_share_secret_vec_recv(Party src_pid, std::shared_ptr<io::NetIOMP> network, std::vector<Row> &share_vec) {
     for (size_t i = 0; i < share_vec.size(); ++i) {
         random_share_secret_recv(src_pid, network, share_vec[i]);
     }
@@ -94,21 +96,26 @@ SecretSharedGraph share::random_share_graph(ProtocolConfig &conf, Graph &graph) 
         payload_bits_shared[i].resize(graph.size);
     }
 
+    std::cout << "Sharing the bits of the graph...";
+    StatsPoint start_sharing(*network);
     if (pid == 0) {
         for (size_t i = 0; i < src_bits.size(); ++i) {
-            random_share_secret_vec_send(P1, rngs, *network, src_bits_shared[i], src_bits[i]);
-            random_share_secret_vec_send(P1, rngs, *network, dst_bits_shared[i], dst_bits[i]);
-            random_share_secret_vec_send(P1, rngs, *network, payload_bits_shared[i], payload_bits[i]);
+            random_share_secret_vec_send(P1, rngs, network, src_bits_shared[i], src_bits[i]);
+            random_share_secret_vec_send(P1, rngs, network, dst_bits_shared[i], dst_bits[i]);
+            random_share_secret_vec_send(P1, rngs, network, payload_bits_shared[i], payload_bits[i]);
         }
-        random_share_secret_vec_send(P1, rngs, *network, isV_shared, isV);
+        random_share_secret_vec_send(P1, rngs, network, isV_shared, isV);
     } else if (pid == 1) {
         for (size_t i = 0; i < src_bits.size(); ++i) {
-            random_share_secret_vec_recv(P0, *network, src_bits_shared[i]);
-            random_share_secret_vec_recv(P0, *network, dst_bits_shared[i]);
-            random_share_secret_vec_recv(P0, *network, payload_bits_shared[i]);
+            random_share_secret_vec_recv(P0, network, src_bits_shared[i]);
+            random_share_secret_vec_recv(P0, network, dst_bits_shared[i]);
+            random_share_secret_vec_recv(P0, network, payload_bits_shared[i]);
         }
-        random_share_secret_vec_recv(P0, *network, isV_shared);
+        random_share_secret_vec_recv(P0, network, isV_shared);
     }
+    StatsPoint end_sharing(*network);
+    auto time = (end_sharing - start_sharing)["time"];
+    std::cout << "Done. " << time << " ms" << std::endl << std::endl;
 
     SecretSharedGraph shared_graph;
     shared_graph.src_bits = src_bits_shared;
@@ -121,7 +128,7 @@ SecretSharedGraph share::random_share_graph(ProtocolConfig &conf, Graph &graph) 
     return shared_graph;
 }
 
-Graph share::reconstruct_graph(ProtocolConfig &conf, SecretSharedGraph &g) {
+Graph share::reveal_graph(ProtocolConfig &conf, SecretSharedGraph &g) {
     auto pid = conf.pid;
     auto network = conf.network;
 
@@ -141,16 +148,28 @@ Graph share::reconstruct_graph(ProtocolConfig &conf, SecretSharedGraph &g) {
     std::vector<Row> isV(g.size);
     std::vector<Row> payload(g.size);
 
+    std::cout << "Reconstructing bit shares...";
+    StatsPoint re_bit_start(*network);
+
     for (size_t i = 0; i < n_bits; ++i) {
-        src_bits[i] = share::reconstruct_vec(partner, network, g.src_bits[i]);
+        src_bits[i] = share::reveal(conf, g.src_bits[i]);
     }
+
     for (size_t i = 0; i < n_bits; ++i) {
-        dst_bits[i] = share::reconstruct_vec(partner, network, g.dst_bits[i]);
+        dst_bits[i] = share::reveal(conf, g.dst_bits[i]);
     }
+
     for (size_t i = 0; i < n_bits; ++i) {
-        payload_bits[i] = share::reconstruct_vec(partner, network, g.payload_bits[i]);
+        payload_bits[i] = share::reveal(conf, g.payload_bits[i]);
     }
-    isV = share::reconstruct_vec(partner, network, g.isV_bits);
+
+    isV = share::reveal(conf, g.isV_bits);
+
+    StatsPoint re_bit_end(*network);
+    auto time = (re_bit_end - re_bit_start)["time"];
+    std::cout << "Done. " << time << " ms" << std::endl << std::endl;
+
+    StatsPoint reconstruct_start(*network);
 
     for (size_t i = 0; i < g.size; ++i) {
         src[i] = 0;
@@ -181,7 +200,7 @@ Graph share::reconstruct_graph(ProtocolConfig &conf, SecretSharedGraph &g) {
     return g_new;
 }
 
-Row share::reconstruct(Party partner, std::shared_ptr<io::NetIOMP> network, Row &share) {
+Row share::reveal(Party partner, std::shared_ptr<io::NetIOMP> network, Row &share) {
     Row share_other;
     if (partner == P0) {
         network->send(partner, &share, sizeof(Row));
@@ -193,10 +212,10 @@ Row share::reconstruct(Party partner, std::shared_ptr<io::NetIOMP> network, Row 
     return share + share_other;
 }
 
-std::vector<Row> share::reconstruct_vec(Party partner, std::shared_ptr<io::NetIOMP> network, std::vector<Row> &share_vec) {
+std::vector<Row> share::reveal_vec(Party partner, std::shared_ptr<io::NetIOMP> network, std::vector<Row> &share_vec) {
     std::vector<Row> res(share_vec.size());
     for (size_t i = 0; i < res.size(); ++i) {
-        res[i] = reconstruct(partner, network, share_vec[i]);
+        res[i] = reveal(partner, network, share_vec[i]);
     }
     return res;
 }

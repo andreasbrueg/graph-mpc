@@ -1,11 +1,9 @@
 #pragma once
 
-#include <omp.h>
-
+#include "../utils/perm.h"
+#include "../utils/protocol_config.h"
+#include "../utils/types.h"
 #include "io/comm.h"
-#include "perm.h"
-#include "protocol_config.h"
-#include "utils/types.h"
 
 struct PermShare {
     Permutation pi_0;
@@ -30,4 +28,4 @@ std::vector<Row> unshuffle(ProtocolConfig &conf, std::vector<Row> &input_share, 
 
 PermShare get_merged_shuffle(ProtocolConfig &conf, PermShare &pi_share, PermShare &omega_share);
 
-};
+};  // namespace shuffle

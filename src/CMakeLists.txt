@@ -2,17 +2,17 @@ add_library(GraphMPC_lib STATIC)
 target_sources(GraphMPC_lib 
     PRIVATE 
     utils/types.h
-    graph.h
-    random_generators.cpp 
-    sharing.cpp
+    utils/graph.h
+    utils/random_generators.cpp 
+    utils/sharing.cpp
+    utils/protocol_config.h
     io/tls_net_io_channel.h
     io/netmp.h
     io/comm.h
-    sorting.cpp
-    shuffle.cpp
-    compaction.cpp
-    protocol_config.h
-    message_passing.cpp
+    protocol/sorting.cpp
+    protocol/shuffle.cpp
+    protocol/compaction.cpp
+    protocol/message_passing.cpp
     # Add further files if necessary
 )
 target_link_libraries(GraphMPC_lib PUBLIC OpenSSL::SSL EMPTool NTL GMP OpenMP::OpenMP_CXX)

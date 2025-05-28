@@ -7,10 +7,10 @@ void compaction::preprocess(ProtocolConfig &conf, std::vector<Row> &triple_a, st
     auto network = conf.network;
 
     for (size_t i = 0; i < n_rows; ++i) {
-        triple_a[i] = share::get_random_share(pid, rngs);
-        triple_b[i] = share::get_random_share(pid, rngs);
+        triple_a[i] = share::random_share(pid, rngs);
+        triple_b[i] = share::random_share(pid, rngs);
         Row c = triple_a[i] * triple_b[i];
-        triple_c[i] = share::get_random_share_secret(pid, rngs, network, c);
+        triple_c[i] = share::random_share_secret(pid, rngs, network, c);
     }
     conf.network->sync();
 }

@@ -1,8 +1,8 @@
 #include <cassert>
 
 #include "../../setup/setup.h"
-#include "../../src/random_generators.h"
-#include "../../src/sharing.h"
+#include "../../src/utils/random_generators.h"
+#include "../../src/utils/sharing.h"
 
 void test_sharing(const bpo::variables_map &opts) {
     auto vec_size = opts["vec-size"].as<size_t>();
@@ -38,11 +38,11 @@ void test_sharing(const bpo::variables_map &opts) {
     }
 
     if (pid == P0) {
-        share::random_share_secret_vec_send(P1, rngs, *network, share, input_table);
-        reconstructed = share::reconstruct_vec(P1, network, share);
+        share::random_share_secret_vec_send(P1, rngs, network, share, input_table);
+        reconstructed = share::reveal_vec(P1, network, share);
     } else if (pid == P1) {
-        share::random_share_secret_vec_recv(P0, *network, share);
-        reconstructed = share::reconstruct_vec(P0, network, share);
+        share::random_share_secret_vec_recv(P0, network, share);
+        reconstructed = share::reveal_vec(P0, network, share);
     }
 
     std::cout << "Final share: ";
@@ -72,7 +72,7 @@ void test_sharing(const bpo::variables_map &opts) {
     g.payload = payload;
 
     SecretSharedGraph shared_graph = share::random_share_graph(conf, g);
-    Graph reconstructed_graph = share::reconstruct_graph(conf, shared_graph);
+    Graph reconstructed_graph = share::reveal_graph(conf, shared_graph);
 
     std::cout << "Initial graph: " << std::endl;
     g.print();

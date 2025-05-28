@@ -1,5 +1,5 @@
 #include "../setup/setup.h"
-#include "../src/shuffle.h"
+#include "../src/protocol/shuffle.h"
 
 void benchmark(const bpo::variables_map &opts) {
     auto vec_size = opts["vec-size"].as<size_t>();

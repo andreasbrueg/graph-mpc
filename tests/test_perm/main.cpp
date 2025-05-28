@@ -2,8 +2,8 @@
 #include <iostream>
 #include <numeric>
 
-#include "../src/perm.h"
-#include "../src/random_generators.h"
+#include "../src/utils/perm.h"
+#include "../src/utils/random_generators.h"
 #include "../src/utils/types.h"
 
 RandomGenerators rngs((uint64_t[4]){123456789, 123456789, 123456789, 123456789}, (uint64_t[4]){123456789, 123456789, 123456789, 123456789});

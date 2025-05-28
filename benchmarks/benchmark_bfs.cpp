@@ -1,8 +1,8 @@
 #include <algorithm>
 
 #include "../setup/setup.h"
-#include "../src/graph.h"
-#include "../src/message_passing.h"
+#include "../src/protocol/message_passing.h"
+#include "../src/utils/graph.h"
 
 void benchmark(const bpo::variables_map &opts) {
     auto vec_size = opts["vec-size"].as<size_t>();
@@ -53,44 +53,18 @@ void benchmark(const bpo::variables_map &opts) {
     g.isV = isV;
     g.payload = payload;
 
-    if (pid != D) g.print();
-
     for (size_t r = 0; r < repeat; ++r) {
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
-        /*
-                StatsPoint start_pre(*network);
-                StatsPoint end_pre(*network);
-                network->sync();
 
-                auto rbench_pre = end_pre - start_pre;
-                output_data["benchmarks_pre"].push_back(rbench_pre);
-                size_t bytes_sent_pre = 0;
-                for (const auto &val : rbench_pre["communication"]) {
-                    bytes_sent_pre += val.get<int64_t>();
-                }
-                std::cout << "setup time: " << rbench_pre["time"] << " ms" << std::endl;
-                std::cout << "setup sent: " << bytes_sent_pre << " bytes" << std::endl;
-        */
-        std::cout << "Sharing graph...";
-        StatsPoint share_start(*network);
         SecretSharedGraph g_shared = share::random_share_graph(conf, g);
-        StatsPoint share_end(*network);
-        auto time = (share_end - share_start)["time"];
-        std::cout << "Done. " << "time: " << time << std::endl << std::endl;
 
         StatsPoint start(*network);
         mp::run(conf, g_shared, 1, nodes);
         StatsPoint end(*network);
 
-        std::cout << "Reconstructing graph...";
-        StatsPoint reconstruct_start(*network);
-        auto res_g = share::reconstruct_graph(conf, g_shared);
-        StatsPoint reconstruct_end(*network);
-        time = (reconstruct_end - reconstruct_start)["time"];
-        std::cout << "Done. " << "time: " << time << std::endl << std::endl;
+        auto res_g = share::reveal_graph(conf, g_shared);
 
         for (auto &elem : res_g.payload) elem = std::min(elem, (Row)1);
-        if (pid != D) res_g.print();
 
         auto rbench = end - start;
         output_data["benchmarks"].push_back(rbench);

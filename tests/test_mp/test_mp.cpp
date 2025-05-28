@@ -2,8 +2,8 @@
 #include <random>
 
 #include "../../setup/setup.h"
-#include "../../src/message_passing.h"
-#include "../../src/perm.h"
+#include "../../src/protocol/message_passing.h"
+#include "../../src/utils/perm.h"
 
 void test_mp(const bpo::variables_map &opts) {
     auto vec_size = opts["vec-size"].as<size_t>();
@@ -48,7 +48,7 @@ void test_mp(const bpo::variables_map &opts) {
 
     mp::run(conf, g_shared, 1, 3);
 
-    auto res_g = share::reconstruct_graph(conf, g_shared);
+    auto res_g = share::reveal_graph(conf, g_shared);
     if (pid != D) res_g.print();
 
     exit(0);

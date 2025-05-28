@@ -1,5 +1,6 @@
 #include "../setup/setup.h"
 #include "../src/protocol/shuffle.h"
+#include "../src/utils/protocol_config.h"
 #include "../src/utils/sharing.h"
 
 void benchmark(const bpo::variables_map &opts) {
@@ -25,27 +26,19 @@ void benchmark(const bpo::variables_map &opts) {
     std::cout << std::endl;
 
     RandomGenerators rngs(seeds_h, seeds_l);
+    Party party = (pid == 0 ? P0 : P1);
+    ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
 
-    std::vector<Row> share(vec_size);
     std::vector<Row> input_table(vec_size);
+    for (size_t i = 0; i < vec_size; ++i) input_table[i] = i;
 
-    for (size_t i = 0; i < vec_size; ++i) {
-        input_table[i] = i;
-    }
-
-    Party partner = (pid == P0 ? P1 : P0);
-
-    StatsPoint start(*network);
-    if (pid == P0) {
-        share::random_share_secret_vec_send(partner, rngs, network, share, input_table);
-    } else if (pid == P1) {
-        share::random_share_secret_vec_recv(partner, network, share);
-    }
-
-    StatsPoint end(*network);
+    StatsPoint start_share(*network);
+    auto share = share::random_share_secret_vec_2P(party, rngs, network, input_table);
+    std::cout << "Sharing done." << std::endl;
+    StatsPoint end_share(*network);
     network->sync();
 
-    auto rbench = end - start;
+    auto rbench = end_share - start_share;
     output_data["benchmarks"].push_back(rbench);
 
     size_t bytes_sent = 0;
@@ -53,8 +46,27 @@ void benchmark(const bpo::variables_map &opts) {
         bytes_sent += val.get<int64_t>();
     }
 
-    std::cout << "time: " << rbench["time"] << " ms" << std::endl;
-    std::cout << "sent: " << bytes_sent << " bytes" << std::endl;
+    std::cout << "share time: " << rbench["time"] << " ms" << std::endl;
+    std::cout << "share sent: " << bytes_sent << " bytes" << std::endl;
+
+    std::cout << std::endl;
+
+    StatsPoint start_reveal(*network);
+    auto revealed = share::reveal_vec(conf, share);
+    std::cout << "Reveal done." << std::endl;
+    StatsPoint end_reveal(*network);
+    network->sync();
+
+    rbench = end_reveal - start_reveal;
+    output_data["benchmarks"].push_back(rbench);
+
+    bytes_sent = 0;
+    for (const auto &val : rbench["communication"]) {
+        bytes_sent += val.get<int64_t>();
+    }
+
+    std::cout << "reveal time: " << rbench["time"] << " ms" << std::endl;
+    std::cout << "reveal sent: " << bytes_sent << " bytes" << std::endl;
 
     std::cout << std::endl;
 

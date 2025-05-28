@@ -1,5 +1,5 @@
 add_executable(test_perm
-    main.cpp
+    test_perm.cpp
     ${TEST_SOURCES}
     ${TEST_HEADERS})
 target_link_libraries(test_perm PUBLIC Boost::system EMPTool NTL GMP nlohmann_json::nlohmann_json)

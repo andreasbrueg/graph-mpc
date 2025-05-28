@@ -102,25 +102,6 @@ void test_observation_2_4() {
     assert(left == right);
 }
 
-void custom() {
-    Permutation pi = Permutation({4, 6, 0, 3, 2, 1, 7, 5, 9, 8});
-    Permutation pi_inv = Permutation({2, 5, 4, 3, 0, 7, 1, 6, 9, 8});
-    Permutation p1 = Permutation({5, 8, 2, 6, 0, 1, 4, 7, 3, 9});
-    Permutation p2 = Permutation({4, 0, 6, 2, 9, 8, 5, 3, 7, 1});
-    Permutation omega = Permutation({3, 8, 7, 4, 0, 1, 9, 5, 6, 2});
-    Permutation omega_inv = Permutation({4, 5, 9, 0, 3, 7, 8, 2, 1, 6});
-
-    std::vector<Row> input_vector = std::vector<Row>({0, 2, 3, 3, 4, 7, 8, 8, 9, 9});
-
-    auto reverse_sorted_vector = p2(omega_inv(omega(pi_inv(pi(p1.inverse()(input_vector))))));
-
-    std::cout << "res: ";
-    for (const auto &elem : reverse_sorted_vector) {
-        std::cout << elem << ", ";
-    }
-    std::cout << std::endl;
-}
-
 int main(int argc, char **argv) {
     test_plausibility();
     test_associativity();
@@ -128,6 +109,5 @@ int main(int argc, char **argv) {
     test_pi_1_p();
     test_fact_2_3();
     test_observation_2_4();
-    custom();
     return 0;
 }

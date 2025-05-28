@@ -6,6 +6,7 @@
 #include "../../src/utils/perm.h"
 
 void test_mp(const bpo::variables_map &opts) {
+    std::cout << "------ test_mp ------" << std::endl << std::endl;
     auto vec_size = opts["vec-size"].as<size_t>();
 
     size_t pid, nP, repeat, threads, shuffle_num, nodes;
@@ -37,6 +38,12 @@ void test_mp(const bpo::variables_map &opts) {
     RandomGenerators rngs(seeds_h, seeds_l);
     ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
 
+    /**
+     *      0 == 1
+     *       \  //
+     *         2
+     */
+
     Graph g;
     g.size = 8;
     g.src = std::vector<Row>({0, 1, 2, 0, 1, 2, 2, 2});
@@ -49,7 +56,19 @@ void test_mp(const bpo::variables_map &opts) {
     mp::run(conf, g_shared, 1, 3);
 
     auto res_g = share::reveal_graph(conf, g_shared);
-    if (pid != D) res_g.print();
+
+    if (pid != D) {
+        res_g.print();
+
+        assert(res_g.payload[0] == 6);
+        assert(res_g.payload[1] == 9);
+        assert(res_g.payload[2] == 3);
+        assert(res_g.payload[3] == 0);
+        assert(res_g.payload[4] == 0);
+        assert(res_g.payload[5] == 0);
+        assert(res_g.payload[6] == 0);
+        assert(res_g.payload[7] == 0);
+    }
 
     exit(0);
 }

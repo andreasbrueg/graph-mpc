@@ -6,6 +6,8 @@
 #include "../../src/utils/perm.h"
 
 void test_bfs(const bpo::variables_map &opts) {
+    std::cout << "------ test_bfs ------" << std::endl << std::endl;
+
     auto vec_size = opts["vec-size"].as<size_t>();
 
     size_t pid, nP, repeat, threads, shuffle_num, nodes;

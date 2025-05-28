@@ -46,7 +46,8 @@ PermShare shuffle::get_shuffle_compute(ProtocolConfig &conf, std::vector<Row> &s
 
             for (int i = 0; i < n_rows; ++i) {
                 /* Send pi_1_p to P1's shared_secret_buffer */
-                shared_secret_D1.push_back((Row)pi_1_p[i]);
+                shared_secret_D1[shared_secret_D1_idx] = (Row)pi_1_p[i];
+                shared_secret_D1_idx++;
             }
 
             /* Compute B_0, B_1 */
@@ -65,8 +66,10 @@ PermShare shuffle::get_shuffle_compute(ProtocolConfig &conf, std::vector<Row> &s
 
             for (int i = 0; i < n_rows; ++i) {
                 /* Send B_0 and B_1 to the corresponding buffers */
-                shared_secret_D0.push_back(B_0[i]);
-                shared_secret_D1.push_back(B_1[i]);
+                shared_secret_D0[shared_secret_D0_idx] = B_0[i];
+                shared_secret_D1[shared_secret_D1_idx] = B_1[i];
+                shared_secret_D0_idx++;
+                shared_secret_D1_idx++;
             }
             break;
         }
@@ -105,11 +108,12 @@ PermShare shuffle::get_shuffle_compute(ProtocolConfig &conf, std::vector<Row> &s
 
 PermShare shuffle::get_shuffle(ProtocolConfig &conf) {
     auto pid = conf.pid;
+    auto n_rows = conf.n_rows;
     auto network = conf.network;
     auto BLOCK_SIZE = conf.BLOCK_SIZE;
 
-    std::vector<Row> shared_secret_D0;
-    std::vector<Row> shared_secret_D1;
+    std::vector<Row> shared_secret_D0(n_rows);
+    std::vector<Row> shared_secret_D1(2 * n_rows);
 
     switch (pid) {
         case D: {
@@ -220,9 +224,10 @@ std::vector<Row> shuffle::shuffle(ProtocolConfig &conf, std::vector<Row> &input_
     return shuffled_share;
 }
 
-std::vector<Row> shuffle::shuffle(ProtocolConfig &conf, Permutation perm, PermShare &perm_share, bool save) {
+Permutation shuffle::shuffle(ProtocolConfig &conf, Permutation perm, PermShare &perm_share, bool save) {
     std::vector<Row> perm_vec = perm.get_perm_vec();
-    return shuffle(conf, perm_vec, perm_share, save);
+    auto shuffled = shuffle(conf, perm_vec, perm_share, save);
+    return Permutation(shuffled);
 }
 
 std::vector<Row> shuffle::unshuffle(ProtocolConfig &conf, std::vector<Row> &input_share, PermShare &perm_share) {

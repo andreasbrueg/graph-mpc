@@ -87,9 +87,9 @@ void mp::run(ProtocolConfig &conf, SecretSharedGraph &graph, size_t n_iterations
     auto time = (perm_end - perm_start)["time"];
     std::cout << "Done. " << "time: " << time << " ms" << std::endl << std::endl;
 
-    auto src_order_rev = share::reveal(conf, src_order);
-    auto dst_order_rev = share::reveal(conf, dst_order);
-    auto vtx_order_rev = share::reveal(conf, vtx_order);
+    auto src_order_rev = share::reveal_perm(conf, src_order);
+    auto dst_order_rev = share::reveal_perm(conf, dst_order);
+    auto vtx_order_rev = share::reveal_perm(conf, vtx_order);
 
     /* Bring payload into vertex order */
     auto payload_v = SecretSharedGraph::from_bits(graph.payload_bits, graph.size);

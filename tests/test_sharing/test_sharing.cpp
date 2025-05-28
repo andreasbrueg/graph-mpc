@@ -5,6 +5,7 @@
 #include "../../src/utils/sharing.h"
 
 void test_sharing(const bpo::variables_map &opts) {
+    std::cout << "------ test_sharing ------" << std::endl << std::endl;
     auto vec_size = opts["vec-size"].as<size_t>();
 
     size_t pid, nP, repeat, threads, shuffle_num, nodes;
@@ -37,13 +38,8 @@ void test_sharing(const bpo::variables_map &opts) {
         input_table[i] = i;
     }
 
-    if (pid == P0) {
-        share::random_share_secret_vec_send(P1, rngs, network, share, input_table);
-        reconstructed = share::reveal_vec(P1, network, share);
-    } else if (pid == P1) {
-        share::random_share_secret_vec_recv(P0, network, share);
-        reconstructed = share::reveal_vec(P0, network, share);
-    }
+    share = share::random_share_secret_vec_2P(party, rngs, network, input_table);
+    reconstructed = share::reveal_vec(conf, share);
 
     std::cout << "Final share: ";
     for (const auto &elem : share) {

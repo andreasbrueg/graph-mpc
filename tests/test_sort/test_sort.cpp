@@ -5,7 +5,8 @@
 #include "../../src/protocol/sorting.h"
 #include "../../src/utils/perm.h"
 
-void test_shuffle(const bpo::variables_map &opts) {
+void test_sort(const bpo::variables_map &opts) {
+    std::cout << "------ test_sort ------" << std::endl << std::endl;
     auto vec_size = opts["vec-size"].as<size_t>();
 
     size_t pid, nP, repeat, threads, shuffle_num, nodes;
@@ -48,37 +49,34 @@ void test_shuffle(const bpo::variables_map &opts) {
         }
     }
 
-    if (pid == 0) {
-        for (size_t i = 0; i < bit_shares.size(); ++i) {
-            share::random_share_secret_vec_send(P1, rngs, network, bit_shares[i], bits[i]);
-        }
-    } else if (pid == 1) {
-        for (size_t i = 0; i < bit_shares.size(); ++i) {
-            share::random_share_secret_vec_recv(P0, network, bit_shares[i]);
-        }
+    for (size_t i = 0; i < bit_shares.size(); ++i) {
+        bit_shares[i] = share::random_share_secret_vec_2P(party, rngs, network, bits[i]);
     }
-
-    /* Test if sharing worked correctly */
-    auto reveal_one = share::reveal(conf, bit_shares[3]);
 
     /* Sorting a vector with entries larger than one bit */
     Permutation sort_share = sort::get_sort(conf, bit_shares);
-    Permutation sort = share::reveal(conf, sort_share);
+    Permutation sort = share::reveal_perm(conf, sort_share);
     auto sorted_vector = sort(input_vector);
 
-    std::cout << "Original input_vector: ";
+    if (pid != D) {
+        std::cout << "Original input_vector: ";
 
-    for (size_t i = 0; i < input_vector.size() - 1; ++i) {
-        std::cout << input_vector[i] << ", ";
+        for (size_t i = 0; i < input_vector.size() - 1; ++i) {
+            std::cout << input_vector[i] << ", ";
+        }
+        std::cout << input_vector[input_vector.size() - 1] << std::endl;
+
+        std::cout << "Sorted input_vector: ";
+
+        for (size_t i = 0; i < sorted_vector.size() - 1; ++i) {
+            std::cout << sorted_vector[i] << ", ";
+        }
+        std::cout << sorted_vector[input_vector.size() - 1] << std::endl;
+
+        for (size_t i = 0; i < sorted_vector.size() - 1; ++i) {
+            assert(sorted_vector[i] <= sorted_vector[i + 1]);
+        }
     }
-    std::cout << input_vector[input_vector.size() - 1] << std::endl;
-
-    std::cout << "Sorted input_vector: ";
-
-    for (size_t i = 0; i < sorted_vector.size() - 1; ++i) {
-        std::cout << sorted_vector[i] << ", ";
-    }
-    std::cout << sorted_vector[input_vector.size() - 1] << std::endl;
 
     exit(0);
 }
@@ -95,7 +93,7 @@ int main(int argc, char **argv) {
     bpo::variables_map opts = setup::parseOptions(cmdline, prog_opts, argc, argv);
 
     try {
-        test_shuffle(opts);
+        test_sort(opts);
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\nFatal error" << std::endl;
         return 1;

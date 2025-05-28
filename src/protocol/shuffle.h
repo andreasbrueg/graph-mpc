@@ -22,7 +22,7 @@ PermShare get_shuffle(ProtocolConfig &conf);
 
 std::vector<Row> shuffle(ProtocolConfig &conf, std::vector<Row> &input_share, PermShare &perm_share, bool save);
 
-std::vector<Row> shuffle(ProtocolConfig &conf, Permutation perm, PermShare &perm_share, bool save);
+Permutation shuffle(ProtocolConfig &conf, Permutation perm, PermShare &perm_share, bool save);
 
 std::vector<Row> unshuffle(ProtocolConfig &conf, std::vector<Row> &input_share, PermShare &perm_share);
 

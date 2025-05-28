@@ -5,6 +5,7 @@
 #include "../../src/utils/sharing.h"
 
 void test_shuffle(const bpo::variables_map &opts) {
+    std::cout << "------ test_shuffle ------" << std::endl << std::endl;
     auto vec_size = opts["vec-size"].as<size_t>();
 
     size_t pid, nP, repeat, threads, shuffle_num, nodes;
@@ -33,13 +34,7 @@ void test_shuffle(const bpo::variables_map &opts) {
     RandomGenerators rngs(seeds_h, seeds_l);
     ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
 
-    std::vector<Row> share(vec_size);
-
-    if (pid == 0) {
-        share::random_share_secret_vec_send(P1, rngs, network, share, input_vector);
-    } else if (pid == 1) {
-        share::random_share_secret_vec_recv(P0, network, share);
-    }
+    std::vector<Row> share = share::random_share_secret_vec_2P(party, rngs, network, input_vector);
 
     /* Protocol run */
     PermShare perm_share = shuffle::get_shuffle(conf);
@@ -50,7 +45,7 @@ void test_shuffle(const bpo::variables_map &opts) {
     std::vector<Row> new_shuffle_share = shuffle::shuffle(conf, share, perm_share_new, true);
     std::vector<Row> second_unshuffle_share = shuffle::unshuffle(conf, new_shuffle_share, perm_share_new);
 
-    std::vector<Row> res = share::reveal(conf, shuffle_share);
+    std::vector<Row> res = share::reveal_vec(conf, shuffle_share);
 
     if (pid != D) {
         std::cout << std::endl << "Result of shuffle: ";
@@ -59,20 +54,28 @@ void test_shuffle(const bpo::variables_map &opts) {
         }
         std::cout << res[res.size() - 1] << std::endl;
         std::cout << std::endl << std::endl;
+
+        bool shuffled = false;
+        for (size_t i = 0; i < res.size(); ++i) {
+            if (res[i] != i) shuffled = shuffled || true;
+        }
+        assert(shuffled);
     }
 
-    res = share::reveal(conf, repeat_share);
+    auto repeat_res = share::reveal_vec(conf, repeat_share);
 
     if (pid != D) {
         std::cout << std::endl << "Result of repeat: ";
-        for (int i = 0; i < res.size() - 1; ++i) {
-            std::cout << res[i] << ", ";
+        for (int i = 0; i < repeat_res.size() - 1; ++i) {
+            std::cout << repeat_res[i] << ", ";
         }
-        std::cout << res[res.size() - 1] << std::endl;
+        std::cout << repeat_res[res.size() - 1] << std::endl;
         std::cout << std::endl << std::endl;
+
+        assert(res == repeat_res);
     }
 
-    res = share::reveal(conf, unshuffle_share);
+    res = share::reveal_vec(conf, unshuffle_share);
 
     if (pid != D) {
         std::cout << std::endl << "Result of unshuffle: ";
@@ -81,20 +84,29 @@ void test_shuffle(const bpo::variables_map &opts) {
         }
         std::cout << res[res.size() - 1] << std::endl;
         std::cout << std::endl << std::endl;
+
+        assert(res == input_vector);
     }
 
-    res = share::reveal(conf, new_shuffle_share);
+    auto new_shuffle = share::reveal_vec(conf, new_shuffle_share);
 
     if (pid != D) {
         std::cout << std::endl << "Result of new shuffle: ";
-        for (int i = 0; i < res.size() - 1; ++i) {
-            std::cout << res[i] << ", ";
+        for (int i = 0; i < new_shuffle.size() - 1; ++i) {
+            std::cout << new_shuffle[i] << ", ";
         }
-        std::cout << res[res.size() - 1] << std::endl;
+        std::cout << new_shuffle[new_shuffle.size() - 1] << std::endl;
         std::cout << std::endl << std::endl;
+
+        bool shuffled = false;
+        for (size_t i = 0; i < new_shuffle.size(); ++i) {
+            if (new_shuffle[i] != i) shuffled = shuffled || true;
+        }
+        assert(shuffled);
+        assert(res != new_shuffle);
     }
 
-    res = share::reveal(conf, second_unshuffle_share);
+    res = share::reveal_vec(conf, second_unshuffle_share);
 
     if (pid != D) {
         std::cout << std::endl << "Result of second unshuffle: ";
@@ -103,6 +115,8 @@ void test_shuffle(const bpo::variables_map &opts) {
         }
         std::cout << res[res.size() - 1] << std::endl;
         std::cout << std::endl << std::endl;
+
+        assert(res == input_vector);
     }
 
     exit(0);

@@ -4,10 +4,11 @@ Permutation sort::sort_iteration(ProtocolConfig &conf, Permutation &perm, std::v
     /* Shuffle perm */
     conf.n_rows = perm.size();
     PermShare perm_share = shuffle::get_shuffle(conf);
-    std::vector<Row> perm_shuffled = shuffle::shuffle(conf, perm, perm_share, true);
+    auto perm_vec = perm.get_perm_vec();
+    std::vector<Row> perm_shuffled = shuffle::shuffle(conf, perm_vec, perm_share, true);
 
     /* Reveal shuffled perm */
-    std::vector<Row> revealed = share::reveal(conf, perm_shuffled);
+    std::vector<Row> revealed = share::reveal_vec(conf, perm_shuffled);
     Permutation perm_open = Permutation(revealed);
 
     /* Shuffle input using the previous order */
@@ -29,7 +30,6 @@ Permutation sort::sort_iteration(ProtocolConfig &conf, Permutation &perm, std::v
 Permutation sort::get_sort(ProtocolConfig &conf, std::vector<std::vector<Row>> &bit_shares) {
     /* Compute compaction of x_0 */
     Permutation sigma = compaction::get_compaction(conf, bit_shares[0]);
-
     /* Proceed sorting with x_1, x_2, ... */
     size_t n_bits = bit_shares.size();
     for (size_t i = 1; i < n_bits; ++i) {
@@ -42,7 +42,7 @@ std::vector<Row> sort::apply_perm(ProtocolConfig &conf, Permutation &perm, std::
     /* Shuffle permutation and open it */
     PermShare perm_share = shuffle::get_shuffle(conf);
     auto perm_shuffled = shuffle::shuffle(conf, perm, perm_share, true);
-    auto revealed = share::reveal(conf, perm_shuffled);
+    auto revealed = share::reveal_perm(conf, perm_shuffled);
     Permutation perm_opened = Permutation(revealed);
 
     /* Shuffle input_share with same perm */
@@ -59,8 +59,8 @@ std::vector<Row> sort::switch_perm(ProtocolConfig &conf, Permutation &p1, Permut
     auto shuffled_p1 = shuffle::shuffle(conf, p1, pi, true);
     auto shuffled_p2 = shuffle::shuffle(conf, p2, omega, true);
 
-    auto revealed_p1 = Permutation(share::reveal(conf, shuffled_p1)); /* pi(p1.get_perm_vec()) == (p1 * pi.inv) */
-    auto revealed_p2 = Permutation(share::reveal(conf, shuffled_p2)); /* omega(p2.get_perm_vec()) == p2 * omega.inv */
+    auto revealed_p1 = Permutation(share::reveal_perm(conf, shuffled_p1)); /* pi(p1.get_perm_vec()) == (p1 * pi.inv) */
+    auto revealed_p2 = Permutation(share::reveal_perm(conf, shuffled_p2)); /* omega(p2.get_perm_vec()) == p2 * omega.inv */
 
     auto merged = shuffle::get_merged_shuffle(conf, pi, omega); /* omega * pi.inv */
 

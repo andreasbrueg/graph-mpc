@@ -11,8 +11,8 @@ void test_sort(const bpo::variables_map &opts) {
 
     size_t pid, nP, repeat, threads, shuffle_num, nodes;
     std::shared_ptr<io::NetIOMP> network = nullptr;
-    uint64_t seeds_h[5];
-    uint64_t seeds_l[5];
+    uint64_t seeds_h[7];
+    uint64_t seeds_l[7];
     json output_data;
     bool save_output;
     std::string save_file;
@@ -54,6 +54,9 @@ void test_sort(const bpo::variables_map &opts) {
     }
 
     /* Sorting a vector with entries larger than one bit */
+    // auto sort_preproc = sort::get_sort_preprocess(conf, bit_shares.size());
+    // auto sort_share = sort::get_sort_evaluate(conf, bit_shares, sort_preproc);
+
     Permutation sort_share = sort::get_sort(conf, bit_shares);
     Permutation sort = share::reveal_perm(conf, sort_share);
     auto sorted_vector = sort(input_vector);
@@ -84,7 +87,7 @@ void test_sort(const bpo::variables_map &opts) {
 int main(int argc, char **argv) {
     auto prog_opts(setup::programOptions());
 
-    bpo::options_description cmdline("Benchmark a simple test for shuffling and unshuffling");
+    bpo::options_description cmdline("Benchmark a simple test for sorting.");
     cmdline.add(prog_opts);
 
     cmdline.add_options()("config,c", bpo::value<std::string>(), "configuration file for easy specification of cmd line arguments")("help,h",

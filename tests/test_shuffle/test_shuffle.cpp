@@ -10,8 +10,8 @@ void test_shuffle(const bpo::variables_map &opts) {
 
     size_t pid, nP, repeat, threads, shuffle_num, nodes;
     std::shared_ptr<io::NetIOMP> network = nullptr;
-    uint64_t seeds_h[5];
-    uint64_t seeds_l[5];
+    uint64_t seeds_h[7];
+    uint64_t seeds_l[7];
     json output_data;
     bool save_output;
     std::string save_file;
@@ -37,13 +37,13 @@ void test_shuffle(const bpo::variables_map &opts) {
     std::vector<Row> share = share::random_share_secret_vec_2P(party, rngs, network, input_vector);
 
     /* Protocol run */
-    PermShare perm_share = shuffle::get_shuffle(conf);
-    std::vector<Row> shuffle_share = shuffle::shuffle(conf, share, perm_share, true);
-    std::vector<Row> repeat_share = shuffle::shuffle(conf, share, perm_share, false);
-    std::vector<Row> unshuffle_share = shuffle::unshuffle(conf, repeat_share, perm_share);
-    PermShare perm_share_new = shuffle::get_shuffle(conf);
-    std::vector<Row> new_shuffle_share = shuffle::shuffle(conf, share, perm_share_new, true);
-    std::vector<Row> second_unshuffle_share = shuffle::unshuffle(conf, new_shuffle_share, perm_share_new);
+    PermShare perm_share_one = shuffle::get_shuffle(conf);
+    PermShare perm_share_two = shuffle::get_shuffle(conf);
+    std::vector<Row> shuffle_share = shuffle::shuffle(conf, share, perm_share_one, true);
+    std::vector<Row> repeat_share = shuffle::shuffle(conf, share, perm_share_one, false);
+    std::vector<Row> unshuffle_share = shuffle::unshuffle(conf, repeat_share, perm_share_one);
+    std::vector<Row> new_shuffle_share = shuffle::shuffle(conf, share, perm_share_two, true);
+    std::vector<Row> second_unshuffle_share = shuffle::unshuffle(conf, new_shuffle_share, perm_share_two);
 
     std::vector<Row> res = share::reveal_vec(conf, shuffle_share);
 

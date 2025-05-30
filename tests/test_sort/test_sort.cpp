@@ -54,10 +54,8 @@ void test_sort(const bpo::variables_map &opts) {
     }
 
     /* Sorting a vector with entries larger than one bit */
-    // auto sort_preproc = sort::get_sort_preprocess(conf, bit_shares.size());
-    // auto sort_share = sort::get_sort_evaluate(conf, bit_shares, sort_preproc);
-
-    Permutation sort_share = sort::get_sort(conf, bit_shares);
+    auto sort_preproc = sort::get_sort_preprocess(conf, bit_shares.size());
+    auto sort_share = sort::get_sort_evaluate(conf, bit_shares, sort_preproc);
     Permutation sort = share::reveal_perm(conf, sort_share);
     auto sorted_vector = sort(input_vector);
 

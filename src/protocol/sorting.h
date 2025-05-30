@@ -6,14 +6,42 @@
 #include "compaction.h"
 #include "shuffle.h"
 
+struct SortPreprocessing {
+    std::vector<PermShare> perm_share_vec;
+    std::vector<std::tuple<std::vector<Row>, std::vector<Row>, std::vector<Row>>> comp_triples;
+};
+
 namespace sort {
 
-Permutation sort_iteration(ProtocolConfig &conf, Permutation &perm, std::vector<Row> &bit_vec_share);
+/**
+ * Runs the necessary preprocessing to compute a sort later on
+ */
+SortPreprocessing get_sort_preprocess(ProtocolConfig &c, size_t n_bits);
 
-Permutation get_sort(ProtocolConfig &conf, std::vector<std::vector<Row>> &bit_shares);
+/**
+ * Runs one sort_iteration using already computed preprocessing
+ */
+Permutation sort_iteration_evaluate(ProtocolConfig &c, Permutation &perm, std::vector<Row> &bit_shares, SortPreprocessing &preproc);
 
-std::vector<Row> apply_perm(ProtocolConfig &conf, Permutation &perm, std::vector<Row> &input_share);
+/**
+ * Runs the necessary preprocessing to compute a sort later on
+ */
+Permutation get_sort_evaluate(ProtocolConfig &c, std::vector<std::vector<Row>> &bit_shares, SortPreprocessing &preproc);
 
-std::vector<Row> switch_perm(ProtocolConfig &conf, Permutation &p1, Permutation &p2, std::vector<Row> &input_share);
+/**
+ * Runs one sort_iteration using ad-hoc preprocessing
+ */
+Permutation sort_iteration(ProtocolConfig &c, Permutation &perm, std::vector<Row> &bit_vec_share);
+
+/**
+ * Interactively computes the sorting of bit-shares using ad-hoc preprocessing
+ */
+Permutation get_sort(ProtocolConfig &c, std::vector<std::vector<Row>> &bit_shares);
+
+std::vector<Row> apply_perm(ProtocolConfig &c, Permutation &perm, std::vector<Row> &input_share);
+
+std::vector<Row> switch_perm(ProtocolConfig &c, Permutation &p1, Permutation &p2, std::vector<Row> &input_share);
+
+std::vector<Row> switch_perm(ProtocolConfig &c, Permutation &p1, Permutation &p2, std::vector<Row> &input_share);
 
 };  // namespace sort

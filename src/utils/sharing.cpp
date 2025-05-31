@@ -22,7 +22,7 @@ Row share::random_share_3P(ProtocolConfig &c) {
     }
 }
 
-Row share::random_share_secret_3P(ProtocolConfig &c, Row &secret) {
+Row share::random_share_secret_3P(ProtocolConfig &c, std::vector<Row> &vals_to_p1, size_t &idx, Row &secret) {
     switch (c.pid) {
         case P0: {
             Row share;
@@ -30,15 +30,16 @@ Row share::random_share_secret_3P(ProtocolConfig &c, Row &secret) {
             return share;
         }
         case P1: {
-            Row share;
-            c.network->recv(2, &share, sizeof(Row));
+            Row share = vals_to_p1[idx];
+            ++idx;
             return share;
         }
         case D: {
             Row share_0;
             c.rngs.rng_D0_comp().random_data(&share_0, sizeof(Row));
             Row share_1 = secret - share_0;
-            c.network->send(1, &share_1, sizeof(Row));
+            vals_to_p1[idx] = share_1;
+            idx++;
             return secret;
         }
     }

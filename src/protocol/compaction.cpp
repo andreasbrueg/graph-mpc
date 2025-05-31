@@ -1,28 +1,27 @@
 #include "compaction.h"
 
-std::tuple<std::vector<Row>, std::vector<Row>, std::vector<Row>> compaction::preprocess_one(ProtocolConfig &c) {
+std::tuple<std::vector<Row>, std::vector<Row>, std::vector<Row>> compaction::preprocess(ProtocolConfig &c) {
     std::vector<Row> triple_a, triple_b, triple_c;
+
+    std::vector<Row> vals_to_p1(c.n_rows);
+    size_t idx = 0;
+
+    if (c.pid == P1) recv_vec(D, c.network, vals_to_p1, c.BLOCK_SIZE);
 
     for (size_t i = 0; i < c.n_rows; ++i) {
         triple_a.push_back(share::random_share_3P(c));
         triple_b.push_back(share::random_share_3P(c));
         Row mul = triple_a[i] * triple_b[i];
-        triple_c.push_back(share::random_share_secret_3P(c, mul));
+        triple_c.push_back(share::random_share_secret_3P(c, vals_to_p1, idx, mul));
     }
+
+    if (c.pid == D) send_vec(P1, c.network, vals_to_p1.size(), vals_to_p1, c.BLOCK_SIZE);
 
     return {triple_a, triple_b, triple_c};
 }
 
-std::vector<std::tuple<std::vector<Row>, std::vector<Row>, std::vector<Row>>> compaction::preprocess(ProtocolConfig &c, size_t n) {
-    std::vector<std::tuple<std::vector<Row>, std::vector<Row>, std::vector<Row>>> preproc;
-    for (size_t i = 0; i < n; ++i) {
-        preproc.push_back(preprocess_one(c));
-    }
-    return preproc;
-}
-
-Permutation compaction::evaluate_one(ProtocolConfig &c, std::vector<Row> &triple_a, std::vector<Row> &triple_b, std::vector<Row> &triple_c,
-                                     std::vector<Row> &input_share) {
+Permutation compaction::evaluate(ProtocolConfig &c, std::vector<Row> &triple_a, std::vector<Row> &triple_b, std::vector<Row> &triple_c,
+                                 std::vector<Row> &input_share) {
     std::vector<Row> output(c.n_rows);
     std::vector<Row> vals;
 
@@ -90,7 +89,7 @@ Permutation compaction::evaluate_one(ProtocolConfig &c, std::vector<Row> &triple
 }
 
 Permutation compaction::get_compaction(ProtocolConfig &c, std::vector<Row> &input_share) {
-    auto [triple_a, triple_b, triple_c] = preprocess_one(c);
+    auto [triple_a, triple_b, triple_c] = preprocess(c);
     c.network->sync();
-    return evaluate_one(c, triple_a, triple_b, triple_c, input_share);
+    return evaluate(c, triple_a, triple_b, triple_c, input_share);
 }

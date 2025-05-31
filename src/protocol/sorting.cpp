@@ -4,9 +4,11 @@ SortPreprocessing sort::get_sort_preprocess(ProtocolConfig &c, size_t n_bits) {
     SortPreprocessing preproc;
 
     /* Get compaction preprocessing */
-    preproc.comp_triples = compaction::preprocess(c, n_bits);
+    for (size_t i = 0; i < n_bits; ++i) {
+        preproc.comp_triples.push_back(compaction::preprocess(c));
+    }
 
-    /* Compute the preprocessing for n_bits-1 shuffles */
+    /* Compute the preprocessing for n_bits-1 shuffles and unshuffles */
     for (size_t i = 0; i < n_bits - 1; ++i) {
         PermShare perm_share = shuffle::get_shuffle(c);
         preproc.perm_share_vec.push_back(perm_share);
@@ -35,7 +37,7 @@ Permutation sort::sort_iteration_evaluate(ProtocolConfig &c, Permutation &perm, 
     /* Compute compaction to stable sort next input */
     auto [triple_a, triple_b, triple_c] = preproc.comp_triples[0];
     preproc.comp_triples.erase(preproc.comp_triples.begin());
-    Permutation sigma_p = compaction::evaluate_one(c, triple_a, triple_b, triple_c, input_sorted);
+    Permutation sigma_p = compaction::evaluate(c, triple_a, triple_b, triple_c, input_sorted);
     auto sigma_p_vec = sigma_p.get_perm_vec();
     std::vector<Row> next_perm = perm_open.inverse()(sigma_p_vec);
 
@@ -53,7 +55,7 @@ Permutation sort::get_sort_evaluate(ProtocolConfig &c, std::vector<std::vector<R
     /* Delete first element */
     preproc.comp_triples.erase(preproc.comp_triples.begin());
 
-    Permutation sigma = compaction::evaluate_one(c, triple_a, triple_b, triple_c, bit_shares[0]);
+    Permutation sigma = compaction::evaluate(c, triple_a, triple_b, triple_c, bit_shares[0]);
 
     size_t n_bits = bit_shares.size();
     for (size_t i = 1; i < n_bits; ++i) {

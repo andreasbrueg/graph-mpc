@@ -4,10 +4,10 @@ std::tuple<std::vector<Row>, std::vector<Row>, std::vector<Row>> compaction::pre
     std::vector<Row> triple_a, triple_b, triple_c;
 
     for (size_t i = 0; i < c.n_rows; ++i) {
-        triple_a.push_back(share::random_share_3P(c.pid, c.rngs));
-        triple_b.push_back(share::random_share_3P(c.pid, c.rngs));
+        triple_a.push_back(share::random_share_3P(c));
+        triple_b.push_back(share::random_share_3P(c));
         Row mul = triple_a[i] * triple_b[i];
-        triple_c.push_back(share::random_share_secret_3P(c.pid, c.rngs, c.network, mul));
+        triple_c.push_back(share::random_share_secret_3P(c, mul));
     }
 
     return {triple_a, triple_b, triple_c};

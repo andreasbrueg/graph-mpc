@@ -34,7 +34,7 @@ void test_shuffle(const bpo::variables_map &opts) {
     RandomGenerators rngs(seeds_h, seeds_l);
     ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
 
-    std::vector<Row> share = share::random_share_secret_vec_2P(party, rngs, network, input_vector);
+    std::vector<Row> share = share::random_share_secret_vec_2P(conf, input_vector);
 
     /* Protocol run */
     PermShare perm_share_one = shuffle::get_shuffle(conf);

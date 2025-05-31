@@ -28,7 +28,7 @@ void test_sharing(const bpo::variables_map &opts) {
 
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
-    ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
+    ProtocolConfig c(party, rngs, network, vec_size, 1000000);
 
     std::vector<Row> share(vec_size);
     std::vector<Row> input_table(vec_size);
@@ -38,8 +38,8 @@ void test_sharing(const bpo::variables_map &opts) {
         input_table[i] = i;
     }
 
-    share = share::random_share_secret_vec_2P(party, rngs, network, input_table);
-    reconstructed = share::reveal_vec(conf, share);
+    share = share::random_share_secret_vec_2P(c, input_table);
+    reconstructed = share::reveal_vec(c, share);
 
     std::cout << "Final share: ";
     for (const auto &elem : share) {
@@ -67,8 +67,8 @@ void test_sharing(const bpo::variables_map &opts) {
     g.isV = isV;
     g.payload = payload;
 
-    SecretSharedGraph shared_graph = share::random_share_graph(conf, g);
-    Graph reconstructed_graph = share::reveal_graph(conf, shared_graph);
+    SecretSharedGraph shared_graph = share::random_share_graph(c, g);
+    Graph reconstructed_graph = share::reveal_graph(c, shared_graph);
 
     std::cout << "Initial graph: " << std::endl;
     g.print();

@@ -33,7 +33,7 @@ void benchmark(const bpo::variables_map &opts) {
     for (size_t i = 0; i < vec_size; ++i) input_table[i] = i;
 
     StatsPoint start_share(*network);
-    auto share = share::random_share_secret_vec_2P(party, rngs, network, input_table);
+    auto share = share::random_share_secret_vec_2P(conf, input_table);
     std::cout << "Sharing done." << std::endl;
     StatsPoint end_share(*network);
     network->sync();

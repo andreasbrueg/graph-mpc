@@ -54,9 +54,9 @@ void test_sw_perm(const bpo::variables_map &opts) {
         }
     }
 
-    input_share = share::random_share_secret_vec_2P(party, rngs, network, input_vector);
+    input_share = share::random_share_secret_vec_2P(conf, input_vector);
     for (size_t i = 0; i < bit_shares.size(); ++i) {
-        bit_shares[i] = share::random_share_secret_vec_2P(party, rngs, network, bits[i]);
+        bit_shares[i] = share::random_share_secret_vec_2P(conf, bits[i]);
     }
 
     /* Sorting a vector with entries larger than one bit */
@@ -74,7 +74,7 @@ void test_sw_perm(const bpo::variables_map &opts) {
 
     /* Sharing again */
     for (size_t i = 0; i < bit_shares.size(); ++i) {
-        bit_shares[i] = share::random_share_secret_vec_2P(party, rngs, network, bits[i]);
+        bit_shares[i] = share::random_share_secret_vec_2P(conf, bits[i]);
     }
 
     /* Generating and applying reverse sort */

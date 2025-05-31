@@ -50,7 +50,7 @@ void benchmark(const bpo::variables_map &opts) {
     }
 
     for (size_t i = 0; i < bit_shares.size(); ++i) {
-        bit_shares[i] = share::random_share_secret_vec_2P(party, rngs, network, bits[i]);
+        bit_shares[i] = share::random_share_secret_vec_2P(conf, bits[i]);
     }
 
     for (size_t r = 0; r < repeat; ++r) {

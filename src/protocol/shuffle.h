@@ -24,9 +24,11 @@ std::vector<Row> shuffle(ProtocolConfig &c, std::vector<Row> &input_share, PermS
 
 Permutation shuffle(ProtocolConfig &c, Permutation &perm, PermShare &perm_share, bool save);
 
-std::vector<Row> unshuffle(ProtocolConfig &c, std::vector<Row> &input_share, PermShare &perm_share);
+std::vector<Row> get_unshuffle(ProtocolConfig &c, PermShare &perm_share);
 
-Permutation unshuffle(ProtocolConfig &c, Permutation &perm, PermShare &perm_share);
+std::vector<Row> unshuffle(ProtocolConfig &c, PermShare &shuffle_share, std::vector<Row> &B, std::vector<Row> &input_share);
+
+Permutation unshuffle(ProtocolConfig &c, PermShare &shuffle_share, std::vector<Row> &B, Permutation &perm);
 
 PermShare get_merged_shuffle(ProtocolConfig &c, PermShare &pi_share, PermShare &omega_share);
 

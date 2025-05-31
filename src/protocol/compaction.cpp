@@ -60,39 +60,17 @@ Permutation compaction::evaluate_one(ProtocolConfig &c, std::vector<Row> &triple
             vals.push_back(xa);
             vals.push_back(yb);
         }
-    }
 
-    std::vector<Row> data_recv(2 * c.n_rows);
-    if (c.pid == P0) {
-        send_vec(P1, c.network, vals.size(), vals, c.BLOCK_SIZE);
-        recv_vec(P1, c.network, data_recv, c.BLOCK_SIZE);
-    } else if (c.pid == P1) {
-        recv_vec(P0, c.network, data_recv, c.BLOCK_SIZE);
-        send_vec(P0, c.network, vals.size(), vals, c.BLOCK_SIZE);
-    }
-
-    for (size_t i = 0; i < vals.size(); ++i) vals[i] += data_recv[i];
-
-    if (c.pid != D) {
-        // We have to compute s_0 + input * (s_1 - s_0) (element-wise multiplication).
-        // input * (s_1 - s_0) is already being computed.
-        // Recompute s_0 to not have to save this somewhere from when it was computed before sending.
-        std::vector<Row> f_0;
-        // set f_0 to 1 - input
-        for (size_t i = 0; i < c.n_rows; i++) {
-            f_0.push_back(-input_share[i]);
-            if (c.pid == P0) {
-                f_0[i] += 1;  // 1 as constant only to one share
-            }
+        std::vector<Row> data_recv(2 * c.n_rows);
+        if (c.pid == P0) {
+            send_vec(P1, c.network, vals.size(), vals, c.BLOCK_SIZE);
+            recv_vec(P1, c.network, data_recv, c.BLOCK_SIZE);
+        } else if (c.pid == P1) {
+            recv_vec(P0, c.network, data_recv, c.BLOCK_SIZE);
+            send_vec(P0, c.network, vals.size(), vals, c.BLOCK_SIZE);
         }
 
-        std::vector<Row> s_0;
-        Row s = 0;
-        // Set s_0 to prefix sum of f_0
-        for (size_t i = 0; i < c.n_rows; ++i) {
-            s += f_0[i];
-            s_0.push_back(s);
-        }
+        for (size_t i = 0; i < vals.size(); ++i) vals[i] += data_recv[i];
 
         // Now, finalize the multiplications and add vector s_0.
         for (size_t i = 0; i < c.n_rows; ++i) {

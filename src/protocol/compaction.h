@@ -17,7 +17,7 @@ namespace compaction {
 std::tuple<std::vector<Row>, std::vector<Row>, std::vector<Row>> preprocess_one(ProtocolConfig &c);
 
 /**
- * Returns CompactionPreprocessing that contains n preprocessed triples
+ * Returns vector that contains n preprocessed triples
  */
 std::vector<std::tuple<std::vector<Row>, std::vector<Row>, std::vector<Row>>> preprocess(ProtocolConfig &c, size_t n);
 

@@ -12,14 +12,14 @@ SortPreprocessing sort::get_sort_preprocess(ProtocolConfig &c, size_t n_bits) {
     for (size_t i = 0; i < n_bits - 1; ++i) {
         PermShare perm_share = shuffle::get_shuffle(c);
         preproc.perm_share_vec.push_back(perm_share);
-        std::vector<Row> unshuffle_B = shuffle::get_unshuffle(c, perm_share);
+        std::vector<Ring> unshuffle_B = shuffle::get_unshuffle(c, perm_share);
         preproc.unshuffle_B_vec.push_back(unshuffle_B);
     }
 
     return preproc;
 }
 
-Permutation sort::sort_iteration_evaluate(ProtocolConfig &c, Permutation &perm, std::vector<Row> &bit_vec_share, SortPreprocessing &preproc) {
+Permutation sort::sort_iteration_evaluate(ProtocolConfig &c, Permutation &perm, std::vector<Ring> &bit_vec_share, SortPreprocessing &preproc) {
     /* Shuffle perm */
     PermShare perm_share = preproc.perm_share_vec[0];
     preproc.perm_share_vec.erase(preproc.perm_share_vec.begin());  // Immediately erase first element
@@ -29,19 +29,19 @@ Permutation sort::sort_iteration_evaluate(ProtocolConfig &c, Permutation &perm, 
     Permutation perm_open = share::reveal_perm(c, perm_shuffled);
 
     /* Shuffle input vec using the previous perm_share */
-    std::vector<Row> input_shuffled = shuffle::shuffle(c, bit_vec_share, perm_share, false);
+    std::vector<Ring> input_shuffled = shuffle::shuffle(c, bit_vec_share, perm_share, false);
 
     /* Apply shuffled permutation to shuffled input */
-    std::vector<Row> input_sorted = perm_open(input_shuffled);
+    std::vector<Ring> input_sorted = perm_open(input_shuffled);
 
     /* Compute compaction to stable sort next input */
     auto [triple_a, triple_b, triple_c] = preproc.comp_triples[0];
     preproc.comp_triples.erase(preproc.comp_triples.begin());
     Permutation sigma_p = compaction::evaluate(c, triple_a, triple_b, triple_c, input_sorted);
     auto sigma_p_vec = sigma_p.get_perm_vec();
-    std::vector<Row> next_perm = perm_open.inverse()(sigma_p_vec);
+    std::vector<Ring> next_perm = perm_open.inverse()(sigma_p_vec);
 
-    std::vector<Row> unshuffle_B = preproc.unshuffle_B_vec[0];
+    std::vector<Ring> unshuffle_B = preproc.unshuffle_B_vec[0];
     preproc.unshuffle_B_vec.erase(preproc.unshuffle_B_vec.begin());
 
     /* Unshuffle next_perm */
@@ -50,7 +50,7 @@ Permutation sort::sort_iteration_evaluate(ProtocolConfig &c, Permutation &perm, 
     return next_perm_unshuffled;
 }
 
-Permutation sort::get_sort_evaluate(ProtocolConfig &c, std::vector<std::vector<Row>> &bit_shares, SortPreprocessing &preproc) {
+Permutation sort::get_sort_evaluate(ProtocolConfig &c, std::vector<std::vector<Ring>> &bit_shares, SortPreprocessing &preproc) {
     auto [triple_a, triple_b, triple_c] = preproc.comp_triples[0];
     /* Delete first element */
     preproc.comp_triples.erase(preproc.comp_triples.begin());
@@ -64,7 +64,7 @@ Permutation sort::get_sort_evaluate(ProtocolConfig &c, std::vector<std::vector<R
     return sigma;
 }
 
-Permutation sort::sort_iteration(ProtocolConfig &c, Permutation &perm, std::vector<Row> &bit_vec_share) {
+Permutation sort::sort_iteration(ProtocolConfig &c, Permutation &perm, std::vector<Ring> &bit_vec_share) {
     /* Shuffle perm */
     PermShare perm_share = shuffle::get_shuffle(c);
     Permutation perm_shuffled = shuffle::shuffle(c, perm, perm_share, true);
@@ -73,22 +73,22 @@ Permutation sort::sort_iteration(ProtocolConfig &c, Permutation &perm, std::vect
     Permutation perm_open = share::reveal_perm(c, perm_shuffled);
 
     /* Shuffle input using the previous order */
-    std::vector<Row> input_shuffled = shuffle::shuffle(c, bit_vec_share, perm_share, false);
+    std::vector<Ring> input_shuffled = shuffle::shuffle(c, bit_vec_share, perm_share, false);
 
     /* Apply revealed permutation to shuffled input */
-    std::vector<Row> sorted_share = perm_open(input_shuffled);
+    std::vector<Ring> sorted_share = perm_open(input_shuffled);
 
     /* Compute compaction to stable sort bit_vec_share */
     Permutation sigma_p = compaction::get_compaction(c, sorted_share);
     auto sigma_p_vec = sigma_p.get_perm_vec();
-    std::vector<Row> next_perm = perm_open.inverse()(sigma_p_vec);
+    std::vector<Ring> next_perm = perm_open.inverse()(sigma_p_vec);
 
     /* Unshuffle next */
-    std::vector<Row> B = shuffle::get_unshuffle(c, perm_share);
+    std::vector<Ring> B = shuffle::get_unshuffle(c, perm_share);
     return Permutation(shuffle::unshuffle(c, perm_share, B, next_perm));
 }
 
-Permutation sort::get_sort(ProtocolConfig &c, std::vector<std::vector<Row>> &bit_shares) {
+Permutation sort::get_sort(ProtocolConfig &c, std::vector<std::vector<Ring>> &bit_shares) {
     /* Compute compaction of x_0 */
     Permutation sigma = compaction::get_compaction(c, bit_shares[0]);
     /* Proceed sorting with x_1, x_2, ... */
@@ -99,7 +99,7 @@ Permutation sort::get_sort(ProtocolConfig &c, std::vector<std::vector<Row>> &bit
     return sigma;
 }
 
-std::vector<Row> sort::apply_perm_evaluate(ProtocolConfig &c, Permutation &perm, PermShare &perm_share, std::vector<Row> &input_share) {
+std::vector<Ring> sort::apply_perm_evaluate(ProtocolConfig &c, Permutation &perm, PermShare &perm_share, std::vector<Ring> &input_share) {
     /* Shuffle permutation and open it */
     auto perm_shuffled = shuffle::shuffle(c, perm, perm_share, true);
     auto perm_opened = share::reveal_perm(c, perm_shuffled);
@@ -111,7 +111,7 @@ std::vector<Row> sort::apply_perm_evaluate(ProtocolConfig &c, Permutation &perm,
     return perm_opened(shuffled_input_share);
 }
 
-std::vector<Row> sort::apply_perm(ProtocolConfig &c, Permutation &perm, std::vector<Row> &input_share) {
+std::vector<Ring> sort::apply_perm(ProtocolConfig &c, Permutation &perm, std::vector<Ring> &input_share) {
     /* Shuffle permutation and open it */
     PermShare perm_share = shuffle::get_shuffle(c);
     auto perm_shuffled = shuffle::shuffle(c, perm, perm_share, true);
@@ -131,8 +131,8 @@ std::tuple<PermShare, PermShare, PermShare> sort::switch_perm_preprocess(Protoco
     return {pi, omega, merged};
 }
 
-std::vector<Row> sort::switch_perm_evaluate(ProtocolConfig &c, Permutation &p1, Permutation &p2, PermShare &pi, PermShare &omega, PermShare &merged,
-                                            std::vector<Row> &input_share) {
+std::vector<Ring> sort::switch_perm_evaluate(ProtocolConfig &c, Permutation &p1, Permutation &p2, PermShare &pi, PermShare &omega, PermShare &merged,
+                                             std::vector<Ring> &input_share) {
     auto shuffled_p1 = shuffle::shuffle(c, p1, pi, true);
     auto shuffled_p2 = shuffle::shuffle(c, p2, omega, true);
 
@@ -146,7 +146,7 @@ std::vector<Row> sort::switch_perm_evaluate(ProtocolConfig &c, Permutation &p1, 
     return switched;
 }
 
-std::vector<Row> sort::switch_perm(ProtocolConfig &c, Permutation &p1, Permutation &p2, std::vector<Row> &input_share) {
+std::vector<Ring> sort::switch_perm(ProtocolConfig &c, Permutation &p1, Permutation &p2, std::vector<Ring> &input_share) {
     PermShare pi = shuffle::get_shuffle(c);
     PermShare omega = shuffle::get_shuffle(c);
 

@@ -44,10 +44,10 @@ void test_bfs(const bpo::variables_map &opts) {
 
     Graph g;
     g.size = 25;
-    g.src = std::vector<Row>({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 1, 1, 2, 2, 2, 3, 4, 4, 4, 5, 6, 6, 7});
-    g.dst = std::vector<Row>({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 6, 2, 8, 1, 4, 8, 4, 2, 9, 10, 4, 0, 5, 1});
-    g.isV = std::vector<Row>({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
-    g.payload = std::vector<Row>({1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
+    g.src = std::vector<Ring>({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 1, 1, 2, 2, 2, 3, 4, 4, 4, 5, 6, 6, 7});
+    g.dst = std::vector<Ring>({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 6, 2, 8, 1, 4, 8, 4, 2, 9, 10, 4, 0, 5, 1});
+    g.isV = std::vector<Ring>({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
+    g.payload = std::vector<Ring>({1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
 
     if (pid != D) g.print();
 
@@ -57,7 +57,7 @@ void test_bfs(const bpo::variables_map &opts) {
     mp::run_evaluate(conf, g_shared, 4, 11, preproc);
 
     auto res_g = share::reveal_graph(conf, g_shared);
-    for (auto &elem : res_g.payload) elem = std::min(elem, (Row)1);
+    for (auto &elem : res_g.payload) elem = std::min(elem, (Ring)1);
 
     if (pid != D) res_g.print();
 

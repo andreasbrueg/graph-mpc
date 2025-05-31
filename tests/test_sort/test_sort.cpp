@@ -28,7 +28,7 @@ void test_sort(const bpo::variables_map &opts) {
     std::cout << std::endl;
 
     /* Setting up the input vector */
-    std::vector<Row> input_vector(vec_size);
+    std::vector<Ring> input_vector(vec_size);
 
     for (size_t i = 0; i < vec_size; i++) {
         input_vector[i] = rand() % vec_size;
@@ -38,10 +38,10 @@ void test_sort(const bpo::variables_map &opts) {
     RandomGenerators rngs(seeds_h, seeds_l);
     ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
 
-    std::vector<std::vector<Row>> bits(sizeof(Row) * 8);
-    std::vector<std::vector<Row>> bit_shares(sizeof(Row) * 8);
+    std::vector<std::vector<Ring>> bits(sizeof(Ring) * 8);
+    std::vector<std::vector<Ring>> bit_shares(sizeof(Ring) * 8);
 
-    for (size_t i = 0; i < sizeof(Row) * 8; ++i) {
+    for (size_t i = 0; i < sizeof(Ring) * 8; ++i) {
         bits[i].resize(vec_size);
         bit_shares[i].resize(vec_size);
         for (size_t j = 0; j < vec_size; ++j) {
@@ -58,7 +58,7 @@ void test_sort(const bpo::variables_map &opts) {
 
     auto sort_share = sort::get_sort_evaluate(conf, bit_shares, sort_preproc);
 
-    for (size_t i = 0; i < sizeof(Row) * 8; ++i) {
+    for (size_t i = 0; i < sizeof(Ring) * 8; ++i) {
         for (size_t j = 0; j < vec_size; ++j) {
             bits[i][j] = 1 - bits[i][j];
         }

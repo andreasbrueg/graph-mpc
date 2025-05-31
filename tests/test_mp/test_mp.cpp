@@ -28,7 +28,7 @@ void test_mp(const bpo::variables_map &opts) {
     std::cout << std::endl;
 
     /* Setting up the input vector */
-    std::vector<Row> input_vector(vec_size);
+    std::vector<Ring> input_vector(vec_size);
 
     for (size_t i = 0; i < vec_size; i++) {
         input_vector[i] = rand() % vec_size;
@@ -46,10 +46,10 @@ void test_mp(const bpo::variables_map &opts) {
 
     Graph g;
     g.size = 8;
-    g.src = std::vector<Row>({0, 1, 2, 0, 1, 2, 2, 2});
-    g.dst = std::vector<Row>({0, 1, 2, 1, 0, 1, 0, 1});
-    g.isV = std::vector<Row>({1, 1, 1, 0, 0, 0, 0, 0});
-    g.payload = std::vector<Row>({1, 2, 3, 0, 0, 0, 0, 0});
+    g.src = std::vector<Ring>({0, 1, 2, 0, 1, 2, 2, 2});
+    g.dst = std::vector<Ring>({0, 1, 2, 1, 0, 1, 0, 1});
+    g.isV = std::vector<Ring>({1, 1, 1, 0, 0, 0, 0, 0});
+    g.payload = std::vector<Ring>({1, 2, 3, 0, 0, 0, 0, 0});
 
     SecretSharedGraph g_shared = share::random_share_graph(conf, g);
 

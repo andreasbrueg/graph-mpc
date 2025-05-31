@@ -1,9 +1,9 @@
 #include "compaction.h"
 
-std::tuple<std::vector<Row>, std::vector<Row>, std::vector<Row>> compaction::preprocess(ProtocolConfig &c) {
-    std::vector<Row> triple_a, triple_b, triple_c;
+std::tuple<std::vector<Ring>, std::vector<Ring>, std::vector<Ring>> compaction::preprocess(ProtocolConfig &c) {
+    std::vector<Ring> triple_a, triple_b, triple_c;
 
-    std::vector<Row> vals_to_p1(c.n_rows);
+    std::vector<Ring> vals_to_p1(c.n_rows);
     size_t idx = 0;
 
     if (c.pid == P1) recv_vec(D, c.network, vals_to_p1, c.BLOCK_SIZE);
@@ -11,7 +11,7 @@ std::tuple<std::vector<Row>, std::vector<Row>, std::vector<Row>> compaction::pre
     for (size_t i = 0; i < c.n_rows; ++i) {
         triple_a.push_back(share::random_share_3P(c));
         triple_b.push_back(share::random_share_3P(c));
-        Row mul = triple_a[i] * triple_b[i];
+        Ring mul = triple_a[i] * triple_b[i];
         triple_c.push_back(share::random_share_secret_3P(c, vals_to_p1, idx, mul));
     }
 
@@ -20,15 +20,15 @@ std::tuple<std::vector<Row>, std::vector<Row>, std::vector<Row>> compaction::pre
     return {triple_a, triple_b, triple_c};
 }
 
-Permutation compaction::evaluate(ProtocolConfig &c, std::vector<Row> &triple_a, std::vector<Row> &triple_b, std::vector<Row> &triple_c,
-                                 std::vector<Row> &input_share) {
-    std::vector<Row> output(c.n_rows);
-    std::vector<Row> vals;
+Permutation compaction::evaluate(ProtocolConfig &c, std::vector<Ring> &triple_a, std::vector<Ring> &triple_b, std::vector<Ring> &triple_c,
+                                 std::vector<Ring> &input_share) {
+    std::vector<Ring> output(c.n_rows);
+    std::vector<Ring> vals;
 
     size_t idx_mult = 0;
 
     if (c.pid != D) {
-        std::vector<Row> f_0;
+        std::vector<Ring> f_0;
         // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
         for (size_t i = 0; i < c.n_rows; ++i) {
             f_0.push_back(-input_share[i]);
@@ -37,8 +37,8 @@ Permutation compaction::evaluate(ProtocolConfig &c, std::vector<Row> &triple_a, 
             }
         }
 
-        std::vector<Row> s_0, s_1;
-        Row s = 0;
+        std::vector<Ring> s_0, s_1;
+        Ring s = 0;
         // Set s_0 to prefix sum of f_0 and s_1 to prefix sum of f_1/input continuing from the prior final value
         for (size_t i = 0; i < c.n_rows; ++i) {
             s += f_0[i];
@@ -60,7 +60,7 @@ Permutation compaction::evaluate(ProtocolConfig &c, std::vector<Row> &triple_a, 
             vals.push_back(yb);
         }
 
-        std::vector<Row> data_recv(2 * c.n_rows);
+        std::vector<Ring> data_recv(2 * c.n_rows);
         if (c.pid == P0) {
             send_vec(P1, c.network, vals.size(), vals, c.BLOCK_SIZE);
             recv_vec(P1, c.network, data_recv, c.BLOCK_SIZE);
@@ -88,7 +88,7 @@ Permutation compaction::evaluate(ProtocolConfig &c, std::vector<Row> &triple_a, 
     return Permutation(output);
 }
 
-Permutation compaction::get_compaction(ProtocolConfig &c, std::vector<Row> &input_share) {
+Permutation compaction::get_compaction(ProtocolConfig &c, std::vector<Ring> &input_share) {
     auto [triple_a, triple_b, triple_c] = preprocess(c);
     c.network->sync();
     return evaluate(c, triple_a, triple_b, triple_c, input_share);

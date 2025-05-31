@@ -1,6 +1,6 @@
 #include "shuffle.h"
 
-PermShare shuffle::get_shuffle_compute(ProtocolConfig &c, std::vector<Row> &shared_secret_D0, std::vector<Row> &shared_secret_D1) {
+PermShare shuffle::get_shuffle_compute(ProtocolConfig &c, std::vector<Ring> &shared_secret_D0, std::vector<Ring> &shared_secret_D1) {
     size_t shared_secret_D0_idx = 0;
     size_t shared_secret_D1_idx = 0;
 
@@ -9,16 +9,16 @@ PermShare shuffle::get_shuffle_compute(ProtocolConfig &c, std::vector<Row> &shar
     switch (c.pid) {
         case D: {
             /* Sampling 1: R_0, R_1*/
-            std::vector<Row> R_0, R_1;
-            Row rand;
+            std::vector<Ring> R_0, R_1;
+            Ring rand;
 
             for (size_t i = 0; i < c.n_rows; ++i) {
-                c.rngs.rng_D0().random_data(&rand, sizeof(Row));
+                c.rngs.rng_D0().random_data(&rand, sizeof(Ring));
                 R_0.push_back(rand);
             }
 
             for (size_t i = 0; i < c.n_rows; ++i) {
-                c.rngs.rng_D1().random_data(&rand, sizeof(Row));
+                c.rngs.rng_D1().random_data(&rand, sizeof(Ring));
                 R_1.push_back(rand);
             }
 
@@ -42,16 +42,16 @@ PermShare shuffle::get_shuffle_compute(ProtocolConfig &c, std::vector<Row> &shar
 
             for (int i = 0; i < c.n_rows; ++i) {
                 /* Send pi_1_p to P1's shared_secret_buffer */
-                shared_secret_D1[shared_secret_D1_idx] = (Row)pi_1_p[i];
+                shared_secret_D1[shared_secret_D1_idx] = (Ring)pi_1_p[i];
                 shared_secret_D1_idx++;
             }
 
             /* Compute B_0, B_1 */
-            std::vector<Row> B_0(c.n_rows);
-            std::vector<Row> B_1(c.n_rows);
+            std::vector<Ring> B_0(c.n_rows);
+            std::vector<Ring> B_1(c.n_rows);
 
-            Row R;
-            c.rngs.rng_D().random_data(&R, sizeof(Row));
+            Ring R;
+            c.rngs.rng_D().random_data(&R, sizeof(Ring));
 
             B_0 = (pi_0 * pi_1)(R_1);
             B_1 = (pi_0 * pi_1)(R_0);
@@ -70,7 +70,7 @@ PermShare shuffle::get_shuffle_compute(ProtocolConfig &c, std::vector<Row> &shar
             break;
         }
         case P0: {
-            std::vector<Row> B(c.n_rows);
+            std::vector<Ring> B(c.n_rows);
             for (int i = 0; i < c.n_rows; ++i) {
                 B[i] = shared_secret_D0[shared_secret_D0_idx];
                 shared_secret_D0_idx++;
@@ -81,14 +81,14 @@ PermShare shuffle::get_shuffle_compute(ProtocolConfig &c, std::vector<Row> &shar
         }
         case P1: {
             /* Receive pi_1_p from P1's shared_secret_buffer */
-            std::vector<Row> perm_vec(c.n_rows);
+            std::vector<Ring> perm_vec(c.n_rows);
             for (int i = 0; i < c.n_rows; ++i) {
                 perm_vec[i] = shared_secret_D1[shared_secret_D1_idx];
                 shared_secret_D1_idx++;
             }
             perm_share.pi_1_p = Permutation(perm_vec);
 
-            std::vector<Row> B(c.n_rows);
+            std::vector<Ring> B(c.n_rows);
             for (int i = 0; i < c.n_rows; ++i) {
                 B[i] = shared_secret_D1[shared_secret_D1_idx];
                 shared_secret_D1_idx++;
@@ -102,8 +102,8 @@ PermShare shuffle::get_shuffle_compute(ProtocolConfig &c, std::vector<Row> &shar
 }
 
 PermShare shuffle::get_shuffle(ProtocolConfig &c) {
-    std::vector<Row> shared_secret_D0(c.n_rows);
-    std::vector<Row> shared_secret_D1(2 * c.n_rows);
+    std::vector<Ring> shared_secret_D0(c.n_rows);
+    std::vector<Ring> shared_secret_D1(2 * c.n_rows);
 
     switch (c.pid) {
         case D: {
@@ -123,25 +123,25 @@ PermShare shuffle::get_shuffle(ProtocolConfig &c) {
     }
 }
 
-std::vector<Row> shuffle::shuffle(ProtocolConfig &c, std::vector<Row> &input_share, PermShare &perm_share, bool save) {
-    if (c.pid == D) return std::vector<Row>(c.n_rows);
+std::vector<Ring> shuffle::shuffle(ProtocolConfig &c, std::vector<Ring> &input_share, PermShare &perm_share, bool save) {
+    if (c.pid == D) return std::vector<Ring>(c.n_rows);
 
-    std::vector<Row> shuffled_share(c.n_rows);
-    std::vector<Row> vec_A(c.n_rows);
+    std::vector<Ring> shuffled_share(c.n_rows);
+    std::vector<Ring> vec_A(c.n_rows);
 
     Permutation perm;
 
-    std::vector<Row> R;
+    std::vector<Ring> R;
 
     if (perm_share.R.empty()) {
-        Row rand;
+        Ring rand;
 
         /* Sampling 1: R_0 / R_1 */
         for (size_t i = 0; i < c.n_rows; ++i) {
             if (c.pid == P0)
-                c.rngs.rng_D0().random_data(&rand, sizeof(Row));
+                c.rngs.rng_D0().random_data(&rand, sizeof(Ring));
             else if (c.pid == P1)
-                c.rngs.rng_D1().random_data(&rand, sizeof(Row));
+                c.rngs.rng_D1().random_data(&rand, sizeof(Ring));
             R.push_back(rand);
         }
         if (save) perm_share.R = R;
@@ -179,7 +179,7 @@ std::vector<Row> shuffle::shuffle(ProtocolConfig &c, std::vector<Row> &input_sha
         send_vec(P1, c.network, vec_A.size(), vec_A, c.BLOCK_SIZE);
         recv_vec(P1, c.network, vec_A, c.BLOCK_SIZE);
     } else {
-        std::vector<Row> data_recv(c.n_rows);
+        std::vector<Ring> data_recv(c.n_rows);
         recv_vec(P0, c.network, data_recv, c.BLOCK_SIZE);
         send_vec(P0, c.network, vec_A.size(), vec_A, c.BLOCK_SIZE);
         std::copy(data_recv.begin(), data_recv.end(), vec_A.begin());
@@ -211,34 +211,34 @@ std::vector<Row> shuffle::shuffle(ProtocolConfig &c, std::vector<Row> &input_sha
 }
 
 Permutation shuffle::shuffle(ProtocolConfig &c, Permutation &perm, PermShare &perm_share, bool save) {
-    std::vector<Row> perm_vec = perm.get_perm_vec();
+    std::vector<Ring> perm_vec = perm.get_perm_vec();
     auto shuffled = shuffle(c, perm_vec, perm_share, save);
     return Permutation(shuffled);
 }
 
-std::vector<Row> shuffle::get_unshuffle(ProtocolConfig &c, PermShare &perm_share) {
-    std::vector<Row> B_0(c.n_rows);
-    std::vector<Row> B_1(c.n_rows);
+std::vector<Ring> shuffle::get_unshuffle(ProtocolConfig &c, PermShare &perm_share) {
+    std::vector<Ring> B_0(c.n_rows);
+    std::vector<Ring> B_1(c.n_rows);
 
     switch (c.pid) {
         case D: {
             /* Sampling 1: R_0, R_1*/
-            std::vector<Row> R_0, R_1;
-            Row rand;
+            std::vector<Ring> R_0, R_1;
+            Ring rand;
 
             for (size_t i = 0; i < c.n_rows; ++i) {
-                c.rngs.rng_D0_unshuffle().random_data(&rand, sizeof(Row));
+                c.rngs.rng_D0_unshuffle().random_data(&rand, sizeof(Ring));
                 R_0.push_back(rand);
             }
 
             for (size_t i = 0; i < c.n_rows; ++i) {
-                c.rngs.rng_D1_unshuffle().random_data(&rand, sizeof(Row));
+                c.rngs.rng_D1_unshuffle().random_data(&rand, sizeof(Ring));
                 R_1.push_back(rand);
             }
 
             /* Compute B_0, B_1 */
-            Row R;
-            c.rngs.rng_D().random_data(&R, sizeof(Row));
+            Ring R;
+            c.rngs.rng_D().random_data(&R, sizeof(Ring));
 
             Permutation pi_inv = (perm_share.pi_0 * perm_share.pi_1).inverse();
 
@@ -251,7 +251,7 @@ std::vector<Row> shuffle::get_unshuffle(ProtocolConfig &c, PermShare &perm_share
 
             send_vec(P0, c.network, B_0.size(), B_0, c.BLOCK_SIZE);
             send_vec(P1, c.network, B_1.size(), B_1, c.BLOCK_SIZE);
-            return std::vector<Row>(c.n_rows);
+            return std::vector<Ring>(c.n_rows);
         }
         case P0: {
             recv_vec(D, c.network, B_0, c.BLOCK_SIZE);
@@ -264,20 +264,20 @@ std::vector<Row> shuffle::get_unshuffle(ProtocolConfig &c, PermShare &perm_share
     }
 }
 
-std::vector<Row> shuffle::unshuffle(ProtocolConfig &c, PermShare &shuffle_share, std::vector<Row> &B, std::vector<Row> &input_share) {
-    std::vector<Row> output_share(c.n_rows);
+std::vector<Ring> shuffle::unshuffle(ProtocolConfig &c, PermShare &shuffle_share, std::vector<Ring> &B, std::vector<Ring> &input_share) {
+    std::vector<Ring> output_share(c.n_rows);
 
     if (c.pid != D) {
-        std::vector<Row> vec_t(c.n_rows);
-        std::vector<Row> R;
-        Row rand;
+        std::vector<Ring> vec_t(c.n_rows);
+        std::vector<Ring> R;
+        Ring rand;
 
         /* Sampling 1: R_0 / R_1 */
         for (size_t i = 0; i < c.n_rows; ++i) {
             if (c.pid == P0)
-                c.rngs.rng_D0_unshuffle().random_data(&rand, sizeof(Row));
+                c.rngs.rng_D0_unshuffle().random_data(&rand, sizeof(Ring));
             else
-                c.rngs.rng_D1_unshuffle().random_data(&rand, sizeof(Row));
+                c.rngs.rng_D1_unshuffle().random_data(&rand, sizeof(Ring));
             R.push_back(rand);
         }
 
@@ -291,7 +291,7 @@ std::vector<Row> shuffle::unshuffle(ProtocolConfig &c, PermShare &shuffle_share,
             send_vec(P1, c.network, vec_t.size(), vec_t, c.BLOCK_SIZE);
             recv_vec(P1, c.network, vec_t, c.BLOCK_SIZE);
         } else {
-            std::vector<Row> data_recv(c.n_rows);
+            std::vector<Ring> data_recv(c.n_rows);
             recv_vec(P0, c.network, data_recv, c.BLOCK_SIZE);
             send_vec(P0, c.network, vec_t.size(), vec_t, c.BLOCK_SIZE);
             std::copy(data_recv.begin(), data_recv.end(), vec_t.begin());
@@ -308,34 +308,34 @@ std::vector<Row> shuffle::unshuffle(ProtocolConfig &c, PermShare &shuffle_share,
     return output_share;
 }
 
-Permutation shuffle::unshuffle(ProtocolConfig &c, PermShare &shuffle_share, std::vector<Row> &B, Permutation &perm) {
-    std::vector<Row> perm_vec = perm.get_perm_vec();
-    std::vector<Row> unshuffled = unshuffle(c, shuffle_share, B, perm_vec);
+Permutation shuffle::unshuffle(ProtocolConfig &c, PermShare &shuffle_share, std::vector<Ring> &B, Permutation &perm) {
+    std::vector<Ring> perm_vec = perm.get_perm_vec();
+    std::vector<Ring> unshuffled = unshuffle(c, shuffle_share, B, perm_vec);
     return Permutation(unshuffled);
 }
 
 PermShare shuffle::get_merged_shuffle(ProtocolConfig &c, PermShare &pi_share, PermShare &omega_share) {
-    std::vector<Row> sigma_0_p_vec(c.n_rows);
-    std::vector<Row> sigma_1_vec(c.n_rows);
+    std::vector<Ring> sigma_0_p_vec(c.n_rows);
+    std::vector<Ring> sigma_1_vec(c.n_rows);
 
-    std::vector<Row> B_0(c.n_rows);
-    std::vector<Row> B_1(c.n_rows);
-    std::vector<Row> R_0, R_1;
+    std::vector<Ring> B_0(c.n_rows);
+    std::vector<Ring> B_1(c.n_rows);
+    std::vector<Ring> R_0, R_1;
 
     PermShare perm_share;
 
     switch (c.pid) {
         case D: {
-            Row rand;
+            Ring rand;
 
             /* Sampling 1: R_0 / R_1 */
             for (int i = 0; i < c.n_rows; ++i) {
-                c.rngs.rng_D0().random_data(&rand, sizeof(Row));
+                c.rngs.rng_D0().random_data(&rand, sizeof(Ring));
                 R_0.push_back(rand);
             }
 
             for (int i = 0; i < c.n_rows; ++i) {
-                c.rngs.rng_D1().random_data(&rand, sizeof(Row));
+                c.rngs.rng_D1().random_data(&rand, sizeof(Ring));
                 R_1.push_back(rand);
             }
 
@@ -359,8 +359,8 @@ PermShare shuffle::get_merged_shuffle(ProtocolConfig &c, PermShare &pi_share, Pe
             perm_share.pi_0_p = sigma_0_p;
             perm_share.pi_1_p = sigma_1_p;
 
-            Row R;
-            c.rngs.rng_D().random_data(&R, sizeof(Row));
+            Ring R;
+            c.rngs.rng_D().random_data(&R, sizeof(Ring));
 
             /* Compute B_0 / B_1 */
             B_0 = (sigma_0 * sigma_1)(R_1);

@@ -32,7 +32,7 @@ void benchmark(const bpo::variables_map &opts) {
     ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
 
     Graph g(vec_size);
-    std::vector<Row> src, dst, isV, payload;
+    std::vector<Ring> src, dst, isV, payload;
     for (size_t i = 0; i < nodes; ++i) {
         src.push_back(i);
         dst.push_back(i);
@@ -40,7 +40,7 @@ void benchmark(const bpo::variables_map &opts) {
         payload.push_back(0);
     }
     for (size_t i = nodes; i < vec_size; ++i) {
-        Row rand = std::rand() % nodes;
+        Ring rand = std::rand() % nodes;
         src.push_back(rand);
         dst.push_back((rand + 1) % nodes);
         isV.push_back(0);

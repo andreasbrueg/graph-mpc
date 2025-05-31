@@ -27,34 +27,34 @@ void test_shuffle(const bpo::variables_map &opts) {
     std::cout << std::endl;
 
     /* Setting up the input vector */
-    std::vector<Row> input_vector(vec_size);
+    std::vector<Ring> input_vector(vec_size);
     for (size_t i = 0; i < vec_size; i++) input_vector[i] = i;
 
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
     ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
 
-    std::vector<Row> share = share::random_share_secret_vec_2P(conf, input_vector);
+    std::vector<Ring> share = share::random_share_secret_vec_2P(conf, input_vector);
 
     /* Protocol run */
     PermShare perm_share_one = shuffle::get_shuffle(conf);
     PermShare perm_share_two = shuffle::get_shuffle(conf);
-    std::vector<Row> unshuffle_B_one = shuffle::get_unshuffle(conf, perm_share_one);
-    std::vector<Row> unshuffle_B_two = shuffle::get_unshuffle(conf, perm_share_two);
+    std::vector<Ring> unshuffle_B_one = shuffle::get_unshuffle(conf, perm_share_one);
+    std::vector<Ring> unshuffle_B_two = shuffle::get_unshuffle(conf, perm_share_two);
     PermShare perm_share_merged_one = shuffle::get_merged_shuffle(conf, perm_share_one, perm_share_two);
     PermShare perm_share_three = shuffle::get_shuffle(conf);
     PermShare perm_share_merged_two = shuffle::get_merged_shuffle(conf, perm_share_two, perm_share_three);
 
-    std::vector<Row> shuffle_share_one = shuffle::shuffle(conf, share, perm_share_one, true);
-    std::vector<Row> repeat_share = shuffle::shuffle(conf, share, perm_share_one, false);
-    std::vector<Row> unshuffle_share_one = shuffle::unshuffle(conf, perm_share_one, unshuffle_B_one, repeat_share);
-    std::vector<Row> shuffle_share_two = shuffle::shuffle(conf, share, perm_share_two, true);
-    std::vector<Row> unshuffle_share_two = shuffle::unshuffle(conf, perm_share_two, unshuffle_B_two, shuffle_share_two);
-    std::vector<Row> merged_share_one = shuffle::shuffle(conf, share, perm_share_merged_one, false);
-    std::vector<Row> shuffle_share_three = shuffle::shuffle(conf, share, perm_share_three, false);
-    std::vector<Row> merged_share_two = shuffle::shuffle(conf, share, perm_share_merged_two, false);
+    std::vector<Ring> shuffle_share_one = shuffle::shuffle(conf, share, perm_share_one, true);
+    std::vector<Ring> repeat_share = shuffle::shuffle(conf, share, perm_share_one, false);
+    std::vector<Ring> unshuffle_share_one = shuffle::unshuffle(conf, perm_share_one, unshuffle_B_one, repeat_share);
+    std::vector<Ring> shuffle_share_two = shuffle::shuffle(conf, share, perm_share_two, true);
+    std::vector<Ring> unshuffle_share_two = shuffle::unshuffle(conf, perm_share_two, unshuffle_B_two, shuffle_share_two);
+    std::vector<Ring> merged_share_one = shuffle::shuffle(conf, share, perm_share_merged_one, false);
+    std::vector<Ring> shuffle_share_three = shuffle::shuffle(conf, share, perm_share_three, false);
+    std::vector<Ring> merged_share_two = shuffle::shuffle(conf, share, perm_share_merged_two, false);
 
-    std::vector<Row> res = share::reveal_vec(conf, shuffle_share_one);
+    std::vector<Ring> res = share::reveal_vec(conf, shuffle_share_one);
 
     if (pid != D) {
         std::cout << std::endl << "Result of shuffle: ";

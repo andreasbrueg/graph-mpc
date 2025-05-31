@@ -1,7 +1,5 @@
 #pragma once
 
-#include <omp.h>
-
 #include "../io/comm.h"
 #include "../setup/utils.h"
 #include "graph.h"
@@ -11,17 +9,17 @@
 
 namespace share {
 
-Row random_share_3P(ProtocolConfig &c);
+Ring random_share_3P(ProtocolConfig &c);
 
-Row random_share_secret_3P(ProtocolConfig &c, std::vector<Row> &vals_to_p1, size_t &idx, Row &secret);
+Ring random_share_secret_3P(ProtocolConfig &c, std::vector<Ring> &vals_to_p1, size_t &idx, Ring &secret);
 
-Row random_share_secret_2P(ProtocolConfig &c, Row &secret);
+Ring random_share_secret_2P(ProtocolConfig &c, Ring &secret);
 
-std::vector<Row> random_share_secret_vec_2P(ProtocolConfig &c, std::vector<Row> &secret_vec);
+std::vector<Ring> random_share_secret_vec_2P(ProtocolConfig &c, std::vector<Ring> &secret_vec);
 
-Row reveal(ProtocolConfig &c, Row &share);
+Ring reveal(ProtocolConfig &c, Ring &share);
 
-std::vector<Row> reveal_vec(ProtocolConfig &conf, std::vector<Row> &share);
+std::vector<Ring> reveal_vec(ProtocolConfig &conf, std::vector<Ring> &share);
 
 Permutation reveal_perm(ProtocolConfig &conf, Permutation &share);
 

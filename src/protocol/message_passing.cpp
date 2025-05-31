@@ -1,8 +1,8 @@
 #include "message_passing.h"
 
 /* Input vector needs to be in vertex order */
-std::vector<Row> mp::propagate_1(std::vector<Row> &input_vector, size_t num_v) {
-    std::vector<Row> data(input_vector.size());
+std::vector<Ring> mp::propagate_1(std::vector<Ring> &input_vector, size_t num_v) {
+    std::vector<Ring> data(input_vector.size());
     for (size_t i = num_v - 1; i > 0; --i) {
         data[i] = input_vector[i] - input_vector[i - 1];
     }
@@ -14,9 +14,9 @@ std::vector<Row> mp::propagate_1(std::vector<Row> &input_vector, size_t num_v) {
 }
 
 /* Input vector needs to be in source order */
-std::vector<Row> mp::propagate_2(std::vector<Row> &input_vector, std::vector<Row> &correction_vector) {
-    std::vector<Row> data(input_vector.size());
-    Row sum = 0;
+std::vector<Ring> mp::propagate_2(std::vector<Ring> &input_vector, std::vector<Ring> &correction_vector) {
+    std::vector<Ring> data(input_vector.size());
+    Ring sum = 0;
     for (size_t i = 0; i < data.size(); ++i) {
         sum += input_vector[i];
         data[i] = sum - correction_vector[i];
@@ -24,9 +24,9 @@ std::vector<Row> mp::propagate_2(std::vector<Row> &input_vector, std::vector<Row
     return data;
 }
 
-std::vector<Row> mp::gather_1(std::vector<Row> &input_vector) {
-    std::vector<Row> data(input_vector.size());
-    Row sum = 0;
+std::vector<Ring> mp::gather_1(std::vector<Ring> &input_vector) {
+    std::vector<Ring> data(input_vector.size());
+    Ring sum = 0;
     for (size_t i = 0; i < data.size(); ++i) {
         sum += input_vector[i];
         data[i] = sum;
@@ -34,9 +34,9 @@ std::vector<Row> mp::gather_1(std::vector<Row> &input_vector) {
     return data;
 }
 
-std::vector<Row> mp::gather_2(std::vector<Row> &input_vector, size_t num_v) {
-    std::vector<Row> data(input_vector.size());
-    Row sum = 0;
+std::vector<Ring> mp::gather_2(std::vector<Ring> &input_vector, size_t num_v) {
+    std::vector<Ring> data(input_vector.size());
+    Ring sum = 0;
     for (size_t i = 0; i < num_v; ++i) {
         data[i] = input_vector[i] - sum;
         sum += data[i];
@@ -47,19 +47,19 @@ std::vector<Row> mp::gather_2(std::vector<Row> &input_vector, size_t num_v) {
     return data;
 }
 
-std::vector<Row> mp::apply(std::vector<Row> &old_payload, std::vector<Row> &new_payload) {
-    std::vector<Row> result(old_payload.size());
+std::vector<Ring> mp::apply(std::vector<Ring> &old_payload, std::vector<Ring> &new_payload) {
+    std::vector<Ring> result(old_payload.size());
     for (size_t i = 0; i < result.size(); ++i) {
         result[i] = old_payload[i] + new_payload[i];
     }
     return result;
 }
 
-std::tuple<std::vector<std::vector<Row>>, std::vector<std::vector<Row>>, std::vector<Row>> mp::init(ProtocolConfig &c, SecretSharedGraph &g) {
+std::tuple<std::vector<std::vector<Ring>>, std::vector<std::vector<Ring>>, std::vector<Ring>> mp::init(ProtocolConfig &c, SecretSharedGraph &g) {
     /* Generate vector containing { 1-isV, src[0], src[1], ..., src[n_bits - 1] } */
-    std::vector<std::vector<Row>> src_order_bits(g.src_bits.size() + 1);
+    std::vector<std::vector<Ring>> src_order_bits(g.src_bits.size() + 1);
 
-    std::vector<Row> inverted_isV(g.isV_bits.size());
+    std::vector<Ring> inverted_isV(g.isV_bits.size());
     for (size_t i = 0; i < inverted_isV.size(); ++i) {
         inverted_isV[i] = -g.isV_bits[i];
         if (c.pid == P0) inverted_isV[i] += 1;
@@ -69,7 +69,7 @@ std::tuple<std::vector<std::vector<Row>>, std::vector<std::vector<Row>>, std::ve
     src_order_bits[0] = inverted_isV;
 
     /* Generate vector containing { isV, dst[0], dst[1], ..., dst[n_bits - 1] } */
-    std::vector<std::vector<Row>> dst_order_bits(g.dst_bits.size() + 1);
+    std::vector<std::vector<Ring>> dst_order_bits(g.dst_bits.size() + 1);
 
     std::copy(g.dst_bits.begin(), g.dst_bits.end(), dst_order_bits.begin() + 1);
     dst_order_bits[0] = g.isV_bits;
@@ -79,13 +79,13 @@ std::tuple<std::vector<std::vector<Row>>, std::vector<std::vector<Row>>, std::ve
 
 MPPreprocessing mp::run_preprocess(ProtocolConfig &c, size_t n_iterations) {
     MPPreprocessing preproc;
-    size_t n_bits = sizeof(Row) * 8;
+    size_t n_bits = sizeof(Ring) * 8;
 
     preproc.src_order_pre = sort::get_sort_preprocess(c, n_bits + 1);
     preproc.dst_order_pre = sort::get_sort_preprocess(c, n_bits + 1);
     preproc.vtx_order_pre = sort::get_sort_preprocess(c, 1);
     PermShare vtx_order_shuffle = shuffle::get_shuffle(c);
-    std::vector<Row> vtx_order_B = shuffle::get_unshuffle(c, vtx_order_shuffle);
+    std::vector<Ring> vtx_order_B = shuffle::get_unshuffle(c, vtx_order_shuffle);
     preproc.vtx_order_pre.perm_share_vec.push_back(vtx_order_shuffle);
     preproc.vtx_order_pre.unshuffle_B_vec.push_back(vtx_order_B);
 
@@ -142,7 +142,7 @@ void mp::run_evaluate(ProtocolConfig &c, SecretSharedGraph &g, size_t n_iteratio
         payload_v = apply(payload_v, update);
     }
 
-    auto payload_bits_new = SecretSharedGraph::to_bits(payload_v, sizeof(Row) * 8);
+    auto payload_bits_new = SecretSharedGraph::to_bits(payload_v, sizeof(Ring) * 8);
     g.payload_bits = payload_bits_new;
 }
 
@@ -185,6 +185,6 @@ void mp::run(ProtocolConfig &c, SecretSharedGraph &g, size_t n_iterations, size_
         payload_v = apply(payload_v, update);
     }
 
-    auto payload_bits_new = SecretSharedGraph::to_bits(payload_v, sizeof(Row) * 8);
+    auto payload_bits_new = SecretSharedGraph::to_bits(payload_v, sizeof(Ring) * 8);
     g.payload_bits = payload_bits_new;
 }

@@ -1,43 +1,43 @@
 #include "sharing.h"
 
-Row share::random_share_3P(ProtocolConfig &c) {
+Ring share::random_share_3P(ProtocolConfig &c) {
     switch (c.pid) {
         case P0: {
-            Row share;
-            c.rngs.rng_D0_comp().random_data(&share, sizeof(Row));
+            Ring share;
+            c.rngs.rng_D0_comp().random_data(&share, sizeof(Ring));
             return share;
         }
         case P1: {
-            Row share;
-            c.rngs.rng_D1_comp().random_data(&share, sizeof(Row));
+            Ring share;
+            c.rngs.rng_D1_comp().random_data(&share, sizeof(Ring));
             return share;
         }
         case D: {
-            Row share_1;
-            Row share_2;
-            c.rngs.rng_D0_comp().random_data(&share_1, sizeof(Row));
-            c.rngs.rng_D1_comp().random_data(&share_2, sizeof(Row));
+            Ring share_1;
+            Ring share_2;
+            c.rngs.rng_D0_comp().random_data(&share_1, sizeof(Ring));
+            c.rngs.rng_D1_comp().random_data(&share_2, sizeof(Ring));
             return (share_1 + share_2);
         }
     }
 }
 
-Row share::random_share_secret_3P(ProtocolConfig &c, std::vector<Row> &vals_to_p1, size_t &idx, Row &secret) {
+Ring share::random_share_secret_3P(ProtocolConfig &c, std::vector<Ring> &vals_to_p1, size_t &idx, Ring &secret) {
     switch (c.pid) {
         case P0: {
-            Row share;
-            c.rngs.rng_D0_comp().random_data(&share, sizeof(Row));
+            Ring share;
+            c.rngs.rng_D0_comp().random_data(&share, sizeof(Ring));
             return share;
         }
         case P1: {
-            Row share = vals_to_p1[idx];
+            Ring share = vals_to_p1[idx];
             ++idx;
             return share;
         }
         case D: {
-            Row share_0;
-            c.rngs.rng_D0_comp().random_data(&share_0, sizeof(Row));
-            Row share_1 = secret - share_0;
+            Ring share_0;
+            c.rngs.rng_D0_comp().random_data(&share_0, sizeof(Ring));
+            Ring share_1 = secret - share_0;
             vals_to_p1[idx] = share_1;
             idx++;
             return secret;
@@ -45,15 +45,15 @@ Row share::random_share_secret_3P(ProtocolConfig &c, std::vector<Row> &vals_to_p
     }
 }
 
-Row share::random_share_secret_2P(ProtocolConfig &c, Row &secret) {
-    Row share;
+Ring share::random_share_secret_2P(ProtocolConfig &c, Ring &secret) {
+    Ring share;
     switch (c.pid) {
         case P0: {
-            c.rngs.rng_01().random_data(&share, sizeof(Row));
+            c.rngs.rng_01().random_data(&share, sizeof(Ring));
             return secret - share;
         }
         case P1: {
-            c.rngs.rng_01().random_data(&share, sizeof(Row));
+            c.rngs.rng_01().random_data(&share, sizeof(Ring));
             return share;
         }
         default:
@@ -61,19 +61,19 @@ Row share::random_share_secret_2P(ProtocolConfig &c, Row &secret) {
     }
 }
 
-std::vector<Row> share::random_share_secret_vec_2P(ProtocolConfig &c, std::vector<Row> &secret_vec) {
-    std::vector<Row> share(secret_vec.size());
+std::vector<Ring> share::random_share_secret_vec_2P(ProtocolConfig &c, std::vector<Ring> &secret_vec) {
+    std::vector<Ring> share(secret_vec.size());
     switch (c.pid) {
         case P0: {
             for (size_t i = 0; i < share.size(); ++i) {
-                c.rngs.rng_01().random_data(&share[i], sizeof(Row));
+                c.rngs.rng_01().random_data(&share[i], sizeof(Ring));
                 share[i] = secret_vec[i] - share[i];
             }
             break;
         }
         case P1: {
             for (size_t i = 0; i < share.size(); ++i) {
-                c.rngs.rng_01().random_data(&share[i], sizeof(Row));
+                c.rngs.rng_01().random_data(&share[i], sizeof(Ring));
             }
             break;
         }
@@ -83,28 +83,28 @@ std::vector<Row> share::random_share_secret_vec_2P(ProtocolConfig &c, std::vecto
     return share;
 }
 
-Row share::reveal(ProtocolConfig &c, Row &share) {
-    Row share_other;
+Ring share::reveal(ProtocolConfig &c, Ring &share) {
+    Ring share_other;
     if (c.pid == P0) {
-        c.network->send(P1, &share, sizeof(Row));
-        c.network->recv(P1, &share_other, sizeof(Row));
+        c.network->send(P1, &share, sizeof(Ring));
+        c.network->recv(P1, &share_other, sizeof(Ring));
     } else if (c.pid == P1) {
-        c.network->recv(P0, &share_other, sizeof(Row));
-        c.network->send(P0, &share, sizeof(Row));
+        c.network->recv(P0, &share_other, sizeof(Ring));
+        c.network->send(P0, &share, sizeof(Ring));
     }
     return share + share_other;
 }
 
-std::vector<Row> share::reveal_vec(ProtocolConfig &c, std::vector<Row> &share) {
+std::vector<Ring> share::reveal_vec(ProtocolConfig &c, std::vector<Ring> &share) {
     auto network = c.network;
     auto pid = c.pid;
     auto BLOCK_SIZE = c.BLOCK_SIZE;
 
-    std::vector<Row> result(share.size());
+    std::vector<Ring> result(share.size());
 
     switch (pid) {
         case P0: {
-            std::vector<Row> share_other(share.size());
+            std::vector<Ring> share_other(share.size());
 
             send_vec(P1, network, share.size(), share, BLOCK_SIZE);
             recv_vec(P1, network, share_other, BLOCK_SIZE);
@@ -115,7 +115,7 @@ std::vector<Row> share::reveal_vec(ProtocolConfig &c, std::vector<Row> &share) {
             return result;
         }
         case P1: {
-            std::vector<Row> share_other(share.size());
+            std::vector<Ring> share_other(share.size());
 
             recv_vec(P0, network, share_other, BLOCK_SIZE);
             send_vec(P0, network, share.size(), share, BLOCK_SIZE);
@@ -132,7 +132,7 @@ std::vector<Row> share::reveal_vec(ProtocolConfig &c, std::vector<Row> &share) {
 
 Permutation share::reveal_perm(ProtocolConfig &c, Permutation &share) {
     auto perm_vec = share.get_perm_vec();
-    std::vector<Row> revealed_perm_vec = reveal_vec(c, perm_vec);
+    std::vector<Ring> revealed_perm_vec = reveal_vec(c, perm_vec);
     return Permutation(revealed_perm_vec);
 }
 
@@ -141,12 +141,12 @@ SecretSharedGraph share::random_share_graph(ProtocolConfig &c, Graph &g) {
     auto dst_bits = g.dst_bits();
     auto payload_bits = g.payload_bits();
 
-    std::vector<std::vector<Row>> src_bits_shared(sizeof(Row) * 8);
-    std::vector<std::vector<Row>> dst_bits_shared(sizeof(Row) * 8);
-    std::vector<Row> isV_shared(g.isV.size());
-    std::vector<std::vector<Row>> payload_bits_shared(sizeof(Row) * 8);
+    std::vector<std::vector<Ring>> src_bits_shared(sizeof(Ring) * 8);
+    std::vector<std::vector<Ring>> dst_bits_shared(sizeof(Ring) * 8);
+    std::vector<Ring> isV_shared(g.isV.size());
+    std::vector<std::vector<Ring>> payload_bits_shared(sizeof(Ring) * 8);
 
-    for (size_t i = 0; i < sizeof(Row) * 8; ++i) {
+    for (size_t i = 0; i < sizeof(Ring) * 8; ++i) {
         src_bits_shared[i].resize(g.size);
         dst_bits_shared[i].resize(g.size);
         payload_bits_shared[i].resize(g.size);
@@ -178,16 +178,16 @@ Graph share::reveal_graph(ProtocolConfig &c, SecretSharedGraph &g) {
     if (pid == D) return g_new;
 
     Party partner = pid == P0 ? P1 : P0;
-    size_t n_bits = sizeof(Row) * 8;
+    size_t n_bits = sizeof(Ring) * 8;
 
-    std::vector<std::vector<Row>> src_bits(n_bits);
-    std::vector<std::vector<Row>> dst_bits(n_bits);
-    std::vector<std::vector<Row>> payload_bits(n_bits);
+    std::vector<std::vector<Ring>> src_bits(n_bits);
+    std::vector<std::vector<Ring>> dst_bits(n_bits);
+    std::vector<std::vector<Ring>> payload_bits(n_bits);
 
-    std::vector<Row> src(g.size);
-    std::vector<Row> dst(g.size);
-    std::vector<Row> isV(g.size);
-    std::vector<Row> payload(g.size);
+    std::vector<Ring> src(g.size);
+    std::vector<Ring> dst(g.size);
+    std::vector<Ring> isV(g.size);
+    std::vector<Ring> payload(g.size);
 
     for (size_t i = 0; i < n_bits; ++i) {
         src_bits[i] = share::reveal_vec(c, g.src_bits[i]);

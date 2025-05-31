@@ -22,15 +22,15 @@ bool contains_duplicates(Permutation p) {
 }
 
 void test_plausibility() {
-    Permutation swap_4_5(std::vector<Row>({0, 1, 2, 3, 5, 4, 6, 7, 8, 9}));
-    Permutation swap_0_9(std::vector<Row>({9, 1, 2, 3, 4, 5, 6, 7, 8, 0}));
-    std::vector<Row> test_vec = std::vector<Row>({0, 0, 0, 0, 0, 1, 1, 1, 1, 1});
+    Permutation swap_4_5(std::vector<Ring>({0, 1, 2, 3, 5, 4, 6, 7, 8, 9}));
+    Permutation swap_0_9(std::vector<Ring>({9, 1, 2, 3, 4, 5, 6, 7, 8, 0}));
+    std::vector<Ring> test_vec = std::vector<Ring>({0, 0, 0, 0, 0, 1, 1, 1, 1, 1});
 
-    std::vector<Row> res1 = swap_4_5(test_vec);
-    assert((res1 == std::vector<Row>({0, 0, 0, 0, 1, 0, 1, 1, 1, 1})));
+    std::vector<Ring> res1 = swap_4_5(test_vec);
+    assert((res1 == std::vector<Ring>({0, 0, 0, 0, 1, 0, 1, 1, 1, 1})));
 
-    std::vector<Row> res2 = swap_0_9(res1);
-    assert((res2 == std::vector<Row>({1, 0, 0, 0, 1, 0, 1, 1, 1, 0})));
+    std::vector<Ring> res2 = swap_0_9(res1);
+    assert((res2 == std::vector<Ring>({1, 0, 0, 0, 1, 0, 1, 1, 1, 0})));
 }
 
 void test_associativity() {
@@ -39,11 +39,11 @@ void test_associativity() {
     Permutation pi_1 = Permutation::random(n_elems, rngs.rng_D1());
     Permutation pi_2 = Permutation::random(n_elems, rngs.rng_D1());
 
-    std::vector<Row> test_table = std::vector<Row>(n_elems);
+    std::vector<Ring> test_table = std::vector<Ring>(n_elems);
     std::iota(test_table.begin(), test_table.end(), 0);
 
-    std::vector<Row> res1 = ((pi_0 * pi_1) * pi_2)(test_table);
-    std::vector<Row> res2 = (pi_0 * (pi_1 * pi_2))(test_table);
+    std::vector<Ring> res1 = ((pi_0 * pi_1) * pi_2)(test_table);
+    std::vector<Ring> res2 = (pi_0 * (pi_1 * pi_2))(test_table);
 
     assert((res1 == res2));
 }
@@ -53,7 +53,7 @@ void test_inverse() {
     Permutation perm = Permutation::random(n_elems, rngs.rng_D());
     Permutation inv = perm.inverse();
 
-    std::vector<Row> test_vec = std::vector<Row>(n_elems);
+    std::vector<Ring> test_vec = std::vector<Ring>(n_elems);
     std::iota(test_vec.begin(), test_vec.end(), 0);
 
     assert(((perm * inv)(test_vec) == test_vec));
@@ -74,7 +74,7 @@ void test_fact_2_3() {
     Permutation pi = Permutation::random(n_elems, rngs.rng_D());
     Permutation sigma = Permutation::random(n_elems, rngs.rng_D());
 
-    std::vector<Row> a = std::vector<Row>(n_elems);
+    std::vector<Ring> a = std::vector<Ring>(n_elems);
     std::iota(a.begin(), a.end(), 0); /* 0, 1, 2, 3, ... */
 
     auto left = (pi * sigma).inverse()(a);
@@ -93,7 +93,7 @@ void test_observation_2_4() {
     Permutation pi = Permutation::random(n_elems, rngs.rng_D());
     Permutation sigma = Permutation::random(n_elems, rngs.rng_D());
 
-    std::vector<Row> a = std::vector<Row>(n_elems);
+    std::vector<Ring> a = std::vector<Ring>(n_elems);
     std::iota(a.begin(), a.end(), 0); /* 0, 1, 2, 3, ... */
 
     auto left = Permutation(pi(sigma.get_perm_vec()));

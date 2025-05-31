@@ -24,7 +24,7 @@ void benchmark(const bpo::variables_map &opts) {
     }
     std::cout << std::endl;
 
-    std::vector<Row> input_vector(vec_size);
+    std::vector<Ring> input_vector(vec_size);
     for (size_t i = 0; i < vec_size; i++) input_vector[i] = i;
 
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
@@ -49,7 +49,7 @@ void benchmark(const bpo::variables_map &opts) {
         std::cout << "setup sent: " << bytes_sent_pre << " bytes" << std::endl;
 
         StatsPoint start(*network);
-        std::vector<Row> shuffle_share = shuffle::shuffle(conf, input_vector, perm_share, false);
+        std::vector<Ring> shuffle_share = shuffle::shuffle(conf, input_vector, perm_share, false);
         StatsPoint end(*network);
 
         auto rbench = end - start;

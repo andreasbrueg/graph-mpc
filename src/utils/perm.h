@@ -19,14 +19,14 @@
 
 class Permutation {
    public:
-    Permutation() : perm_vec(std::vector<Row>()) {};
+    Permutation() : perm_vec(std::vector<Ring>()) {};
 
     Permutation(size_t n) {
-        perm_vec = std::vector<Row>(n);
+        perm_vec = std::vector<Ring>(n);
         std::iota(perm_vec.begin(), perm_vec.end(), 0);
     };
 
-    Permutation(std::vector<Row> _perm_vec) : perm_vec(_perm_vec) {};
+    Permutation(std::vector<Ring> _perm_vec) : perm_vec(_perm_vec) {};
 
     [[nodiscard]] static Permutation random(int n_rows, emp::PRG &rng) {
         Permutation p = Permutation(n_rows);
@@ -40,7 +40,7 @@ class Permutation {
     }
 
     [[nodiscard]] Permutation inverse() {
-        std::vector<Row> inverse_vec(perm_vec.size());
+        std::vector<Ring> inverse_vec(perm_vec.size());
         for (size_t i = 0; i < perm_vec.size(); ++i) {
             inverse_vec[perm_vec[i]] = i;
         }
@@ -49,9 +49,9 @@ class Permutation {
 
     [[nodiscard]] size_t size() const { return perm_vec.size(); }
 
-    [[nodiscard]] Row operator[](size_t idx) { return perm_vec[idx]; }
+    [[nodiscard]] Ring operator[](size_t idx) { return perm_vec[idx]; }
 
-    [[nodiscard]] std::vector<Row> get_perm_vec() { return perm_vec; }
+    [[nodiscard]] std::vector<Ring> get_perm_vec() { return perm_vec; }
 
     template <typename T>
     std::vector<T> operator()(const std::vector<T> &input_vec) const {
@@ -77,7 +77,7 @@ class Permutation {
 
     [[nodiscard]] Permutation operator*(const Permutation &other) const {
         size_t n = perm_vec.size();
-        std::vector<Row> result(n);
+        std::vector<Ring> result(n);
 
         for (size_t i = 0; i < perm_vec.size(); ++i) {
             result[i] = perm_vec[other.perm_vec[i]];
@@ -104,5 +104,5 @@ class Permutation {
     }
 
    private:
-    std::vector<Row> perm_vec;
+    std::vector<Ring> perm_vec;
 };

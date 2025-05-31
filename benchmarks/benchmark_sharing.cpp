@@ -29,7 +29,7 @@ void benchmark(const bpo::variables_map &opts) {
     Party party = (pid == 0 ? P0 : P1);
     ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
 
-    std::vector<Row> input_table(vec_size);
+    std::vector<Ring> input_table(vec_size);
     for (size_t i = 0; i < vec_size; ++i) input_table[i] = i;
 
     StatsPoint start_share(*network);

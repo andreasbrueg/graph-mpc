@@ -30,9 +30,9 @@ void test_sharing(const bpo::variables_map &opts) {
     RandomGenerators rngs(seeds_h, seeds_l);
     ProtocolConfig c(party, rngs, network, vec_size, 1000000);
 
-    std::vector<Row> share(vec_size);
-    std::vector<Row> input_table(vec_size);
-    std::vector<Row> reconstructed;
+    std::vector<Ring> share(vec_size);
+    std::vector<Ring> input_table(vec_size);
+    std::vector<Ring> reconstructed;
 
     for (size_t i = 0; i < vec_size; ++i) {
         input_table[i] = i;
@@ -58,10 +58,10 @@ void test_sharing(const bpo::variables_map &opts) {
     /* Test Graph Sharing */
     Graph g;
     g.size = 8;
-    std::vector<Row> src({0, 1, 2, 3, 0, 1, 2, 3});
-    std::vector<Row> dst({0, 1, 2, 3, 1, 2, 0, 2});
-    std::vector<Row> isV({1, 1, 1, 1, 0, 0, 0, 0});
-    std::vector<Row> payload({1, 2, 3, 4, 0, 0, 0, 0});
+    std::vector<Ring> src({0, 1, 2, 3, 0, 1, 2, 3});
+    std::vector<Ring> dst({0, 1, 2, 3, 1, 2, 0, 2});
+    std::vector<Ring> isV({1, 1, 1, 1, 0, 0, 0, 0});
+    std::vector<Ring> payload({1, 2, 3, 4, 0, 0, 0, 0});
     g.src = src;
     g.dst = dst;
     g.isV = isV;

@@ -1,12 +1,10 @@
-#include <cassert>
-#include <random>
+#include <algorithm>
 
 #include "../setup/setup.h"
-#include "../src/protocol/sorting.h"
-#include "../src/utils/perm.h"
+#include "../src/processor.h"
+#include "../src/utils/graph.h"
 
 void benchmark(const bpo::variables_map &opts) {
-    std::cout << "------ test_sort ------" << std::endl << std::endl;
     auto vec_size = opts["vec-size"].as<size_t>();
 
     size_t pid, nP, repeat, threads, shuffle_num, nodes;
@@ -20,6 +18,8 @@ void benchmark(const bpo::variables_map &opts) {
     setup::setupExecution(opts, pid, nP, repeat, threads, shuffle_num, nodes, network, seeds_h, seeds_l, save_output, save_file);
     output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads},  {"seeds_h", seeds_h},
                               {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", vec_size}};
+    output_data["benchmarks_pre"] = json::array();
+    output_data["benchmarks"] = json::array();
 
     std::cout << "--- Details ---\n";
     for (const auto &[key, value] : output_data["details"].items()) {
@@ -27,57 +27,64 @@ void benchmark(const bpo::variables_map &opts) {
     }
     std::cout << std::endl;
 
-    /* Setting up the input vector */
-    std::vector<Ring> input_vector(vec_size);
-
-    for (size_t i = 0; i < vec_size; i++) {
-        input_vector[i] = rand() % vec_size;
-    }
-
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
     const size_t BLOCK_SIZE = 100000;
+    const size_t n_iterations = 1;
 
-    std::vector<std::vector<Ring>> bits(sizeof(Ring) * 8);
-    std::vector<std::vector<Ring>> bit_shares(sizeof(Ring) * 8);
-
-    for (size_t i = 0; i < sizeof(Ring) * 8; ++i) {
-        bits[i].resize(vec_size);
-        bit_shares[i].resize(vec_size);
-        for (size_t j = 0; j < vec_size; ++j) {
-            bits[i][j] = (input_vector[j] & (1 << i)) >> i;
-        }
+    Graph g(vec_size);
+    std::vector<Ring> src, dst, isV, payload;
+    for (size_t i = 0; i < nodes; ++i) {
+        src.push_back(i);
+        dst.push_back(i);
+        isV.push_back(1);
+        payload.push_back(0);
     }
-
-    for (size_t i = 0; i < bit_shares.size(); ++i) {
-        bit_shares[i] = share::random_share_secret_vec_2P(party, rngs, bits[i]);
+    for (size_t i = nodes; i < vec_size; ++i) {
+        Ring rand = std::rand() % nodes;
+        src.push_back(rand);
+        dst.push_back((rand + 1) % nodes);
+        isV.push_back(0);
+        payload.push_back(0);
     }
+    payload[0] = 1;
+
+    g.src = src;
+    g.dst = dst;
+    g.isV = isV;
+    g.payload = payload;
+
+    Processor proc(party, rngs, network, g.size, BLOCK_SIZE);
+    SecretSharedGraph g_shared = share::random_share_graph(party, rngs, g);
+    proc.set_graph(g_shared);
 
     for (size_t r = 0; r < repeat; ++r) {
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
 
         StatsPoint start_pre(*network);
-        auto sort_preproc = sort::get_sort_preprocess(party, rngs, network, vec_size, BLOCK_SIZE, bit_shares.size());
+        proc.run_mp_preprocessing(n_iterations);
         StatsPoint end_pre(*network);
         network->sync();
 
-        auto rbench_pre = end_pre - start_pre;
-        output_data["benchmarks_pre"].push_back(rbench_pre);
-        size_t bytes_sent_pre = 0;
-        for (const auto &val : rbench_pre["communication"]) {
-            bytes_sent_pre += val.get<int64_t>();
-        }
-        std::cout << "setup time: " << rbench_pre["time"] << " ms" << std::endl;
-        std::cout << "setup sent: " << bytes_sent_pre << " bytes" << std::endl;
-
-        StatsPoint start(*network);
-        auto sort_share = sort::get_sort_evaluate(party, rngs, network, vec_size, BLOCK_SIZE, bit_shares, sort_preproc);
-        StatsPoint end(*network);
-
-        auto rbench = end - start;
+        auto rbench = end_pre - start_pre;
         output_data["benchmarks"].push_back(rbench);
 
         size_t bytes_sent = 0;
+        for (const auto &val : rbench["communication"]) {
+            bytes_sent += val.get<int64_t>();
+        }
+
+        std::cout << "preprocessing time: " << rbench["time"] << " ms" << std::endl;
+        std::cout << "preprocessing sent: " << bytes_sent << " bytes" << std::endl;
+
+        StatsPoint start(*network);
+        proc.run_mp_evaluation(n_iterations, nodes);
+        StatsPoint end(*network);
+
+        rbench = end - start;
+        output_data["benchmarks"].push_back(rbench);
+
+        bytes_sent = 0;
         for (const auto &val : rbench["communication"]) {
             bytes_sent += val.get<int64_t>();
         }
@@ -106,7 +113,7 @@ void benchmark(const bpo::variables_map &opts) {
 int main(int argc, char **argv) {
     auto prog_opts(setup::programOptions());
 
-    bpo::options_description cmdline("Benchmark the sorting protocol.");
+    bpo::options_description cmdline("Benchmark a simple test for shuffling and unshuffling");
     cmdline.add(prog_opts);
 
     cmdline.add_options()("config,c", bpo::value<std::string>(), "configuration file for easy specification of cmd line arguments")("help,h",

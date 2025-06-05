@@ -1,38 +1,44 @@
 #include "compaction.h"
 
-std::tuple<std::vector<Ring>, std::vector<Ring>, std::vector<Ring>> compaction::preprocess(ProtocolConfig &c) {
-    std::vector<Ring> triple_a, triple_b, triple_c;
-
-    std::vector<Ring> vals_to_p1(c.n_rows);
+std::vector<Ring> compaction::preprocess_Dealer(Party id, RandomGenerators &rngs, size_t n) {
+    std::vector<Ring> shares_P1;
     size_t idx = 0;
 
-    if (c.pid == P1) recv_vec(D, c.network, vals_to_p1, c.BLOCK_SIZE);
-
-    for (size_t i = 0; i < c.n_rows; ++i) {
-        triple_a.push_back(share::random_share_3P(c));
-        triple_b.push_back(share::random_share_3P(c));
-        Ring mul = triple_a[i] * triple_b[i];
-        triple_c.push_back(share::random_share_secret_3P(c, vals_to_p1, idx, mul));
-    }
-
-    if (c.pid == D) send_vec(P1, c.network, vals_to_p1.size(), vals_to_p1, c.BLOCK_SIZE);
-
-    return {triple_a, triple_b, triple_c};
+    auto triples = mul::preprocess(id, rngs, shares_P1, idx, n);
+    return shares_P1;
 }
 
-Permutation compaction::evaluate(ProtocolConfig &c, std::vector<Ring> &triple_a, std::vector<Ring> &triple_b, std::vector<Ring> &triple_c,
-                                 std::vector<Ring> &input_share) {
-    std::vector<Ring> output(c.n_rows);
+std::vector<std::tuple<Ring, Ring, Ring>> compaction::preprocess_Parties(Party id, RandomGenerators &rngs, size_t n, std::vector<Ring> &shares_P1,
+                                                                         size_t &idx) {
+    return mul::preprocess(id, rngs, shares_P1, idx, n);
+}
+
+std::vector<std::tuple<Ring, Ring, Ring>> compaction::preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n,
+                                                                 size_t BLOCK_SIZE) {
+    std::vector<Ring> vals_to_p1;
+    size_t idx = 0;
+
+    if (id == P1) recv_vec(D, network, n, vals_to_p1, BLOCK_SIZE);
+
+    auto triples = mul::preprocess(id, rngs, vals_to_p1, idx, n);
+
+    if (id == D) send_vec(P1, network, vals_to_p1.size(), vals_to_p1, BLOCK_SIZE);
+
+    return triples;
+}
+
+std::vector<Ring> compaction::evaluate_1(Party id, size_t n, std::vector<std::tuple<Ring, Ring, Ring>> &triples, std::vector<Ring> &input_share) {
+    std::vector<Ring> output(n);
     std::vector<Ring> vals;
 
     size_t idx_mult = 0;
 
-    if (c.pid != D) {
+    if (id != D) {
         std::vector<Ring> f_0;
         // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
-        for (size_t i = 0; i < c.n_rows; ++i) {
+        for (size_t i = 0; i < n; ++i) {
             f_0.push_back(-input_share[i]);
-            if (c.pid == P0) {
+            if (id == P0) {
                 f_0[i] += 1;  // 1 as constant only to one share
             }
         }
@@ -40,56 +46,129 @@ Permutation compaction::evaluate(ProtocolConfig &c, std::vector<Ring> &triple_a,
         std::vector<Ring> s_0, s_1;
         Ring s = 0;
         // Set s_0 to prefix sum of f_0 and s_1 to prefix sum of f_1/input continuing from the prior final value
-        for (size_t i = 0; i < c.n_rows; ++i) {
+        for (size_t i = 0; i < n; ++i) {
             s += f_0[i];
             s_0.push_back(s);
         }
-        for (size_t i = 0; i < c.n_rows; ++i) {
+        for (size_t i = 0; i < n; ++i) {
             s += input_share[i];
             s_1.push_back(s - s_0[i]);  // s_0[i] see below
         }
 
-        // We now have to compute s_0 + input * (s_1 - s_0) (element-wise multiplication).
-        // Previously, we already subtracted s_0 from s_1, so we just compute s_0 + input * s_1
-        // s_0 is added after the communication though, here, we just multiply.
+        mul::evaluate_1(triples, vals, input_share, s_1, n);
+    }
+    return vals;
+}
 
-        for (size_t i = 0; i < c.n_rows; i++) {
-            auto xa = triple_a[i] + input_share[i];
-            auto yb = triple_b[i] + s_1[i];
-            vals.push_back(xa);
-            vals.push_back(yb);
+Permutation compaction::evaluate_2(Party id, size_t n, std::vector<std::tuple<Ring, Ring, Ring>> &triples, std::vector<Ring> &vals,
+                                   std::vector<Ring> &input_share) {
+    std::vector<Ring> output(n);
+    if (id != D) {
+        std::vector<Ring> f_0;
+        // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
+        for (size_t i = 0; i < n; ++i) {
+            f_0.push_back(-input_share[i]);
+            if (id == P0) {
+                f_0[i] += 1;  // 1 as constant only to one share
+            }
         }
 
-        std::vector<Ring> data_recv(2 * c.n_rows);
-        if (c.pid == P0) {
-            send_vec(P1, c.network, vals.size(), vals, c.BLOCK_SIZE);
-            recv_vec(P1, c.network, data_recv, c.BLOCK_SIZE);
-        } else if (c.pid == P1) {
-            recv_vec(P0, c.network, data_recv, c.BLOCK_SIZE);
-            send_vec(P0, c.network, vals.size(), vals, c.BLOCK_SIZE);
+        std::vector<Ring> s_0, s_1;
+        Ring s = 0;
+        // Set s_0 to prefix sum of f_0 and s_1 to prefix sum of f_1/input continuing from the prior final value
+        for (size_t i = 0; i < n; ++i) {
+            s += f_0[i];
+            s_0.push_back(s);
+        }
+        for (size_t i = 0; i < n; ++i) {
+            s += input_share[i];
+            s_1.push_back(s - s_0[i]);  // s_0[i] see below
         }
 
-        for (size_t i = 0; i < vals.size(); ++i) vals[i] += data_recv[i];
+        output = mul::evaluate_2(id, triples, vals, input_share, s_1, n);
 
-        // Now, finalize the multiplications and add vector s_0.
-        for (size_t i = 0; i < c.n_rows; ++i) {
-            auto a = triple_a[i];
-            auto b = triple_b[i];
-            auto mul = triple_c[i];
+        for (size_t i = 0; i < output.size(); ++i) {
+            output[i] += s_0[i];
+            if (id == P0) output[i]--;
+        }
+    }
 
-            auto xa = vals[2 * idx_mult];
-            auto yb = vals[2 * idx_mult + 1];
+    return Permutation(output);
+}
 
-            output[i] = s_0[i] + (xa * yb * (c.pid)) - (xa * b) - (yb * a) + mul;
-            if (c.pid == P0) output[i]--;
+Permutation compaction::evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE,
+                                 std::vector<std::tuple<Ring, Ring, Ring>> &triples, std::vector<Ring> &input_share) {
+    std::vector<Ring> output(n);
+    std::vector<Ring> vals_send;
+
+    if (id == D) return Permutation(output);
+
+    size_t idx_mult = 0;
+
+    if (n != D) {
+        std::vector<Ring> f_0;
+        // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
+        for (size_t i = 0; i < n; ++i) {
+            f_0.push_back(-input_share[i]);
+            if (id == P0) {
+                f_0[i] += 1;  // 1 as constant only to one share
+            }
+        }
+
+        std::vector<Ring> s_0, s_1;
+        Ring s = 0;
+        // Set s_0 to prefix sum of f_0 and s_1 to prefix sum of f_1/input continuing from the prior final value
+        for (size_t i = 0; i < n; ++i) {
+            s += f_0[i];
+            s_0.push_back(s);
+        }
+        for (size_t i = 0; i < n; ++i) {
+            s += input_share[i];
+            s_1.push_back(s - s_0[i]);  // s_0[i] see below
+        }
+
+        for (size_t i = 0; i < n; ++i) {
+            auto [a, b, _] = triples[i];
+            auto xa = input_share[i] + a;
+            auto yb = s_1[i] + b;
+            vals_send.push_back(xa);
+            vals_send.push_back(yb);
+        }
+
+        std::vector<Ring> vals_receive(n * 2);
+        if (id == P0) {
+            send_vec(P1, network, vals_send.size(), vals_send, BLOCK_SIZE);
+            recv_vec(P1, network, vals_receive, BLOCK_SIZE);
+        } else {
+            recv_vec(P0, network, vals_receive, BLOCK_SIZE);
+            send_vec(P0, network, vals_send.size(), vals_send, BLOCK_SIZE);
+        }
+
+        for (size_t i = 0; i < n * 2; ++i) {
+            vals_send[i] += vals_receive[i];
+        }
+
+        for (size_t i = 0; i < n; ++i) {
+            auto [a, b, mul] = triples[i];
+
+            auto xa = vals_send[2 * idx_mult];
+            auto yb = vals_send[2 * idx_mult + 1];
+
+            output[i] = (xa * yb * (id)) - (xa * b) - (yb * a) + mul;
             idx_mult++;
+        }
+
+        for (size_t i = 0; i < output.size(); ++i) {
+            output[i] += s_0[i];
+            if (id == P0) output[i]--;
         }
     }
     return Permutation(output);
 }
 
-Permutation compaction::get_compaction(ProtocolConfig &c, std::vector<Ring> &input_share) {
-    auto [triple_a, triple_b, triple_c] = preprocess(c);
-    c.network->sync();
-    return evaluate(c, triple_a, triple_b, triple_c, input_share);
+Permutation compaction::get_compaction(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE,
+                                       std::vector<Ring> &input_share) {
+    auto triples = preprocess(id, rngs, network, n, BLOCK_SIZE);
+    network->sync();
+    return evaluate(id, rngs, network, n, BLOCK_SIZE, triples, input_share);
 }

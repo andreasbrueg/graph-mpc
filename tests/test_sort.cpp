@@ -1,9 +1,9 @@
 #include <cassert>
 #include <random>
 
-#include "../../setup/setup.h"
-#include "../../src/protocol/sorting.h"
-#include "../../src/utils/perm.h"
+#include "../setup/setup.h"
+#include "../src/protocol/sorting.h"
+#include "../src/utils/perm.h"
 
 void test_sort(const bpo::variables_map &opts) {
     std::cout << "------ test_sort ------" << std::endl << std::endl;
@@ -36,7 +36,7 @@ void test_sort(const bpo::variables_map &opts) {
 
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
-    ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
+    const size_t BLOCK_SIZE = 100000;
 
     std::vector<std::vector<Ring>> bits(sizeof(Ring) * 8);
     std::vector<std::vector<Ring>> bit_shares(sizeof(Ring) * 8);
@@ -50,13 +50,11 @@ void test_sort(const bpo::variables_map &opts) {
     }
 
     for (size_t i = 0; i < bit_shares.size(); ++i) {
-        bit_shares[i] = share::random_share_secret_vec_2P(conf, bits[i]);
+        bit_shares[i] = share::random_share_secret_vec_2P(party, rngs, bits[i]);
     }
 
-    /* Sorting a vector with entries larger than one bit */
-    auto sort_preproc = sort::get_sort_preprocess(conf, bit_shares.size());
-
-    auto sort_share = sort::get_sort_evaluate(conf, bit_shares, sort_preproc);
+    auto sort_preproc = sort::get_sort_preprocess(party, rngs, network, vec_size, BLOCK_SIZE, bit_shares.size());
+    auto sort_share = sort::get_sort_evaluate(party, rngs, network, vec_size, BLOCK_SIZE, bit_shares, sort_preproc);
 
     for (size_t i = 0; i < sizeof(Ring) * 8; ++i) {
         for (size_t j = 0; j < vec_size; ++j) {
@@ -65,18 +63,16 @@ void test_sort(const bpo::variables_map &opts) {
     }
 
     for (size_t i = 0; i < bit_shares.size(); ++i) {
-        bit_shares[i] = share::random_share_secret_vec_2P(conf, bits[i]);
+        bit_shares[i] = share::random_share_secret_vec_2P(party, rngs, bits[i]);
     }
-    /*
-        auto reverse_sort_preproc = sort::get_sort_preprocess(conf, bit_shares);
-        auto reverse_sort_share = sort::get_sort_evaluate(conf, bit_shares, reverse_sort_preproc);
-        Permutation reverse_sort = share::reveal_perm(conf, reverse_sort_share);
-    */
+    auto reverse_sort_preproc = sort::get_sort_preprocess(party, rngs, network, vec_size, BLOCK_SIZE, bit_shares.size());
+    auto reverse_sort_share = sort::get_sort_evaluate(party, rngs, network, vec_size, BLOCK_SIZE, bit_shares, reverse_sort_preproc);
 
-    Permutation sort = share::reveal_perm(conf, sort_share);
+    Permutation reverse_sort = share::reveal_perm(party, network, BLOCK_SIZE, reverse_sort_share);
+    Permutation sort = share::reveal_perm(party, network, BLOCK_SIZE, sort_share);
 
     auto sorted_vector = sort(input_vector);
-    // auto reverse_sorted_vector = reverse_sort(input_vector);
+    auto reverse_sorted_vector = reverse_sort(input_vector);
 
     if (pid != D) {
         std::cout << "Original input_vector: ";
@@ -96,14 +92,13 @@ void test_sort(const bpo::variables_map &opts) {
         for (size_t i = 0; i < sorted_vector.size() - 1; ++i) {
             assert(sorted_vector[i] <= sorted_vector[i + 1]);
         }
-        /*
-                std::cout << "Reverse sorted input_vector: ";
 
-                for (size_t i = 0; i < reverse_sorted_vector.size() - 1; ++i) {
-                    std::cout << reverse_sorted_vector[i] << ", ";
-                }
-                std::cout << reverse_sorted_vector[input_vector.size() - 1] << std::endl;
-        */
+        std::cout << "Reverse sorted input_vector: ";
+
+        for (size_t i = 0; i < reverse_sorted_vector.size() - 1; ++i) {
+            std::cout << reverse_sorted_vector[i] << ", ";
+        }
+        std::cout << reverse_sorted_vector[input_vector.size() - 1] << std::endl;
     }
 
     exit(0);

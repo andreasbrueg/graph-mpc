@@ -10,22 +10,30 @@
 #include "types.h"
 
 namespace share {
+Ring random_share_secret_2P(Party id, RandomGenerators &rngs, Ring &secret);
 
-Ring random_share_3P(ProtocolConfig &c);
+Ring random_share_secret_2P_bin(Party id, RandomGenerators &rngs, Ring &secret);
 
-Ring random_share_secret_3P(ProtocolConfig &c, std::vector<Ring> &vals_to_p1, size_t &idx, Ring &secret);
+std::vector<Ring> random_share_secret_vec_2P(Party id, RandomGenerators &rngs, std::vector<Ring> &secret_vec);
 
-Ring random_share_secret_2P(ProtocolConfig &c, Ring &secret);
+Ring random_share_3P(Party id, RandomGenerators &rngs);
 
-std::vector<Ring> random_share_secret_vec_2P(ProtocolConfig &c, std::vector<Ring> &secret_vec);
+Ring random_share_3P_bin(Party id, RandomGenerators &rngs);
 
-Ring reveal(ProtocolConfig &c, Ring &share);
+Ring random_share_secret_3P(Party id, RandomGenerators &rngs, std::vector<Ring> &shares_P1, size_t &idx, Ring &secret);
 
-std::vector<Ring> reveal_vec(ProtocolConfig &conf, std::vector<Ring> &share);
+Ring random_share_secret_3P_bin(Party id, RandomGenerators &rngs, std::vector<Ring> &vals_to_p1, size_t &idx, Ring &secret);
 
-Permutation reveal_perm(ProtocolConfig &conf, Permutation &share);
+SecretSharedGraph random_share_graph(Party id, RandomGenerators &rngs, Graph &g);
 
-SecretSharedGraph random_share_graph(ProtocolConfig &conf, Graph &graph);
+Ring reveal(Party id, std::shared_ptr<io::NetIOMP> network, Ring &share);
 
-Graph reveal_graph(ProtocolConfig &conf, SecretSharedGraph &shared_graph);
+Ring reveal_bin(Party id, std::shared_ptr<io::NetIOMP> network, Ring &share);
+
+std::vector<Ring> reveal_vec(Party id, std::shared_ptr<io::NetIOMP> network, size_t BLOCK_SIZE, std::vector<Ring> &share);
+
+Permutation reveal_perm(Party id, std::shared_ptr<io::NetIOMP> network, size_t BLOCK_SIZE, Permutation &share);
+
+Graph reveal_graph(Party id, std::shared_ptr<io::NetIOMP> network, size_t BLOCK_SIZE, SecretSharedGraph &g);
+
 };  // namespace share

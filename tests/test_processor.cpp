@@ -1,12 +1,10 @@
 #include <cassert>
-#include <random>
 
-#include "../../setup/setup.h"
-#include "../../src/protocol/message_passing.h"
-#include "../../src/utils/perm.h"
+#include "../setup/setup.h"
+#include "../src/processor.h"
 
-void test_mp(const bpo::variables_map &opts) {
-    std::cout << "------ test_mp ------" << std::endl << std::endl;
+void test_processor(const bpo::variables_map &opts) {
+    std::cout << "------ test_processor ------" << std::endl << std::endl;
     auto vec_size = opts["vec-size"].as<size_t>();
 
     size_t pid, nP, repeat, threads, shuffle_num, nodes;
@@ -29,20 +27,12 @@ void test_mp(const bpo::variables_map &opts) {
 
     /* Setting up the input vector */
     std::vector<Ring> input_vector(vec_size);
-
-    for (size_t i = 0; i < vec_size; i++) {
-        input_vector[i] = rand() % vec_size;
-    }
+    for (size_t i = 0; i < vec_size; i++) input_vector[i] = i;
 
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
-    ProtocolConfig conf(party, rngs, network, 8, 1000000);
-
-    /**
-     *      0 == 1
-     *       \  //
-     *         2
-     */
+    const size_t BLOCK_SIZE = 100000;
+    Processor proc(party, rngs, network, 8, 100000);
 
     Graph g;
     g.size = 8;
@@ -51,24 +41,26 @@ void test_mp(const bpo::variables_map &opts) {
     g.isV = std::vector<Ring>({1, 1, 1, 0, 0, 0, 0, 0});
     g.payload = std::vector<Ring>({1, 2, 3, 0, 0, 0, 0, 0});
 
-    SecretSharedGraph g_shared = share::random_share_graph(conf, g);
+    SecretSharedGraph g_shared = share::random_share_graph(party, rngs, g);
 
-    auto preproc = mp::run_preprocess(conf, 2);
-    mp::run_evaluate(conf, g_shared, 2, 3, preproc);
+    proc.set_graph(g_shared);
+    proc.run_mp_preprocessing(2);
+    proc.run_mp_evaluation(2, 3);
 
-    auto res_g = share::reveal_graph(conf, g_shared);
+    auto g_new = proc.get_graph();
+    auto g_revealed = share::reveal_graph(party, network, BLOCK_SIZE, g_new);
 
     if (pid != D) {
-        res_g.print();
+        g_revealed.print();
 
-        assert(res_g.payload[0] == 18);
-        assert(res_g.payload[1] == 21);
-        assert(res_g.payload[2] == 3);
-        assert(res_g.payload[3] == 0);
-        assert(res_g.payload[4] == 0);
-        assert(res_g.payload[5] == 0);
-        assert(res_g.payload[6] == 0);
-        assert(res_g.payload[7] == 0);
+        assert(g_revealed.payload[0] == 18);
+        assert(g_revealed.payload[1] == 21);
+        assert(g_revealed.payload[2] == 3);
+        assert(g_revealed.payload[3] == 0);
+        assert(g_revealed.payload[4] == 0);
+        assert(g_revealed.payload[5] == 0);
+        assert(g_revealed.payload[6] == 0);
+        assert(g_revealed.payload[7] == 0);
     }
 
     exit(0);
@@ -86,7 +78,7 @@ int main(int argc, char **argv) {
     bpo::variables_map opts = setup::parseOptions(cmdline, prog_opts, argc, argv);
 
     try {
-        test_mp(opts);
+        test_processor(opts);
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\nFatal error" << std::endl;
         return 1;

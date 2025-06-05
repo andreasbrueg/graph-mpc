@@ -1,10 +1,12 @@
 add_library(GraphMPC_lib STATIC)
 target_sources(GraphMPC_lib 
     PRIVATE 
+    processor.cpp
     utils/types.h
     utils/graph.h
     utils/random_generators.cpp 
     utils/sharing.cpp
+    utils/mul.cpp
     utils/protocol_config.h
     io/tls_net_io_channel.h
     io/netmp.h

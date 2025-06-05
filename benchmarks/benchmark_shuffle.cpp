@@ -29,13 +29,13 @@ void benchmark(const bpo::variables_map &opts) {
 
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
-    ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
+    const size_t BLOCK_SIZE = 100000;
 
     for (size_t r = 0; r < repeat; ++r) {
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
 
         StatsPoint start_pre(*network);
-        PermShare perm_share = shuffle::get_shuffle(conf);
+        ShufflePre perm_share = shuffle::get_shuffle(party, rngs, network, vec_size, 100000, false);
         StatsPoint end_pre(*network);
         network->sync();
 
@@ -49,7 +49,7 @@ void benchmark(const bpo::variables_map &opts) {
         std::cout << "setup sent: " << bytes_sent_pre << " bytes" << std::endl;
 
         StatsPoint start(*network);
-        std::vector<Ring> shuffle_share = shuffle::shuffle(conf, input_vector, perm_share, false);
+        std::vector<Ring> shuffle_share = shuffle::shuffle(party, rngs, network, input_vector, perm_share, vec_size, BLOCK_SIZE);
         StatsPoint end(*network);
 
         auto rbench = end - start;

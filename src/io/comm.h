@@ -44,3 +44,23 @@ static void recv_vec(Party src, std::shared_ptr<io::NetIOMP> network, std::vecto
         buffer[n_msgs * BLOCK_SIZE + j] = data_recv_last[j];
     }
 }
+
+static void recv_vec(Party src, std::shared_ptr<io::NetIOMP> network, size_t n_elems, std::vector<Ring> &buffer, const size_t BLOCK_SIZE) {
+    buffer.resize(n_elems);
+    size_t n_msgs = n_elems / BLOCK_SIZE;
+    size_t last_msg_size = n_elems % BLOCK_SIZE;
+    for (size_t i = 0; i < n_msgs; i++) {
+        std::vector<Ring> data_recv_i(BLOCK_SIZE);
+        network->recv(src, data_recv_i.data(), sizeof(Ring) * BLOCK_SIZE);
+        for (size_t j = 0; j < BLOCK_SIZE; j++) {
+            buffer[i * BLOCK_SIZE + j] = data_recv_i[j];
+        }
+    }
+
+    /* Receive last elements */
+    std::vector<Ring> data_recv_last(last_msg_size);
+    network->recv(src, data_recv_last.data(), sizeof(Ring) * last_msg_size);
+    for (size_t j = 0; j < last_msg_size; j++) {
+        buffer[n_msgs * BLOCK_SIZE + j] = data_recv_last[j];
+    }
+}

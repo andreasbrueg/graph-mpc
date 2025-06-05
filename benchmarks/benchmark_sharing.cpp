@@ -27,13 +27,13 @@ void benchmark(const bpo::variables_map &opts) {
 
     RandomGenerators rngs(seeds_h, seeds_l);
     Party party = (pid == 0 ? P0 : P1);
-    ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
+    const size_t BLOCK_SIZE = 100000;
 
     std::vector<Ring> input_table(vec_size);
     for (size_t i = 0; i < vec_size; ++i) input_table[i] = i;
 
     StatsPoint start_share(*network);
-    auto share = share::random_share_secret_vec_2P(conf, input_table);
+    auto share = share::random_share_secret_vec_2P(party, rngs, input_table);
     std::cout << "Sharing done." << std::endl;
     StatsPoint end_share(*network);
     network->sync();
@@ -52,7 +52,7 @@ void benchmark(const bpo::variables_map &opts) {
     std::cout << std::endl;
 
     StatsPoint start_reveal(*network);
-    auto revealed = share::reveal_vec(conf, share);
+    auto revealed = share::reveal_vec(party, network, BLOCK_SIZE, share);
     std::cout << "Reveal done." << std::endl;
     StatsPoint end_reveal(*network);
     network->sync();

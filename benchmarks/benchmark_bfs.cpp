@@ -29,7 +29,7 @@ void benchmark(const bpo::variables_map &opts) {
 
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
-    ProtocolConfig conf(party, rngs, network, vec_size, 1000000);
+    const size_t BLOCK_SIZE = 100000;
 
     Graph g(vec_size);
     std::vector<Ring> src, dst, isV, payload;
@@ -56,10 +56,10 @@ void benchmark(const bpo::variables_map &opts) {
     for (size_t r = 0; r < repeat; ++r) {
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
 
-        SecretSharedGraph g_shared = share::random_share_graph(conf, g);
+        SecretSharedGraph g_shared = share::random_share_graph(party, rngs, g);
 
         StatsPoint start_pre(*network);
-        auto preproc = mp::run_preprocess(conf, 1);
+        auto preproc = mp::preprocess(party, rngs, network, g.size, BLOCK_SIZE, 1);
         StatsPoint end_pre(*network);
         network->sync();
 
@@ -75,7 +75,7 @@ void benchmark(const bpo::variables_map &opts) {
         std::cout << "preprocessing sent: " << bytes_sent << " bytes" << std::endl;
 
         StatsPoint start(*network);
-        mp::run_evaluate(conf, g_shared, 1, nodes, preproc);
+        mp::evaluate(party, rngs, network, g.size, BLOCK_SIZE, g_shared, 1, nodes, preproc);
         StatsPoint end(*network);
 
         rbench = end - start;

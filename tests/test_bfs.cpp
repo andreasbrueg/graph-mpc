@@ -1,9 +1,9 @@
 #include <algorithm>
 #include <cassert>
 
-#include "../../setup/setup.h"
-#include "../../src/protocol/message_passing.h"
-#include "../../src/utils/perm.h"
+#include "../setup/setup.h"
+#include "../src/protocol/message_passing.h"
+#include "../src/utils/perm.h"
 
 void test_bfs(const bpo::variables_map &opts) {
     std::cout << "------ test_bfs ------" << std::endl << std::endl;
@@ -30,7 +30,7 @@ void test_bfs(const bpo::variables_map &opts) {
 
     Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
-    ProtocolConfig conf(party, rngs, network, 25, 1000000);
+    const size_t BLOCK_SIZE = 100000;
 
     /**
      *                      10        8
@@ -51,12 +51,12 @@ void test_bfs(const bpo::variables_map &opts) {
 
     if (pid != D) g.print();
 
-    SecretSharedGraph g_shared = share::random_share_graph(conf, g);
+    SecretSharedGraph g_shared = share::random_share_graph(party, rngs, g);
 
-    auto preproc = mp::run_preprocess(conf, 4);
-    mp::run_evaluate(conf, g_shared, 4, 11, preproc);
+    auto preproc = mp::preprocess(party, rngs, network, g.size, BLOCK_SIZE, 4);
+    mp::evaluate(party, rngs, network, g.size, BLOCK_SIZE, g_shared, 4, 11, preproc);
 
-    auto res_g = share::reveal_graph(conf, g_shared);
+    auto res_g = share::reveal_graph(party, network, BLOCK_SIZE, g_shared);
     for (auto &elem : res_g.payload) elem = std::min(elem, (Ring)1);
 
     if (pid != D) res_g.print();

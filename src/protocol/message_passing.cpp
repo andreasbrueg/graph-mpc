@@ -136,6 +136,9 @@ MPPreprocessing mp::preprocess(Party id, RandomGenerators &rngs, std::shared_ptr
         }
     }
 
+    preproc.eqz_triples = clip::equals_zero_preprocess(id, rngs, network, n, BLOCK_SIZE);
+    preproc.B2A_triples = clip::B2A_preprocess(id, rngs, network, n, BLOCK_SIZE);
+
     return preproc;
 }
 
@@ -184,7 +187,12 @@ void mp::evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP>
         payload_v = apply(payload_v, update);
     }
 
-    auto payload_bits_new = SecretSharedGraph::to_bits(payload_v, sizeof(Ring) * 8);
+    std::vector<Ring> payload_v_eqz = clip::equals_zero_evaluate(id, rngs, network, BLOCK_SIZE, preproc.eqz_triples, payload_v);
+    std::vector<Ring> payload_v_B2A = clip::B2A_evaluate(id, rngs, network, BLOCK_SIZE, preproc.B2A_triples, payload_v_eqz);
+
+    auto payload_v_flip = clip::flip(id, payload_v_B2A);
+
+    auto payload_bits_new = SecretSharedGraph::to_bits(payload_v_flip, sizeof(Ring) * 8);
     g.payload_bits = payload_bits_new;
 }
 
@@ -228,6 +236,11 @@ void mp::run(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> netw
         payload_v = apply(payload_v, update);
     }
 
-    auto payload_bits_new = SecretSharedGraph::to_bits(payload_v, sizeof(Ring) * 8);
+    std::vector<Ring> payload_v_eqz = clip::equals_zero(id, rngs, network, BLOCK_SIZE, payload_v);
+    std::vector<Ring> payload_v_B2A = clip::B2A(id, rngs, network, BLOCK_SIZE, payload_v_eqz);
+
+    auto payload_v_flip = clip::flip(id, payload_v_B2A);
+
+    auto payload_bits_new = SecretSharedGraph::to_bits(payload_v_flip, sizeof(Ring) * 8);
     g.payload_bits = payload_bits_new;
 }

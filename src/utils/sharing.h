@@ -16,6 +16,8 @@ Ring random_share_secret_2P_bin(Party id, RandomGenerators &rngs, Ring &secret);
 
 std::vector<Ring> random_share_secret_vec_2P(Party id, RandomGenerators &rngs, std::vector<Ring> &secret_vec);
 
+std::vector<Ring> random_share_secret_vec_2P_bin(Party id, RandomGenerators &rngs, std::vector<Ring> &secret_vec);
+
 Ring random_share_3P(Party id, RandomGenerators &rngs);
 
 Ring random_share_3P_bin(Party id, RandomGenerators &rngs);
@@ -31,6 +33,8 @@ Ring reveal(Party id, std::shared_ptr<io::NetIOMP> network, Ring &share);
 Ring reveal_bin(Party id, std::shared_ptr<io::NetIOMP> network, Ring &share);
 
 std::vector<Ring> reveal_vec(Party id, std::shared_ptr<io::NetIOMP> network, size_t BLOCK_SIZE, std::vector<Ring> &share);
+
+std::vector<Ring> reveal_vec_bin(Party id, std::shared_ptr<io::NetIOMP> network, size_t BLOCK_SIZE, std::vector<Ring> &share);
 
 Permutation reveal_perm(Party id, std::shared_ptr<io::NetIOMP> network, size_t BLOCK_SIZE, Permutation &share);
 

@@ -57,7 +57,6 @@ void test_bfs(const bpo::variables_map &opts) {
     mp::evaluate(party, rngs, network, g.size, BLOCK_SIZE, g_shared, 4, 11, preproc);
 
     auto res_g = share::reveal_graph(party, network, BLOCK_SIZE, g_shared);
-    for (auto &elem : res_g.payload) elem = std::min(elem, (Ring)1);
 
     if (pid != D) res_g.print();
 

@@ -53,9 +53,9 @@ void test_processor(const bpo::variables_map &opts) {
     if (pid != D) {
         g_revealed.print();
 
-        assert(g_revealed.payload[0] == 18);
-        assert(g_revealed.payload[1] == 21);
-        assert(g_revealed.payload[2] == 3);
+        assert(g_revealed.payload[0] == 1);
+        assert(g_revealed.payload[1] == 1);
+        assert(g_revealed.payload[2] == 1);
         assert(g_revealed.payload[3] == 0);
         assert(g_revealed.payload[4] == 0);
         assert(g_revealed.payload[5] == 0);

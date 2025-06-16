@@ -8,6 +8,7 @@
 #include "../setup/utils.h"
 #include "../utils/graph.h"
 #include "../utils/protocol_config.h"
+#include "clip.h"
 #include "sorting.h"
 
 struct MPPreprocessing_Dealer {
@@ -16,6 +17,8 @@ struct MPPreprocessing_Dealer {
     SortIterationPreprocessing_Dealer vtx_order_pre;
     std::tuple<std::vector<Ring>, std::vector<Ring>> apply_perm_pre;
     std::vector<SwitchPermPreprocessing_Dealer> sw_perm_pre;
+    std::vector<Ring> clip_vals_to_P1;
+    std::vector<Ring> B2A_vals_to_P1;
 
     std::tuple<std::vector<Ring>, std::vector<Ring>> to_vals() {
         std::vector<Ring> vals_P0;
@@ -48,16 +51,20 @@ struct MPPreprocessing_Dealer {
             vals_P1.insert(vals_P1.end(), pre.sigma_1.begin(), pre.sigma_1.end());
         }
 
+        for (auto &val : clip_vals_to_P1) vals_P1.push_back(val);
+
         return {vals_P0, vals_P1};
     }
 };
 
 struct MPPreprocessing {
-    SortPreprocessing src_order_pre;                   // size: (3 + (5 resp. 6) * (n_bits-1)) * n
-    SortPreprocessing dst_order_pre;                   // size: (3 + (5 resp. 6) * (n_bits-1)) * n
-    SortIterationPreprocessing vtx_order_pre;          // size: 5n resp. 6n
-    ShufflePre apply_perm_pre;                         // size: n resp. 2n
-    std::vector<SwitchPermPreprocessing> sw_perm_pre;  // size: 5n resp. 7n
+    SortPreprocessing src_order_pre;                        // size: (3 + (5 resp. 6) * (n_bits-1)) * n
+    SortPreprocessing dst_order_pre;                        // size: (3 + (5 resp. 6) * (n_bits-1)) * n
+    SortIterationPreprocessing vtx_order_pre;               // size: 5n resp. 6n
+    ShufflePre apply_perm_pre;                              // size: n resp. 2n
+    std::vector<SwitchPermPreprocessing> sw_perm_pre;       // size: 5n resp. 7n
+    std::vector<std::tuple<Ring, Ring, Ring>> eqz_triples;  // size: 3n
+    std::vector<std::tuple<Ring, Ring, Ring>> B2A_triples;
 };
 
 namespace mp {

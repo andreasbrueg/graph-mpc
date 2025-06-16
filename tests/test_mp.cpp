@@ -55,15 +55,13 @@ void test_mp(const bpo::variables_map &opts) {
 
     auto preproc = mp::preprocess(party, rngs, network, g.size, BLOCK_SIZE, 2);
     mp::evaluate(party, rngs, network, g.size, BLOCK_SIZE, g_shared, 2, 3, preproc);
-
     auto res_g = share::reveal_graph(party, network, BLOCK_SIZE, g_shared);
 
     if (pid != D) {
         res_g.print();
-
-        assert(res_g.payload[0] == 18);
-        assert(res_g.payload[1] == 21);
-        assert(res_g.payload[2] == 3);
+        assert(res_g.payload[0] == 1);
+        assert(res_g.payload[1] == 1);
+        assert(res_g.payload[2] == 1);
         assert(res_g.payload[3] == 0);
         assert(res_g.payload[4] == 0);
         assert(res_g.payload[5] == 0);

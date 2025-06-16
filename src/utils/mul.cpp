@@ -19,6 +19,8 @@ std::vector<Ring> mul::evaluate(Party id, std::shared_ptr<io::NetIOMP> network, 
     std::vector<Ring> output(n);
     size_t idx_mult = 0;
 
+    if (id == D) return output;
+
     for (size_t i = 0; i < n; ++i) {
         auto [a, b, _] = triples[i];
         auto xa = x[i] + a;
@@ -30,7 +32,7 @@ std::vector<Ring> mul::evaluate(Party id, std::shared_ptr<io::NetIOMP> network, 
     if (id == P0) {
         send_vec(P1, network, vals_send.size(), vals_send, BLOCK_SIZE);
         recv_vec(P1, network, vals_receive, BLOCK_SIZE);
-    } else {
+    } else if (id == P1) {
         recv_vec(P0, network, vals_receive, BLOCK_SIZE);
         send_vec(P0, network, vals_send.size(), vals_send, BLOCK_SIZE);
     }
@@ -76,6 +78,38 @@ std::vector<Ring> mul::evaluate_2(Party id, std::vector<std::tuple<Ring, Ring, R
     return output;
 }
 
+std::tuple<Ring, Ring, Ring> mul::preprocess_one(Party id, RandomGenerators &rngs, std::vector<Ring> &vals_to_p1, size_t &idx) {
+    Ring a = share::random_share_3P(id, rngs);
+    Ring b = share::random_share_3P(id, rngs);
+    Ring mul = a * b;
+    Ring d = share::random_share_secret_3P(id, rngs, vals_to_p1, idx, mul);
+    return {a, b, d};
+}
+
+Ring mul::evaluate_one(Party id, std::shared_ptr<io::NetIOMP> network, size_t BLOCK_SIZE, std::tuple<Ring, Ring, Ring> &triple, Ring x, Ring y) {
+    auto [a, b, mul] = triple;
+    Ring xa = x + a;
+    Ring yb = y + b;
+
+    std::vector<Ring> vals_rcv(2);
+    std::vector<Ring> vals(2);
+    vals[0] = xa;
+    vals[1] = yb;
+
+    if (id == P0) {
+        send_vec(P1, network, 2, vals, BLOCK_SIZE);
+        recv_vec(P1, network, vals_rcv, BLOCK_SIZE);
+    } else if (id == P1) {
+        recv_vec(P0, network, vals_rcv, BLOCK_SIZE);
+        send_vec(P0, network, 2, vals, BLOCK_SIZE);
+    }
+
+    xa += vals_rcv[0];
+    yb += vals_rcv[1];
+
+    return (xa * yb) * (id) - (xa * b) - (yb * a) + mul;
+}
+
 std::vector<std::tuple<Ring, Ring, Ring>> mul::preprocess_bin(Party id, RandomGenerators &rngs, std::vector<Ring> &vals_to_p1, size_t &idx, size_t n) {
     std::vector<std::tuple<Ring, Ring, Ring>> triples;
     for (size_t i = 0; i < n; ++i) {
@@ -93,6 +127,8 @@ std::vector<Ring> mul::evaluate_bin(Party id, std::shared_ptr<io::NetIOMP> netwo
     std::vector<Ring> vals_send;
     std::vector<Ring> vals_receive(n * 2);
     std::vector<Ring> output(n);
+
+    if (id == D) return output;
 
     for (size_t i = 0; i < n; ++i) {
         auto [a, b, _] = triples[i];
@@ -132,7 +168,7 @@ std::tuple<Ring, Ring, Ring> mul::preprocess_one_bin(Party id, RandomGenerators 
     return {a, b, d};
 }
 
-Ring mul::evaluate_one_bin(Party id, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, std::tuple<Ring, Ring, Ring> &triple, Ring x, Ring y) {
+Ring mul::evaluate_one_bin(Party id, std::shared_ptr<io::NetIOMP> network, size_t BLOCK_SIZE, std::tuple<Ring, Ring, Ring> &triple, Ring x, Ring y) {
     auto [a, b, mul] = triple;
     Ring xa = x ^ a;
     Ring yb = y ^ b;

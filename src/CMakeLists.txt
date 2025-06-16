@@ -14,6 +14,7 @@ target_sources(GraphMPC_lib
     protocol/sorting.cpp
     protocol/shuffle.cpp
     protocol/compaction.cpp
+    protocol/clip.cpp
     protocol/message_passing.cpp
     # Add further files if necessary
 )

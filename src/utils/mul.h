@@ -19,6 +19,10 @@ void evaluate_1(std::vector<std::tuple<Ring, Ring, Ring>> &triples, std::vector<
 std::vector<Ring> evaluate_2(Party id, std::vector<std::tuple<Ring, Ring, Ring>> &triples, std::vector<Ring> &vals, std::vector<Ring> x, std::vector<Ring> y,
                              size_t n);
 
+std::tuple<Ring, Ring, Ring> preprocess_one(Party id, RandomGenerators &rngs, std::vector<Ring> &vals_to_p1, size_t &idx);
+
+Ring evaluate_one(Party id, std::shared_ptr<io::NetIOMP> network, size_t BLOCK_SIZE, std::tuple<Ring, Ring, Ring> &triple, Ring x, Ring y);
+
 std::vector<std::tuple<Ring, Ring, Ring>> preprocess_bin(Party id, RandomGenerators &rngs, std::vector<Ring> &vals_to_p1, size_t &idx, size_t n);
 
 std::vector<Ring> evaluate_bin(Party id, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, std::vector<std::tuple<Ring, Ring, Ring>> &triples,
@@ -26,6 +30,6 @@ std::vector<Ring> evaluate_bin(Party id, std::shared_ptr<io::NetIOMP> network, s
 
 std::tuple<Ring, Ring, Ring> preprocess_one_bin(Party id, RandomGenerators &rngs, std::vector<Ring> &vals_to_p1, size_t &idx);
 
-Ring evaluate_one_bin(Party id, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, std::tuple<Ring, Ring, Ring> &triple, Ring x, Ring y);
+Ring evaluate_one_bin(Party id, std::shared_ptr<io::NetIOMP> network, size_t BLOCK_SIZE, std::tuple<Ring, Ring, Ring> &triple, Ring x, Ring y);
 
 };  // namespace mul

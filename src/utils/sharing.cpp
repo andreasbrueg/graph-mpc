@@ -53,6 +53,29 @@ std::vector<Ring> share::random_share_secret_vec_2P(Party id, RandomGenerators &
     }
     return share;
 }
+
+std::vector<Ring> share::random_share_secret_vec_2P_bin(Party id, RandomGenerators &rngs, std::vector<Ring> &secret_vec) {
+    std::vector<Ring> share(secret_vec.size());
+    switch (id) {
+        case P0: {
+            for (size_t i = 0; i < share.size(); ++i) {
+                rngs.rng_01().random_data(&share[i], sizeof(Ring));
+                share[i] = secret_vec[i] ^ share[i];
+            }
+            break;
+        }
+        case P1: {
+            for (size_t i = 0; i < share.size(); ++i) {
+                rngs.rng_01().random_data(&share[i], sizeof(Ring));
+            }
+            break;
+        }
+        default:
+            break;
+    }
+    return share;
+}
+
 Ring share::random_share_3P(Party id, RandomGenerators &rngs) {
     switch (id) {
         case P0: {
@@ -135,7 +158,7 @@ Ring share::random_share_secret_3P_bin(Party id, RandomGenerators &rngs, std::ve
             Ring share_0;
             rngs.rng_D0_comp().random_data(&share_0, sizeof(Ring));
             Ring share_1 = secret ^ share_0;
-            vals_to_p1[idx] = share_1;
+            vals_to_p1.push_back(share_1);
             idx++;
             return secret;
         }
@@ -228,6 +251,30 @@ std::vector<Ring> share::reveal_vec(Party id, std::shared_ptr<io::NetIOMP> netwo
         default:
             return result;
     }
+}
+std::vector<Ring> share::reveal_vec_bin(Party id, std::shared_ptr<io::NetIOMP> network, size_t BLOCK_SIZE, std::vector<Ring> &share) {
+    std::vector<Ring> result(share.size());
+    std::vector<Ring> share_other(share.size());
+
+    switch (id) {
+        case P0: {
+            send_vec(P1, network, share.size(), share, BLOCK_SIZE);
+            recv_vec(P1, network, share_other, BLOCK_SIZE);
+            break;
+        }
+        case P1: {
+            recv_vec(P0, network, share_other, BLOCK_SIZE);
+            send_vec(P0, network, share.size(), share, BLOCK_SIZE);
+            break;
+        }
+        default:
+            return result;
+    }
+
+    for (size_t i = 0; i < result.size(); ++i) {
+        result[i] = share[i] ^ share_other[i];
+    }
+    return result;
 }
 
 Permutation share::reveal_perm(Party id, std::shared_ptr<io::NetIOMP> network, size_t BLOCK_SIZE, Permutation &share) {

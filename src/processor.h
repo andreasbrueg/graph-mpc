@@ -15,16 +15,7 @@
 #include "utils/sharing.h"
 #include "utils/types.h"
 
-enum FunctionToken { COMPACTION, SHUFFLE, UNSHUFFLE, SORT, SORT_ITERATION, SWITCH_PERM, APPLY_PERM };
-
-struct Preprocessing {
-    std::vector<std::vector<std::tuple<Ring, Ring, Ring>>> compaction_triples;
-    std::vector<ShufflePre> shuffle_shares;
-    std::vector<std::vector<Ring>> unshuffle_Bs;
-    std::vector<SortPreprocessing_Dealer> sort_preproc_1;
-    std::vector<SortPreprocessing> sort_preproc_2;
-    std::vector<SwitchPermPreprocessing> sw_perm_preproc;
-};
+enum FunctionToken { SORT, SORT_ITERATION, SWITCH_PERM, APPLY_PERM, CLIP };
 
 class Processor {
    public:
@@ -33,15 +24,10 @@ class Processor {
 
     void add(FunctionToken function);
     void set_graph(SecretSharedGraph &graph) { g = graph; }
-    void set_wire(std::vector<Ring> &input) { wire = input; }
-    void set_sort_wire(std::vector<std::vector<Ring>> &input) { sort_wire = input; }
 
     void run_mp_preprocessing(size_t n_iterations);
     void run_mp_evaluation(size_t n_iterations, size_t n_vertices);
 
-    Preprocessing get_preprocessing() { return preproc; }
-    std::vector<Ring> get_wire() { return wire; }
-    std::vector<Ring> get_wire_clear() { return share::reveal_vec(id, network, BLOCK_SIZE, wire); }
     SecretSharedGraph get_graph() { return g; }
 
    private:
@@ -52,11 +38,8 @@ class Processor {
     const size_t BLOCK_SIZE;
 
     SecretSharedGraph g;
-    std::vector<Ring> wire;
-    std::vector<std::vector<Ring>> sort_wire;
 
     std::vector<FunctionToken> queue;
-    Preprocessing preproc;
     MPPreprocessing mp_preproc;
 
     ShufflePre last_shuffle;

@@ -222,7 +222,7 @@ std::vector<Ring> clip::B2A_evaluate(Party id, RandomGenerators &rngs, std::shar
         vals_send[i] += vals_receive[i];
     }
 
-    for (size_t i = 0; i < 2 * n; ++i) {
+    for (size_t i = 0; i < n; ++i) {
         auto [a, b, mul] = triples[i];
         auto xa = vals_send[2 * i];
         auto yb = vals_send[2 * i + 1];

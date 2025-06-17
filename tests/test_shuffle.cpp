@@ -34,9 +34,24 @@ void test_shuffle(const bpo::variables_map &opts) {
     RandomGenerators rngs(seeds_h, seeds_l);
     const size_t BLOCK_SIZE = 100000;
 
+    const size_t n_shuffles = 3;
+    const size_t n_repeats = 1;
+    const size_t n_unshuffles = 2;
+    const size_t n_merged_shuffles = 2;
+
+    /* Communication (per party) */
+    const size_t shuffle_comm_pre = 3 * vec_size;         // 3n: B_0, B_1, pi_1_p
+    const size_t unshuffle_comm_pre = 2 * vec_size;       // 2n: B_0, B_1
+    const size_t merged_shuffle_comm_pre = 4 * vec_size;  // 4n: sigma_0_p, sigma_1, B_0, B_1
+    const size_t shuffle_comm_online = vec_size;          // n: t_0/1
+    const size_t unshuffle_comm_online = vec_size;        // n: t_0/1
+    const size_t merged_shuffle_comm_online = vec_size;   // n: t_0/1
+
     std::vector<Ring> share = share::random_share_secret_vec_2P(party, rngs, input_vector);
 
-    /* Protocol run */
+    /* Preprocessing */
+    StatsPoint start_pre(*network);
+
     ShufflePre perm_share_one = shuffle::get_shuffle(party, rngs, network, vec_size, BLOCK_SIZE, true);
     ShufflePre perm_share_two = shuffle::get_shuffle(party, rngs, network, vec_size, BLOCK_SIZE, true);
     std::vector<Ring> unshuffle_B_one = shuffle::get_unshuffle(party, rngs, network, vec_size, BLOCK_SIZE, perm_share_one);
@@ -44,6 +59,24 @@ void test_shuffle(const bpo::variables_map &opts) {
     ShufflePre perm_share_merged_one = shuffle::get_merged_shuffle(party, rngs, network, vec_size, BLOCK_SIZE, perm_share_one, perm_share_two);
     ShufflePre perm_share_three = shuffle::get_shuffle(party, rngs, network, vec_size, BLOCK_SIZE, false);
     ShufflePre perm_share_merged_two = shuffle::get_merged_shuffle(party, rngs, network, vec_size, BLOCK_SIZE, perm_share_two, perm_share_three);
+
+    StatsPoint end_pre(*network);
+
+    auto rbench_pre = end_pre - start_pre;
+    output_data["benchmarks_pre"].push_back(rbench_pre);
+    size_t bytes_sent_pre = 0;
+    for (const auto &val : rbench_pre["communication"]) {
+        bytes_sent_pre += val.get<int64_t>();
+    }
+
+    /* Preprocessing communication assertions */
+    if (party == D) {
+        /* n_elems * 4 Bytes per element */
+        size_t total_comm = 4 * (n_shuffles * shuffle_comm_pre + n_unshuffles * unshuffle_comm_pre + n_merged_shuffles * merged_shuffle_comm_pre);
+        assert(bytes_sent_pre == total_comm);
+    }
+
+    StatsPoint start_online(*network);
 
     std::vector<Ring> shuffle_share_one = shuffle::shuffle(party, rngs, network, share, perm_share_one, vec_size, BLOCK_SIZE);
     std::vector<Ring> repeat_share = shuffle::shuffle(party, rngs, network, share, perm_share_one, vec_size, BLOCK_SIZE);
@@ -53,6 +86,23 @@ void test_shuffle(const bpo::variables_map &opts) {
     std::vector<Ring> merged_share_one = shuffle::shuffle(party, rngs, network, share, perm_share_merged_one, vec_size, BLOCK_SIZE);
     std::vector<Ring> shuffle_share_three = shuffle::shuffle(party, rngs, network, share, perm_share_three, vec_size, BLOCK_SIZE);
     std::vector<Ring> merged_share_two = shuffle::shuffle(party, rngs, network, share, perm_share_merged_two, vec_size, BLOCK_SIZE);
+
+    StatsPoint end_online(*network);
+
+    auto rbench = end_online - start_online;
+    output_data["benchmarks"].push_back(rbench);
+
+    size_t bytes_sent = 0;
+    for (const auto &val : rbench["communication"]) {
+        bytes_sent += val.get<int64_t>();
+    }
+
+    /* Evaluation communication assertions */
+    if (party != D) {
+        size_t total_comm = 4 * (n_shuffles * shuffle_comm_online + n_repeats * shuffle_comm_online + n_unshuffles * unshuffle_comm_online +
+                                 n_merged_shuffles * merged_shuffle_comm_online);
+        assert(total_comm == bytes_sent);
+    }
 
     std::vector<Ring> res = share::reveal_vec(party, network, BLOCK_SIZE, shuffle_share_one);
 

@@ -38,8 +38,33 @@ void test_sharing(const bpo::variables_map &opts) {
         input_table[i] = i;
     }
 
+    StatsPoint start_sharing(*network);
     share = share::random_share_secret_vec_2P(party, rngs, input_table);
+    StatsPoint end_sharing(*network);
+
+    auto rbench_sharing = end_sharing - start_sharing;
+    output_data["benchmarks_pre"].push_back(rbench_sharing);
+    size_t bytes_sent_sharing = 0;
+    for (const auto &val : rbench_sharing["communication"]) {
+        bytes_sent_sharing += val.get<int64_t>();
+    }
+
+    /* No communication when secret sharing a vector */
+    assert(bytes_sent_sharing == 0);
+
+    StatsPoint start_reveal(*network);
     reconstructed = share::reveal_vec(party, network, BLOCK_SIZE, share);
+    StatsPoint end_reveal(*network);
+
+    auto rbench_reveal = end_reveal - start_reveal;
+    output_data["benchmarks_pre"].push_back(rbench_reveal);
+    size_t bytes_sent_reveal = 0;
+    for (const auto &val : rbench_reveal["communication"]) {
+        bytes_sent_reveal += val.get<int64_t>();
+    }
+
+    /* Each party sends its share during reveal */
+    assert(bytes_sent_reveal == 4 * vec_size);
 
     std::cout << "Final share: ";
     for (const auto &elem : share) {

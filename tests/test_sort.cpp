@@ -38,6 +38,22 @@ void test_sort(const bpo::variables_map &opts) {
     RandomGenerators rngs(seeds_h, seeds_l);
     const size_t BLOCK_SIZE = 100000;
 
+    const size_t n_bits = sizeof(Ring) * 8;
+    const size_t n_compactions = n_bits;
+    const size_t n_shuffles = n_bits - 1;
+    const size_t n_unshuffles = n_bits - 1;
+    const size_t n_repeats = n_bits - 1;
+    const size_t n_reveals = n_bits - 1;
+
+    const size_t compaction_comm_pre = vec_size;     // n; triple shares to P1
+    const size_t shuffle_comm_pre = 3 * vec_size;    // 3n: B_0, B_1, pi_1_p
+    const size_t unshuffle_comm_pre = 2 * vec_size;  // 2n: B_0, B_1
+
+    const size_t compaction_comm_online = 2 * vec_size;  // 2n: n * xa, n * yb
+    const size_t shuffle_comm_online = vec_size;         // n: t_0/1
+    const size_t unshuffle_comm_online = vec_size;       // n: t_0/1
+    const size_t reveal_comm = vec_size;
+
     std::vector<std::vector<Ring>> bits(sizeof(Ring) * 8);
     std::vector<std::vector<Ring>> bit_shares(sizeof(Ring) * 8);
 
@@ -53,8 +69,43 @@ void test_sort(const bpo::variables_map &opts) {
         bit_shares[i] = share::random_share_secret_vec_2P(party, rngs, bits[i]);
     }
 
+    /* Preprocessing */
+    StatsPoint start_pre(*network);
     auto sort_preproc = sort::get_sort_preprocess(party, rngs, network, vec_size, BLOCK_SIZE, bit_shares.size());
+    StatsPoint end_pre(*network);
+
+    auto rbench_pre = end_pre - start_pre;
+    output_data["benchmarks_pre"].push_back(rbench_pre);
+    size_t bytes_sent_pre = 0;
+    for (const auto &val : rbench_pre["communication"]) {
+        bytes_sent_pre += val.get<int64_t>();
+    }
+
+    /* Preprocessing communication assertions */
+    if (party == D) {
+        size_t total_comm = 4 * (n_compactions * compaction_comm_pre + n_shuffles * shuffle_comm_pre + n_unshuffles * unshuffle_comm_pre);
+        assert(bytes_sent_pre == total_comm);
+    }
+
+    /* Evaluation */
+    StatsPoint start_online(*network);
     auto sort_share = sort::get_sort_evaluate(party, rngs, network, vec_size, BLOCK_SIZE, bit_shares, sort_preproc);
+    StatsPoint end_online(*network);
+
+    auto rbench = end_online - start_online;
+    output_data["benchmarks"].push_back(rbench);
+
+    size_t bytes_sent = 0;
+    for (const auto &val : rbench["communication"]) {
+        bytes_sent += val.get<int64_t>();
+    }
+
+    /* Evaluation communication assertions */
+    if (party != D) {
+        size_t total_comm = 4 * (n_shuffles * shuffle_comm_online + n_repeats * shuffle_comm_online + n_unshuffles * unshuffle_comm_online +
+                                 n_compactions * compaction_comm_online + n_reveals * reveal_comm);
+        assert(total_comm == bytes_sent);
+    }
 
     for (size_t i = 0; i < sizeof(Ring) * 8; ++i) {
         for (size_t j = 0; j < vec_size; ++j) {
@@ -65,8 +116,10 @@ void test_sort(const bpo::variables_map &opts) {
     for (size_t i = 0; i < bit_shares.size(); ++i) {
         bit_shares[i] = share::random_share_secret_vec_2P(party, rngs, bits[i]);
     }
-    auto reverse_sort_preproc = sort::get_sort_preprocess(party, rngs, network, vec_size, BLOCK_SIZE, bit_shares.size());
-    auto reverse_sort_share = sort::get_sort_evaluate(party, rngs, network, vec_size, BLOCK_SIZE, bit_shares, reverse_sort_preproc);
+    // auto reverse_sort_preproc = sort::get_sort_preprocess(party, rngs, network, vec_size, BLOCK_SIZE, bit_shares.size());
+    // auto reverse_sort_share = sort::get_sort_evaluate(party, rngs, network, vec_size, BLOCK_SIZE, bit_shares, reverse_sort_preproc);
+
+    auto reverse_sort_share = sort::get_sort(party, rngs, network, vec_size, BLOCK_SIZE, bit_shares);
 
     Permutation reverse_sort = share::reveal_perm(party, network, BLOCK_SIZE, reverse_sort_share);
     Permutation sort = share::reveal_perm(party, network, BLOCK_SIZE, sort_share);

@@ -22,10 +22,14 @@ constexpr const size_t merged_shuffle_comm_pre(size_t n) { return 4 * n; }  // 4
 constexpr const size_t sort_comm_pre(size_t n, size_t n_bits) {
     return n_bits * compaction_comm_pre(n) + (n_bits - 1) * (shuffle_comm_pre(n) + unshuffle_comm_pre(n));
 }  // n_bits * compaction + (n_bits - 1) * (shuffle + unshuffle)
-
+constexpr const size_t sort_iteration_comm_pre(size_t n) { return compaction_comm_pre(n) + shuffle_comm_pre(n) + unshuffle_comm_pre(n); }
 constexpr const size_t apply_perm_comm_pre(size_t n) { return shuffle_comm_pre(n); }
 constexpr const size_t reverse_perm_comm_pre(size_t n) { return shuffle_comm_pre(n) + unshuffle_comm_pre(n); }
 constexpr const size_t switch_perm_comm_pre(size_t n) { return 2 * shuffle_comm_pre(n) + merged_shuffle_comm_pre(n); }
+
+constexpr const size_t mp_comm_pre(size_t n, size_t d) {
+    return 2 * sort_comm_pre(n, 33) + sort_iteration_comm_pre(n) + shuffle_comm_pre(n) + d * 4 * switch_perm_comm_pre(n) + eqz_comm_pre(n) + B2A_comm_pre(n);
+}
 
 /* ----- Online communication costs per party ----- */
 /* Multiplication, Compaction, etc. */
@@ -43,7 +47,12 @@ constexpr const size_t merged_shuffle_comm_online(size_t n) { return n; }  // n:
 constexpr const size_t sort_comm_online(size_t n, size_t n_bits) {
     return n_bits * compaction_comm_online(n) + (n_bits - 1) * (shuffle_comm_online(n) + n + shuffle_comm_online(n) + unshuffle_comm_online(n));
 }
-
+constexpr const size_t sort_iteration_comm_online(size_t n) { return 2 * shuffle_comm_online(n) + n + compaction_comm_online(n) + unshuffle_comm_online(n); }
 constexpr const size_t apply_perm_comm_online(size_t n) { return shuffle_comm_online(n) + n + shuffle_comm_online(n); }
 constexpr const size_t reverse_perm_comm_online(size_t n) { return shuffle_comm_online(n) + n + unshuffle_comm_online(n); }
 constexpr const size_t switch_perm_comm_online(size_t n) { return 2 * n + 3 * shuffle_comm_online(n); }  // 2 reveals, 3 shuffles
+
+constexpr const size_t mp_comm_online(size_t n, size_t d) {
+    return 2 * sort_comm_online(n, 33) + sort_iteration_comm_online(n) + apply_perm_comm_online(n) + d * 4 * switch_perm_comm_online(n) + eqz_comm_online(n) +
+           B2A_comm_online(n);
+}

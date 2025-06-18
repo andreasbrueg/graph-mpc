@@ -4,6 +4,7 @@
 #include "../setup/setup.h"
 #include "../src/protocol/message_passing.h"
 #include "../src/utils/perm.h"
+#include "constants.h"
 
 std::vector<Ring> apply(std::vector<Ring> &old_payload, std::vector<Ring> &new_payload) {
     std::vector<Ring> result(old_payload.size());
@@ -18,14 +19,17 @@ void test_mp(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> netw
     std::cout << "------ test_mp ------" << std::endl << std::endl;
 
     json output_data;
+
     /**
      *      0 == 1
      *       \  //
      *         2
      */
 
+    const size_t n_iterations = 2;
+    n = 8;
     Graph g;
-    g.size = 8;
+    g.size = n;
     g.src = std::vector<Ring>({0, 1, 2, 0, 1, 2, 2, 2});
     g.dst = std::vector<Ring>({0, 1, 2, 1, 0, 1, 0, 1});
     g.isV = std::vector<Ring>({1, 1, 1, 0, 0, 0, 0, 0});
@@ -33,8 +37,43 @@ void test_mp(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> netw
 
     SecretSharedGraph g_shared = share::random_share_graph(id, rngs, g);
 
-    auto preproc = mp::preprocess(id, rngs, network, g.size, BLOCK_SIZE, 2);
-    mp::evaluate(id, rngs, network, g.size, BLOCK_SIZE, g_shared, 2, 3, preproc, apply);
+    StatsPoint start_pre(*network);
+    auto preproc = mp::preprocess(id, rngs, network, g.size, BLOCK_SIZE, n_iterations);
+    StatsPoint end_pre(*network);
+
+    auto rbench_pre = end_pre - start_pre;
+    output_data["benchmarks_pre"].push_back(rbench_pre);
+    size_t bytes_sent_pre = 0;
+    for (const auto &val : rbench_pre["communication"]) {
+        bytes_sent_pre += val.get<int64_t>();
+    }
+
+    /* Preprocessing communication assertions */
+    if (id == D) {
+        /* n_elems * 4 Bytes per element */
+        size_t total_comm = 4 * mp_comm_pre(n, n_iterations);
+        assert(bytes_sent_pre == total_comm);
+    }
+
+    StatsPoint start_online(*network);
+    mp::evaluate(id, rngs, network, g.size, BLOCK_SIZE, g_shared, n_iterations, 3, preproc, apply);
+    StatsPoint end_online(*network);
+
+    auto rbench = end_online - start_online;
+    output_data["benchmarks"].push_back(rbench);
+
+    size_t bytes_sent = 0;
+    for (const auto &val : rbench["communication"]) {
+        bytes_sent += val.get<int64_t>();
+    }
+
+    /* Evaluation communication assertions */
+    if (id != D) {
+        size_t total_comm = 4 * mp_comm_online(n, n_iterations);
+        assert(total_comm == bytes_sent);
+    }
+
+    /* Correctness assertions */
     auto res_g = share::reveal_graph(id, network, BLOCK_SIZE, g_shared);
 
     if (id != D) {

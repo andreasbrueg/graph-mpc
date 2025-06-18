@@ -7,6 +7,7 @@
 #include "constants.h"
 
 void test_shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE) {
+    std::cout << "------ test_shuffle ------" << std::endl << std::endl;
     json output_data;
 
     /* setting up the input vector */

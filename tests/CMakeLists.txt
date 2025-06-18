@@ -2,6 +2,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/tests)
 
 set(testbin "")
 
+
 macro(add_test source_name)
     add_executable(${source_name} ${source_name}.cpp)
     #if(MSVC)
@@ -14,6 +15,7 @@ macro(add_test source_name)
 endmacro()
 
 add_test(test_bfs)
+add_test(test_deduplication)
 add_test(test_eqz)
 add_test(test_mp)
 add_test(test_perm)
@@ -25,5 +27,6 @@ add_test(test_sw_perm)
 
 add_custom_target(tests)
 add_dependencies(tests ${testbin})
+
 
 file(COPY ../certs DESTINATION ${PROJECT_BINARY_DIR}/tests)

@@ -11,11 +11,24 @@ target_sources(GraphMPC_lib
     io/tls_net_io_channel.h
     io/netmp.h
     io/comm.h
-    protocol/sorting.cpp
-    protocol/shuffle.cpp
-    protocol/compaction.cpp
-    protocol/clip.cpp
-    protocol/message_passing.cpp
+    protocol/combined/clip.cpp
+    protocol/combined/compaction.cpp
+    protocol/combined/deduplication.cpp
+    protocol/combined/message_passing.cpp
+    protocol/combined/sort.cpp
+    protocol/evaluation/clip.cpp
+    protocol/evaluation/compaction.cpp
+    protocol/evaluation/deduplication.cpp
+    protocol/evaluation/message_passing.cpp
+    protocol/evaluation/shuffle.cpp
+    protocol/evaluation/sort.cpp
+    protocol/preprocessing/clip.cpp
+    protocol/preprocessing/compaction.cpp
+    protocol/preprocessing/deduplication.cpp
+    protocol/preprocessing/shuffle.cpp
+    protocol/preprocessing/sort.cpp
+    protocol/preprocessing/message_passing.cpp
+    protocol/deduplication.h
     # Add further files if necessary
 )
 target_link_libraries(GraphMPC_lib PUBLIC OpenSSL::SSL EMPTool NTL GMP OpenMP::OpenMP_CXX)

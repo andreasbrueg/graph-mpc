@@ -117,7 +117,7 @@ void test_sort(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> ne
         for (size_t i = 0; i < reverse_sorted_vector.size() - 1; ++i) {
             std::cout << reverse_sorted_vector[i] << ", ";
         }
-        std::cout << reverse_sorted_vector[input_vector.size() - 1] << std::endl;
+        std::cout << reverse_sorted_vector[input_vector.size() - 1] << std::endl << std::endl;
     }
 }
 

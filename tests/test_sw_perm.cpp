@@ -141,7 +141,7 @@ void test_sw_perm(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP>
         for (size_t i = 0; i < inverse.size() - 1; ++i) {
             std::cout << inverse[i] << ", ";
         }
-        std::cout << inverse[input_vector.size() - 1] << std::endl;
+        std::cout << inverse[input_vector.size() - 1] << std::endl << std::endl;
     }
 }
 

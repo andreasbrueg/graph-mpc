@@ -146,7 +146,6 @@ void setup::setupExecution(const bpo::variables_map &opts, size_t &pid, size_t &
 
 void setup::run_test(const bpo::variables_map &opts,
                      std::function<void(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE)> func) {
-    std::cout << "------ test_shuffle ------" << std::endl << std::endl;
     auto n = opts["vec-size"].as<size_t>();
 
     size_t pid, nP, repeat, threads, shuffle_num, nodes;

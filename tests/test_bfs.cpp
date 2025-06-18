@@ -17,6 +17,7 @@ std::vector<Ring> apply(std::vector<Ring> &old_payload, std::vector<Ring> &new_p
 }
 
 void test_bfs(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE) {
+    std::cout << "------ test_bfs ------" << std::endl << std::endl;
     json output_data;
 
     /**

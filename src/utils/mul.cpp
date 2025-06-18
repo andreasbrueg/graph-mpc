@@ -12,6 +12,17 @@ std::vector<std::tuple<Ring, Ring, Ring>> mul::preprocess(Party id, RandomGenera
     return triples;
 }
 
+std::vector<std::tuple<Ring, Ring, Ring>> mul::preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE) {
+    std::vector<Ring> vals_to_P1;
+    size_t idx = 0;
+
+    if (id == P1) recv_vec(D, network, n, vals_to_P1, BLOCK_SIZE);
+    auto triples = mul::preprocess(id, rngs, vals_to_P1, idx, n);
+    if (id == D) send_vec(P1, network, n, vals_to_P1, BLOCK_SIZE);
+
+    return triples;
+}
+
 std::vector<Ring> mul::evaluate(Party id, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, std::vector<std::tuple<Ring, Ring, Ring>> &triples,
                                 std::vector<Ring> x, std::vector<Ring> y) {
     std::vector<Ring> vals_send;
@@ -119,6 +130,18 @@ std::vector<std::tuple<Ring, Ring, Ring>> mul::preprocess_bin(Party id, RandomGe
         Ring d = share::random_share_secret_3P_bin(id, rngs, vals_to_p1, idx, mul);
         triples.push_back({a, b, d});
     }
+    return triples;
+}
+
+std::vector<std::tuple<Ring, Ring, Ring>> mul::preprocess_bin(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n,
+                                                              size_t BLOCK_SIZE) {
+    std::vector<Ring> vals_to_P1;
+    size_t idx = 0;
+
+    if (id == P1) recv_vec(D, network, n, vals_to_P1, BLOCK_SIZE);
+    auto triples = mul::preprocess_bin(id, rngs, vals_to_P1, idx, n);
+    if (id == D) send_vec(P1, network, n, vals_to_P1, BLOCK_SIZE);
+
     return triples;
 }
 

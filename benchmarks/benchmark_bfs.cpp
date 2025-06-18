@@ -13,45 +13,23 @@ std::vector<Ring> apply(std::vector<Ring> &old_payload, std::vector<Ring> &new_p
     return result;
 }
 
-void benchmark(const bpo::variables_map &opts) {
-    auto vec_size = opts["vec-size"].as<size_t>();
-
-    size_t pid, nP, repeat, threads, shuffle_num, nodes;
-    std::shared_ptr<io::NetIOMP> network = nullptr;
-    uint64_t seeds_h[9];
-    uint64_t seeds_l[9];
+void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, size_t repeat, size_t n_vertices,
+               bool save_output, std::string save_file) {
     json output_data;
-    bool save_output;
-    std::string save_file;
 
-    setup::setupExecution(opts, pid, nP, repeat, threads, shuffle_num, nodes, network, seeds_h, seeds_l, save_output, save_file);
-    output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads},  {"seeds_h", seeds_h},
-                              {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", vec_size}};
-    output_data["benchmarks_pre"] = json::array();
-    output_data["benchmarks"] = json::array();
-
-    std::cout << "--- Details ---\n";
-    for (const auto &[key, value] : output_data["details"].items()) {
-        std::cout << key << ": " << value << "\n";
-    }
-    std::cout << std::endl;
-
-    Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
-    RandomGenerators rngs(seeds_h, seeds_l);
-    const size_t BLOCK_SIZE = 100000;
-
-    Graph g(vec_size);
+    Graph g(n);
     std::vector<Ring> src, dst, isV, payload;
-    for (size_t i = 0; i < nodes; ++i) {
+
+    for (size_t i = 0; i < n_vertices; ++i) {
         src.push_back(i);
         dst.push_back(i);
         isV.push_back(1);
         payload.push_back(0);
     }
-    for (size_t i = nodes; i < vec_size; ++i) {
-        Ring rand = std::rand() % nodes;
+    for (size_t i = n_vertices; i < n; ++i) {
+        Ring rand = std::rand() % n_vertices;
         src.push_back(rand);
-        dst.push_back((rand + 1) % nodes);
+        dst.push_back((rand + 1) % n_vertices);
         isV.push_back(0);
         payload.push_back(0);
     }
@@ -65,10 +43,10 @@ void benchmark(const bpo::variables_map &opts) {
     for (size_t r = 0; r < repeat; ++r) {
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
 
-        SecretSharedGraph g_shared = share::random_share_graph(party, rngs, g);
+        SecretSharedGraph g_shared = share::random_share_graph(id, rngs, g);
 
         StatsPoint start_pre(*network);
-        auto preproc = mp::preprocess(party, rngs, network, g.size, BLOCK_SIZE, 1);
+        auto preproc = mp::preprocess(id, rngs, network, g.size, BLOCK_SIZE, 1);
         StatsPoint end_pre(*network);
         network->sync();
 
@@ -84,7 +62,7 @@ void benchmark(const bpo::variables_map &opts) {
         std::cout << "preprocessing sent: " << bytes_sent << " bytes" << std::endl;
 
         StatsPoint start(*network);
-        mp::evaluate(party, rngs, network, g.size, BLOCK_SIZE, g_shared, 1, nodes, preproc, apply);
+        mp::evaluate(id, rngs, network, g.size, BLOCK_SIZE, g_shared, 1, n_vertices, preproc, apply);
         StatsPoint end(*network);
 
         rbench = end - start;
@@ -112,8 +90,6 @@ void benchmark(const bpo::variables_map &opts) {
     if (save_output) {
         saveJson(output_data, save_file);
     }
-
-    exit(0);
 }
 
 int main(int argc, char **argv) {
@@ -128,7 +104,7 @@ int main(int argc, char **argv) {
     bpo::variables_map opts = setup::parseOptions(cmdline, prog_opts, argc, argv);
 
     try {
-        benchmark(opts);
+        setup::run_benchmark(opts, benchmark);
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\nFatal error" << std::endl;
         return 1;

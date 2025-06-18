@@ -5,64 +5,33 @@
 #include "../src/utils/random_generators.h"
 #include "../src/utils/sharing.h"
 
-void test_eqz(const bpo::variables_map &opts) {
-    std::cout << "------ test_mul ------" << std::endl << std::endl;
-    auto vec_size = opts["vec-size"].as<size_t>();
-
-    size_t pid, nP, repeat, threads, shuffle_num, nodes;
-    std::shared_ptr<io::NetIOMP> network = nullptr;
-    uint64_t seeds_h[9];
-    uint64_t seeds_l[9];
+void test_eqz(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE) {
     json output_data;
-    bool save_output;
-    std::string save_file;
 
-    setup::setupExecution(opts, pid, nP, repeat, threads, shuffle_num, nodes, network, seeds_h, seeds_l, save_output, save_file);
-    output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads},  {"seeds_h", seeds_h},
-                              {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", vec_size}};
+    std::vector<Ring> x_vec(n);
+    std::vector<Ring> y_vec(n);
 
-    std::cout << "--- Details ---\n";
-    for (const auto &[key, value] : output_data["details"].items()) {
-        std::cout << key << ": " << value << "\n";
-    }
-    std::cout << std::endl;
+    std::vector<Ring> share_x_vec(n);
+    std::vector<Ring> share_y_vec(n);
 
-    Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
-    RandomGenerators rngs(seeds_h, seeds_l);
-    const size_t BLOCK_SIZE = 100000;
-
-    std::vector<Ring> x_vec(vec_size);
-    std::vector<Ring> y_vec(vec_size);
-
-    std::vector<Ring> share_x_vec(vec_size);
-    std::vector<Ring> share_y_vec(vec_size);
-
-    for (size_t i = 0; i < vec_size; ++i) {
+    for (size_t i = 0; i < n; ++i) {
         x_vec[i] = std::rand() % 2;
     }
-    for (size_t i = 0; i < vec_size / 2; ++i) {
+    for (size_t i = 0; i < n / 2; ++i) {
         y_vec[i] = 1;
     }
-    for (size_t i = vec_size / 2; i < vec_size; ++i) {
+    for (size_t i = n / 2; i < n; ++i) {
         y_vec[i] = 0;
     }
 
-    share_x_vec = share::random_share_secret_vec_2P(party, rngs, x_vec);
-    share_y_vec = share::random_share_secret_vec_2P(party, rngs, y_vec);
+    share_x_vec = share::random_share_secret_vec_2P(id, rngs, x_vec);
+    share_y_vec = share::random_share_secret_vec_2P(id, rngs, y_vec);
 
-    std::vector<Ring> vals_to_p1;
-    size_t idx = 0;
+    auto triples = mul::preprocess(id, rngs, network, n, BLOCK_SIZE);
+    auto x_y_share = mul::evaluate(id, network, n, BLOCK_SIZE, triples, share_x_vec, share_y_vec);
+    auto x_y_revealed = share::reveal_vec(id, network, BLOCK_SIZE, x_y_share);
 
-    if (party == P1) recv_vec(D, network, vec_size, vals_to_p1, BLOCK_SIZE);
-
-    auto triples = mul::preprocess(party, rngs, vals_to_p1, idx, vec_size);
-
-    if (party == D) send_vec(P1, network, vals_to_p1.size(), vals_to_p1, BLOCK_SIZE);
-
-    auto x_y_share = mul::evaluate(party, network, vec_size, BLOCK_SIZE, triples, share_x_vec, share_y_vec);
-    auto x_y_revealed = share::reveal_vec(party, network, BLOCK_SIZE, x_y_share);
-
-    if (pid != D) {
+    if (id != D) {
         std::cout << "x: ";
         for (auto &elem : x_vec) {
             std::cout << elem << ", ";
@@ -83,23 +52,23 @@ void test_eqz(const bpo::variables_map &opts) {
     }
 
     std::cout << std::endl << "------ test_eqz ------" << std::endl;
-    std::vector<Ring> test_vec(vec_size);
-    for (size_t i = 0; i < vec_size; ++i) test_vec[i] = i;
-    auto test_vec_share = share::random_share_secret_vec_2P(party, rngs, test_vec);
+    std::vector<Ring> test_vec(n);
+    for (size_t i = 0; i < n; ++i) test_vec[i] = i;
+    auto test_vec_share = share::random_share_secret_vec_2P(id, rngs, test_vec);
 
-    auto eqz_vec = clip::equals_zero(party, rngs, network, BLOCK_SIZE, test_vec_share);
-    std::vector<Ring> B2A_vec = clip::B2A(party, rngs, network, BLOCK_SIZE, eqz_vec);
+    auto eqz_vec = clip::equals_zero(id, rngs, network, BLOCK_SIZE, test_vec_share);
+    std::vector<Ring> B2A_vec = clip::B2A(id, rngs, network, BLOCK_SIZE, eqz_vec);
 
-    auto result = share::reveal_vec(party, network, BLOCK_SIZE, B2A_vec);
+    auto result = share::reveal_vec(id, network, BLOCK_SIZE, B2A_vec);
 
-    if (pid != D) {
+    if (id != D) {
         std::cout << "Result of eqz: ";
         for (auto &elem : result) {
             std::cout << elem << ", ";
         }
         std::cout << std::endl;
 
-        for (size_t i = 0; i < vec_size; ++i) {
+        for (size_t i = 0; i < n; ++i) {
             if (i == 0)
                 assert(result[i] == 1);
             else
@@ -120,7 +89,7 @@ int main(int argc, char **argv) {
     bpo::variables_map opts = setup::parseOptions(cmdline, prog_opts, argc, argv);
 
     try {
-        test_eqz(opts);
+        setup::run_test(opts, test_eqz);
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\nFatal error" << std::endl;
         return 1;

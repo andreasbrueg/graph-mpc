@@ -4,42 +4,20 @@
 #include "../src/utils/random_generators.h"
 #include "../src/utils/sharing.h"
 
-void test_sharing(const bpo::variables_map &opts) {
+void test_sharing(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE) {
     std::cout << "------ test_sharing ------" << std::endl << std::endl;
-    auto vec_size = opts["vec-size"].as<size_t>();
-
-    size_t pid, nP, repeat, threads, shuffle_num, nodes;
-    std::shared_ptr<io::NetIOMP> network = nullptr;
-    uint64_t seeds_h[9];
-    uint64_t seeds_l[9];
     json output_data;
-    bool save_output;
-    std::string save_file;
 
-    setup::setupExecution(opts, pid, nP, repeat, threads, shuffle_num, nodes, network, seeds_h, seeds_l, save_output, save_file);
-    output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads},  {"seeds_h", seeds_h},
-                              {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", vec_size}};
-
-    std::cout << "--- Details ---\n";
-    for (const auto &[key, value] : output_data["details"].items()) {
-        std::cout << key << ": " << value << "\n";
-    }
-    std::cout << std::endl;
-
-    Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
-    RandomGenerators rngs(seeds_h, seeds_l);
-    const size_t BLOCK_SIZE = 100000;
-
-    std::vector<Ring> share(vec_size);
-    std::vector<Ring> input_table(vec_size);
+    std::vector<Ring> share(n);
+    std::vector<Ring> input_table(n);
     std::vector<Ring> reconstructed;
 
-    for (size_t i = 0; i < vec_size; ++i) {
+    for (size_t i = 0; i < n; ++i) {
         input_table[i] = i;
     }
 
     StatsPoint start_sharing(*network);
-    share = share::random_share_secret_vec_2P(party, rngs, input_table);
+    share = share::random_share_secret_vec_2P(id, rngs, input_table);
     StatsPoint end_sharing(*network);
 
     auto rbench_sharing = end_sharing - start_sharing;
@@ -53,7 +31,7 @@ void test_sharing(const bpo::variables_map &opts) {
     assert(bytes_sent_sharing == 0);
 
     StatsPoint start_reveal(*network);
-    reconstructed = share::reveal_vec(party, network, BLOCK_SIZE, share);
+    reconstructed = share::reveal_vec(id, network, BLOCK_SIZE, share);
     StatsPoint end_reveal(*network);
 
     auto rbench_reveal = end_reveal - start_reveal;
@@ -64,7 +42,7 @@ void test_sharing(const bpo::variables_map &opts) {
     }
 
     /* Each party sends its share during reveal */
-    assert(bytes_sent_reveal == 4 * vec_size);
+    assert(bytes_sent_reveal == 4 * n);
 
     std::cout << "Final share: ";
     for (const auto &elem : share) {
@@ -92,8 +70,8 @@ void test_sharing(const bpo::variables_map &opts) {
     g.isV = isV;
     g.payload = payload;
 
-    SecretSharedGraph shared_graph = share::random_share_graph(party, rngs, g);
-    Graph reconstructed_graph = share::reveal_graph(party, network, BLOCK_SIZE, shared_graph);
+    SecretSharedGraph shared_graph = share::random_share_graph(id, rngs, g);
+    Graph reconstructed_graph = share::reveal_graph(id, network, BLOCK_SIZE, shared_graph);
 
     std::cout << "Initial graph: " << std::endl;
     g.print();
@@ -118,7 +96,7 @@ int main(int argc, char **argv) {
     bpo::variables_map opts = setup::parseOptions(cmdline, prog_opts, argc, argv);
 
     try {
-        test_sharing(opts);
+        setup::run_test(opts, test_sharing);
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\nFatal error" << std::endl;
         return 1;

@@ -3,37 +3,15 @@
 #include "../src/utils/protocol_config.h"
 #include "../src/utils/sharing.h"
 
-void benchmark(const bpo::variables_map &opts) {
-    auto vec_size = opts["vec-size"].as<size_t>();
-
-    size_t pid, nP, repeat, threads, shuffle_num, nodes;
-    std::shared_ptr<io::NetIOMP> network = nullptr;
-    uint64_t seeds_h[9];
-    uint64_t seeds_l[9];
+void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, size_t repeat, size_t n_vertices,
+               bool save_output, std::string save_file) {
     json output_data;
-    bool save_output;
-    std::string save_file;
 
-    setup::setupExecution(opts, pid, nP, repeat, threads, shuffle_num, nodes, network, seeds_h, seeds_l, save_output, save_file);
-    output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads},  {"seeds_h", seeds_h},
-                              {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", vec_size}};
-    output_data["benchmarks"] = json::array();
-
-    std::cout << "--- Details ---\n";
-    for (const auto &[key, value] : output_data["details"].items()) {
-        std::cout << key << ": " << value << "\n";
-    }
-    std::cout << std::endl;
-
-    RandomGenerators rngs(seeds_h, seeds_l);
-    Party party = (pid == 0 ? P0 : P1);
-    const size_t BLOCK_SIZE = 100000;
-
-    std::vector<Ring> input_table(vec_size);
-    for (size_t i = 0; i < vec_size; ++i) input_table[i] = i;
+    std::vector<Ring> input_table(n);
+    for (size_t i = 0; i < n; ++i) input_table[i] = i;
 
     StatsPoint start_share(*network);
-    auto share = share::random_share_secret_vec_2P(party, rngs, input_table);
+    auto share = share::random_share_secret_vec_2P(id, rngs, input_table);
     std::cout << "Sharing done." << std::endl;
     StatsPoint end_share(*network);
     network->sync();
@@ -52,7 +30,7 @@ void benchmark(const bpo::variables_map &opts) {
     std::cout << std::endl;
 
     StatsPoint start_reveal(*network);
-    auto revealed = share::reveal_vec(party, network, BLOCK_SIZE, share);
+    auto revealed = share::reveal_vec(id, network, BLOCK_SIZE, share);
     std::cout << "Reveal done." << std::endl;
     StatsPoint end_reveal(*network);
     network->sync();
@@ -81,8 +59,6 @@ void benchmark(const bpo::variables_map &opts) {
     if (save_output) {
         saveJson(output_data, save_file);
     }
-
-    exit(0);
 }
 
 int main(int argc, char **argv) {
@@ -97,7 +73,7 @@ int main(int argc, char **argv) {
     bpo::variables_map opts = setup::parseOptions(cmdline, prog_opts, argc, argv);
 
     try {
-        benchmark(opts);
+        setup::run_benchmark(opts, benchmark);
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\nFatal error" << std::endl;
         return 1;

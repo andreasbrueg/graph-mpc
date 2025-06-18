@@ -1,41 +1,18 @@
 #include "../setup/setup.h"
 #include "../src/protocol/shuffle.h"
 
-void benchmark(const bpo::variables_map &opts) {
-    auto vec_size = opts["vec-size"].as<size_t>();
-
-    size_t pid, nP, repeat, threads, shuffle_num, nodes;
-    std::shared_ptr<io::NetIOMP> network = nullptr;
-    uint64_t seeds_h[9];
-    uint64_t seeds_l[9];
+void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, size_t repeat, size_t n_vertices,
+               bool save_output, std::string save_file) {
     json output_data;
-    bool save_output;
-    std::string save_file;
 
-    setup::setupExecution(opts, pid, nP, repeat, threads, shuffle_num, nodes, network, seeds_h, seeds_l, save_output, save_file);
-    output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads},  {"seeds_h", seeds_h},
-                              {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", vec_size}};
-    output_data["benchmarks_pre"] = json::array();
-    output_data["benchmarks"] = json::array();
-
-    std::cout << "--- Details ---\n";
-    for (const auto &[key, value] : output_data["details"].items()) {
-        std::cout << key << ": " << value << "\n";
-    }
-    std::cout << std::endl;
-
-    std::vector<Ring> input_vector(vec_size);
-    for (size_t i = 0; i < vec_size; i++) input_vector[i] = i;
-
-    Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
-    RandomGenerators rngs(seeds_h, seeds_l);
-    const size_t BLOCK_SIZE = 100000;
+    std::vector<Ring> input_vector(n);
+    for (size_t i = 0; i < n; i++) input_vector[i] = i;
 
     for (size_t r = 0; r < repeat; ++r) {
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
 
         StatsPoint start_pre(*network);
-        ShufflePre perm_share = shuffle::get_shuffle(party, rngs, network, vec_size, 100000, false);
+        ShufflePre perm_share = shuffle::get_shuffle(id, rngs, network, n, BLOCK_SIZE, false);
         StatsPoint end_pre(*network);
         network->sync();
 
@@ -49,7 +26,7 @@ void benchmark(const bpo::variables_map &opts) {
         std::cout << "setup sent: " << bytes_sent_pre << " bytes" << std::endl;
 
         StatsPoint start(*network);
-        std::vector<Ring> shuffle_share = shuffle::shuffle(party, rngs, network, input_vector, perm_share, vec_size, BLOCK_SIZE);
+        std::vector<Ring> shuffle_share = shuffle::shuffle(id, rngs, network, input_vector, perm_share, n, BLOCK_SIZE);
         StatsPoint end(*network);
 
         auto rbench = end - start;
@@ -77,8 +54,6 @@ void benchmark(const bpo::variables_map &opts) {
     if (save_output) {
         saveJson(output_data, save_file);
     }
-
-    exit(0);
 }
 
 int main(int argc, char **argv) {
@@ -93,7 +68,7 @@ int main(int argc, char **argv) {
     bpo::variables_map opts = setup::parseOptions(cmdline, prog_opts, argc, argv);
 
     try {
-        benchmark(opts);
+        setup::run_benchmark(opts, benchmark);
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\nFatal error" << std::endl;
         return 1;

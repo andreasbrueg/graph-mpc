@@ -143,3 +143,65 @@ void setup::setupExecution(const bpo::variables_map &opts, size_t &pid, size_t &
         network = std::make_shared<io::NetIOMP>(pid, nP, port, ip.data(), certificate_path, private_key_path, trusted_cert_path, false);
     }
 }
+
+void setup::run_test(const bpo::variables_map &opts,
+                     std::function<void(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE)> func) {
+    std::cout << "------ test_shuffle ------" << std::endl << std::endl;
+    auto n = opts["vec-size"].as<size_t>();
+
+    size_t pid, nP, repeat, threads, shuffle_num, nodes;
+    std::shared_ptr<io::NetIOMP> network = nullptr;
+    uint64_t seeds_h[9];
+    uint64_t seeds_l[9];
+    json output_data;
+    bool save_output;
+    std::string save_file;
+
+    setup::setupExecution(opts, pid, nP, repeat, threads, shuffle_num, nodes, network, seeds_h, seeds_l, save_output, save_file);
+    output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads}, {"seeds_h", seeds_h},
+                              {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", n}};
+
+    std::cout << "--- Details ---\n";
+    for (const auto &[key, value] : output_data["details"].items()) {
+        std::cout << key << ": " << value << "\n";
+    }
+    std::cout << std::endl;
+
+    Party id = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
+    RandomGenerators rngs(seeds_h, seeds_l);
+    const size_t BLOCK_SIZE = 100000;
+
+    func(id, rngs, network, n, BLOCK_SIZE);
+}
+
+void setup::run_benchmark(const bpo::variables_map &opts,
+                          std::function<void(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, size_t repeat,
+                                             size_t n_vertices, bool save_output, std::string save_file)>
+                              func) {
+    std::cout << "------ test_shuffle ------" << std::endl << std::endl;
+    auto n = opts["vec-size"].as<size_t>();
+
+    size_t pid, nP, repeat, threads, shuffle_num, nodes;
+    std::shared_ptr<io::NetIOMP> network = nullptr;
+    uint64_t seeds_h[9];
+    uint64_t seeds_l[9];
+    json output_data;
+    bool save_output;
+    std::string save_file;
+
+    setup::setupExecution(opts, pid, nP, repeat, threads, shuffle_num, nodes, network, seeds_h, seeds_l, save_output, save_file);
+    output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads}, {"seeds_h", seeds_h},
+                              {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", n}};
+
+    std::cout << "--- Details ---\n";
+    for (const auto &[key, value] : output_data["details"].items()) {
+        std::cout << key << ": " << value << "\n";
+    }
+    std::cout << std::endl;
+
+    Party id = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
+    RandomGenerators rngs(seeds_h, seeds_l);
+    const size_t BLOCK_SIZE = 100000;
+
+    func(id, rngs, network, n, BLOCK_SIZE, repeat, nodes, save_output, save_file);
+}

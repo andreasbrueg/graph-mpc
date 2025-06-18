@@ -16,32 +16,8 @@ std::vector<Ring> apply(std::vector<Ring> &old_payload, std::vector<Ring> &new_p
     return result;
 }
 
-void test_bfs(const bpo::variables_map &opts) {
-    std::cout << "------ test_bfs ------" << std::endl << std::endl;
-
-    auto vec_size = opts["vec-size"].as<size_t>();
-
-    size_t pid, nP, repeat, threads, shuffle_num, nodes;
-    std::shared_ptr<io::NetIOMP> network = nullptr;
-    uint64_t seeds_h[9];
-    uint64_t seeds_l[9];
+void test_bfs(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE) {
     json output_data;
-    bool save_output;
-    std::string save_file;
-
-    setup::setupExecution(opts, pid, nP, repeat, threads, shuffle_num, nodes, network, seeds_h, seeds_l, save_output, save_file);
-    output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads},  {"seeds_h", seeds_h},
-                              {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", vec_size}};
-
-    std::cout << "--- Details ---\n";
-    for (const auto &[key, value] : output_data["details"].items()) {
-        std::cout << key << ": " << value << "\n";
-    }
-    std::cout << std::endl;
-
-    Party party = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
-    RandomGenerators rngs(seeds_h, seeds_l);
-    const size_t BLOCK_SIZE = 100000;
 
     /**
      *                      10        8
@@ -60,18 +36,18 @@ void test_bfs(const bpo::variables_map &opts) {
     g.isV = std::vector<Ring>({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
     g.payload = std::vector<Ring>({1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
 
-    if (pid != D) g.print();
+    if (id != D) g.print();
 
-    SecretSharedGraph g_shared = share::random_share_graph(party, rngs, g);
+    SecretSharedGraph g_shared = share::random_share_graph(id, rngs, g);
 
-    auto preproc = mp::preprocess(party, rngs, network, g.size, BLOCK_SIZE, 4);
-    mp::evaluate(party, rngs, network, g.size, BLOCK_SIZE, g_shared, 4, 11, preproc, apply);
+    auto preproc = mp::preprocess(id, rngs, network, g.size, BLOCK_SIZE, 4);
+    mp::evaluate(id, rngs, network, g.size, BLOCK_SIZE, g_shared, 4, 11, preproc, apply);
 
-    auto res_g = share::reveal_graph(party, network, BLOCK_SIZE, g_shared);
+    auto res_g = share::reveal_graph(id, network, BLOCK_SIZE, g_shared);
 
-    if (pid != D) res_g.print();
+    if (id != D) res_g.print();
 
-    if (pid != D) {
+    if (id != D) {
         /* Source node should still be discovered */
         assert(res_g.payload[0] == 1);
         /* Discovered nodes */
@@ -87,8 +63,6 @@ void test_bfs(const bpo::variables_map &opts) {
         assert(res_g.payload[7] == 0);
         assert(res_g.payload[8] == 0);
     }
-
-    exit(0);
 }
 
 int main(int argc, char **argv) {
@@ -103,7 +77,7 @@ int main(int argc, char **argv) {
     bpo::variables_map opts = setup::parseOptions(cmdline, prog_opts, argc, argv);
 
     try {
-        test_bfs(opts);
+        setup::run_test(opts, test_bfs);
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\nFatal error" << std::endl;
         return 1;

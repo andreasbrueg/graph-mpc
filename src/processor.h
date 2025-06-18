@@ -9,7 +9,7 @@
 #include "protocol/compaction.h"
 #include "protocol/message_passing.h"
 #include "protocol/shuffle.h"
-#include "protocol/sorting.h"
+#include "protocol/sort.h"
 #include "utils/graph.h"
 #include "utils/random_generators.h"
 #include "utils/sharing.h"

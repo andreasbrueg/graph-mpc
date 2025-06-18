@@ -10,7 +10,7 @@
 #include "../utils/graph.h"
 #include "../utils/protocol_config.h"
 #include "clip.h"
-#include "sorting.h"
+#include "sort.h"
 
 struct MPPreprocessing_Dealer {
     SortPreprocessing_Dealer src_order_pre;

@@ -40,10 +40,10 @@ void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> ne
     g.isV = isV;
     g.payload = payload;
 
+    SecretSharedGraph g_shared = share::random_share_graph(id, rngs, g);
+
     for (size_t r = 0; r < repeat; ++r) {
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
-
-        SecretSharedGraph g_shared = share::random_share_graph(id, rngs, g);
 
         StatsPoint start_pre(*network);
         auto preproc = mp::preprocess(id, rngs, network, g.size, BLOCK_SIZE, 1);

@@ -2,7 +2,7 @@
 #include <random>
 
 #include "../setup/setup.h"
-#include "../src/protocol/sorting.h"
+#include "../src/protocol/sort.h"
 #include "../src/utils/perm.h"
 
 void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, size_t repeat, size_t n_vertices,

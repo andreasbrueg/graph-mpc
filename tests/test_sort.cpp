@@ -2,7 +2,7 @@
 #include <random>
 
 #include "../setup/setup.h"
-#include "../src/protocol/sorting.h"
+#include "../src/protocol/sort.h"
 #include "../src/utils/perm.h"
 #include "constants.h"
 

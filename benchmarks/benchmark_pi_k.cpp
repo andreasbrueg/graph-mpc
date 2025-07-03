@@ -4,51 +4,37 @@
 #include "../src/protocol/message_passing.h"
 #include "../src/utils/graph.h"
 
-std::vector<Ring> apply(std::vector<Ring> &old_payload, std::vector<Ring> &new_payload) {
-    std::vector<Ring> result(old_payload.size());
+std::vector<Ring> apply(std::vector<Ring> &old_payload, std::vector<Ring> &new_payload) { return new_payload; }
 
-    for (size_t i = 0; i < result.size(); ++i) {
-        result[i] = old_payload[i] + new_payload[i];
-    }
-    return result;
+void pre_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc) {
+    size_t n_bits = std::ceil(std::log2(n + 2));
+    preproc.deduplication_pre = deduplication_preprocess(id, rngs, network, n, n_bits);
 }
 
-void pre_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, MPPreprocessing &preproc) {
-    return;
+void post_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc) { return; }
+
+void pre_mp_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc, SecretSharedGraph &g) {
+    deduplication_evaluate(id, rngs, network, n, preproc.deduplication_pre, g.src_bits, g.dst_bits, g.src, g.dst);
 }
 
-void post_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, MPPreprocessing &preproc) {
-    return;
-}
-
-void pre_mp_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, MPPreprocessing &preproc,
-                     SecretSharedGraph &g) {
-    return;
-}
-
-void post_mp_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, SecretSharedGraph &g,
-                      MPPreprocessing &preproc, std::vector<Ring> &payload) {
+void post_mp_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, SecretSharedGraph &g, MPPreprocessing &preproc,
+                      std::vector<Ring> &payload) {
     g.payload = payload;
     g.payload_bits = to_bits(payload, sizeof(Ring) * 8);
 }
 
-void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, size_t repeat, size_t n_vertices,
+void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, size_t BLOCK_SIZE, size_t repeat, size_t n_vertices,
                bool save_output, std::string save_file) {
     json output_data;
+    network->init();
 
-    Graph g(n);
+    Graph g;
 
-    for (size_t i = 0; i < n_vertices; ++i) {
-        g.add_list_entry(i, i, 1, 0);
-    }
+    for (size_t i = 0; i < n_vertices; i++) g.add_list_entry(i + 1, i + 1, 1);
+    for (size_t i = 0; i < n - n_vertices; i++) g.add_list_entry(1, 2, 0);
 
-    for (size_t i = n_vertices; i < n; ++i) {
-        Ring rand = std::rand() % n_vertices;
-        g.add_list_entry(rand, (rand + 1) % n_vertices, 0, 0);
-    }
-    g.payload[0] = 1;
-
-    size_t n_bits = sizeof(Ring) * 8 + 1;
+    size_t n_bits = std::ceil(std::log2(n + 2)) + 1;
+    std::cout << "n_bits: " << n_bits << std::endl;
     size_t n_iterations = 1;
     std::vector<Ring> weights(n_iterations);
 
@@ -58,7 +44,7 @@ void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> ne
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
 
         StatsPoint start_pre(*network);
-        auto preproc = mp::preprocess(id, rngs, network, g.size, BLOCK_SIZE, n_bits, 1, pre_mp_preprocess, post_mp_preprocess);
+        auto preproc = mp::preprocess(id, rngs, network, g.size, n_bits, n_iterations, pre_mp_preprocess, post_mp_preprocess);
         StatsPoint end_pre(*network);
         network->sync();
 
@@ -74,8 +60,7 @@ void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> ne
         std::cout << "preprocessing sent: " << bytes_sent << " bytes" << std::endl;
 
         StatsPoint start(*network);
-        mp::evaluate(id, rngs, network, g.size, BLOCK_SIZE, n_bits, n_iterations, n_vertices, g_shared, weights, apply, pre_mp_evaluate, post_mp_evaluate,
-                     preproc);
+        mp::evaluate(id, rngs, network, g.size, n_bits, n_iterations, n_vertices, g_shared, weights, apply, pre_mp_evaluate, post_mp_evaluate, preproc);
         StatsPoint end(*network);
 
         rbench = end - start;

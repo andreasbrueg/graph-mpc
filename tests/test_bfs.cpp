@@ -59,7 +59,7 @@ void test_bfs(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface
     g.payload = std::vector<Ring>({1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
     n = 25;
 
-    const size_t n_bits = sizeof(Ring) * 8;
+    size_t n_bits = std::ceil(std::log2(n + 2));
     const size_t n_iterations = 4;
     std::vector<Ring> weights(n_iterations);
 
@@ -82,7 +82,7 @@ void test_bfs(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface
     /* Preprocessing communication assertions */
     if (id == D) {
         /* n_elems * 4 Bytes per element */
-        size_t total_comm = 4 * bfs_comm_pre(n, n_iterations);
+        size_t total_comm = 4 * bfs_comm_pre(n, n_bits, n_iterations);
         assert(bytes_sent_pre == total_comm);
     }
 
@@ -100,7 +100,7 @@ void test_bfs(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface
 
     /* Evaluation communication assertions */
     if (id != D) {
-        size_t total_comm = 4 * bfs_comm_online(n, n_iterations);
+        size_t total_comm = 4 * bfs_comm_online(n, n_bits, n_iterations);
         assert(total_comm == bytes_sent);
     }
 

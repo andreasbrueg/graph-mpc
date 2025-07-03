@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 
 #include "../setup/setup.h"
 #include "../src/protocol/message_passing.h"
@@ -12,32 +13,40 @@ std::vector<Ring> apply(std::vector<Ring> &old_payload, std::vector<Ring> &new_p
     }
     return result;
 }
-void pre_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, MPPreprocessing &preproc) {
+void pre_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc) { return; }
+
+void post_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc) {
+    preproc.eqz_triples = clip::equals_zero_preprocess(id, rngs, network, n);
+    preproc.B2A_triples = clip::B2A_preprocess(id, rngs, network, n);
+}
+
+void pre_mp_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc, SecretSharedGraph &g) {
     return;
 }
 
-void post_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, MPPreprocessing &preproc) {
-    preproc.eqz_triples = clip::equals_zero_preprocess(id, rngs, network, n, BLOCK_SIZE);
-    preproc.B2A_triples = clip::B2A_preprocess(id, rngs, network, n, BLOCK_SIZE);
-}
+void post_mp_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, SecretSharedGraph &g, MPPreprocessing &preproc,
+                      std::vector<Ring> &payload) {
+    auto eqz_start = std::chrono::system_clock::now();
+    std::vector<Ring> payload_v_eqz = clip::equals_zero_evaluate(id, rngs, network, preproc.eqz_triples, payload);
+    auto eqz_end = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(eqz_end - eqz_start);
+    std::cout << "EQZ Evaluation took: " << std::to_string(elapsed.count()) << " s" << std::endl;
 
-void pre_mp_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, MPPreprocessing &preproc,
-                     SecretSharedGraph &g) {
-    return;
-}
+    auto B2A_start = std::chrono::system_clock::now();
+    std::vector<Ring> payload_v_B2A = clip::B2A_evaluate(id, rngs, network, preproc.B2A_triples, payload_v_eqz);
+    auto B2A_end = std::chrono::system_clock::now();
+    elapsed = std::chrono::duration_cast<std::chrono::seconds>(B2A_end - B2A_start);
+    std::cout << "B2A Evaluation took: " << std::to_string(elapsed.count()) << " s" << std::endl;
 
-void post_mp_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, SecretSharedGraph &g,
-                      MPPreprocessing &preproc, std::vector<Ring> &payload) {
-    std::vector<Ring> payload_v_eqz = clip::equals_zero_evaluate(id, rngs, network, BLOCK_SIZE, preproc.eqz_triples, payload);
-    std::vector<Ring> payload_v_B2A = clip::B2A_evaluate(id, rngs, network, BLOCK_SIZE, preproc.B2A_triples, payload_v_eqz);
     auto payload_v_flip = clip::flip(id, payload_v_B2A);
     g.payload = payload_v_flip;
     g.payload_bits = to_bits(payload_v_flip, sizeof(Ring) * 8);
 }
 
-void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, size_t repeat, size_t n_vertices,
+void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, size_t BLOCK_SIZE, size_t repeat, size_t n_vertices,
                bool save_output, std::string save_file) {
     json output_data;
+    network->init();
 
     Graph g(n);
 
@@ -62,7 +71,7 @@ void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> ne
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
 
         StatsPoint start_pre(*network);
-        auto preproc = mp::preprocess(id, rngs, network, g.size, BLOCK_SIZE, n_bits, 1, pre_mp_preprocess, post_mp_preprocess);
+        auto preproc = mp::preprocess(id, rngs, network, g.size, n_bits, 1, pre_mp_preprocess, post_mp_preprocess);
         StatsPoint end_pre(*network);
         network->sync();
 
@@ -78,8 +87,7 @@ void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> ne
         std::cout << "preprocessing sent: " << bytes_sent << " bytes" << std::endl;
 
         StatsPoint start(*network);
-        mp::evaluate(id, rngs, network, g.size, BLOCK_SIZE, n_bits, n_iterations, n_vertices, g_shared, weights, apply, pre_mp_evaluate, post_mp_evaluate,
-                     preproc);
+        mp::evaluate(id, rngs, network, g.size, n_bits, n_iterations, n_vertices, g_shared, weights, apply, pre_mp_evaluate, post_mp_evaluate, preproc);
         StatsPoint end(*network);
 
         rbench = end - start;

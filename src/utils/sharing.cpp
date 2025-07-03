@@ -54,6 +54,28 @@ std::vector<Ring> share::random_share_secret_vec_2P(Party id, RandomGenerators &
     return share;
 }
 
+Permutation share::random_share_secret_perm_2P(Party id, RandomGenerators &rngs, Permutation &secret_perm) {
+    std::vector<Ring> share(secret_perm.size());
+    switch (id) {
+        case P0: {
+            for (size_t i = 0; i < share.size(); ++i) {
+                rngs.rng_01().random_data(&share[i], sizeof(Ring));
+                share[i] = secret_perm[i] - share[i];
+            }
+            break;
+        }
+        case P1: {
+            for (size_t i = 0; i < share.size(); ++i) {
+                rngs.rng_01().random_data(&share[i], sizeof(Ring));
+            }
+            break;
+        }
+        default:
+            break;
+    }
+    return Permutation(share);
+}
+
 std::vector<Ring> share::random_share_secret_vec_2P_bin(Party id, RandomGenerators &rngs, std::vector<Ring> &secret_vec) {
     std::vector<Ring> share(secret_vec.size());
     switch (id) {
@@ -263,33 +285,10 @@ Graph share::reveal_graph(Party id, std::shared_ptr<NetworkInterface> network, s
 
     if (id == D) return g_new;
 
-    std::vector<std::vector<Ring>> src_bits(n_bits);
-    std::vector<std::vector<Ring>> dst_bits(n_bits);
-    std::vector<std::vector<Ring>> payload_bits(n_bits);
-
-    std::vector<Ring> src(g.size);
-    std::vector<Ring> dst(g.size);
-    std::vector<Ring> isV(g.size);
-    std::vector<Ring> payload(g.size);
-
-    for (size_t i = 0; i < n_bits; ++i) {
-        src_bits[i] = share::reveal_vec(id, network, g.src_bits[i]);
-    }
-
-    for (size_t i = 0; i < n_bits; ++i) {
-        dst_bits[i] = share::reveal_vec(id, network, g.dst_bits[i]);
-    }
-
-    for (size_t i = 0; i < n_bits; ++i) {
-        payload_bits[i] = share::reveal_vec(id, network, g.payload_bits[i]);
-    }
-
-    isV = share::reveal_vec(id, network, g.isV_bits);
-
-    g_new.src = from_bits(src_bits, g.size);
-    g_new.dst = from_bits(dst_bits, g.size);
-    g_new.isV = isV;
-    g_new.payload = from_bits(payload_bits, g.size);
+    g_new.src = share::reveal_vec(id, network, g.src);
+    g_new.dst = share::reveal_vec(id, network, g.dst);
+    g_new.isV = share::reveal_vec(id, network, g.isV_bits);
+    g_new.payload = share::reveal_vec(id, network, g.payload);
 
     return g_new;
 }

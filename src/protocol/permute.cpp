@@ -14,38 +14,6 @@ SwitchPermPreprocessing permute::switch_perm_preprocess(Party id, RandomGenerato
     return preproc;
 }
 
-SwitchPermPreprocessing_Dealer permute::switch_perm_preprocess_Dealer(Party id, RandomGenerators &rngs, size_t n) {
-    SwitchPermPreprocessing_Dealer preproc;
-
-    auto [pi_share, pi_B_0, pi_shares_P1] = shuffle::get_shuffle_1(id, rngs, n);
-    auto [omega_share, omega_B_0, omega_shares_P1] = shuffle::get_shuffle_1(id, rngs, n);
-    auto [merged_share, merged_B_0, merged_B_1, sigma_0_p, sigma_1] = shuffle::get_merged_shuffle_1(id, rngs, n, pi_share, omega_share);
-
-    preproc.pi_B_0 = pi_B_0;
-    preproc.pi_shares_P1 = pi_shares_P1;
-    preproc.omega_B_0 = omega_B_0;
-    preproc.omega_shares_P1 = omega_shares_P1;
-    preproc.merged_B_0 = merged_B_0;
-    preproc.merged_B_1 = merged_B_1;
-    preproc.sigma_0_p = sigma_0_p;
-    preproc.sigma_1 = sigma_1;
-
-    return preproc;
-}
-
-SwitchPermPreprocessing permute::switch_perm_preprocess_Parties(Party id, RandomGenerators &rngs, size_t n, std::vector<Ring> &vals, size_t &idx) {
-    SwitchPermPreprocessing preproc;
-
-    ShufflePre pi_share = shuffle::get_shuffle_2(id, rngs, n, vals, idx, true);
-    ShufflePre omega_share = shuffle::get_shuffle_2(id, rngs, n, vals, idx, true);
-    ShufflePre merged_share = shuffle::get_merged_shuffle_2(id, n, vals, idx);
-
-    preproc.pi = pi_share;
-    preproc.omega = omega_share;
-    preproc.merged = merged_share;
-    return preproc;
-}
-
 /* ----- Evaluation ----- */
 std::vector<Ring> permute::apply_perm_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, Permutation &perm,
                                                ShufflePre &perm_share, std::vector<Ring> &input_share) {

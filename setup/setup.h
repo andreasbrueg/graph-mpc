@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/program_options.hpp>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <fstream>

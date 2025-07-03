@@ -1,30 +1,15 @@
 #include "clip.h"
 
 /* ----- Preprocessing ----- */
-std::vector<std::tuple<Ring, Ring, Ring>> clip::equals_zero_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n) {
+std::vector<std::vector<std::tuple<Ring, Ring, Ring>>> clip::equals_zero_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network,
+                                                                                    size_t n) {
     const size_t n_layers = 5;
     const size_t n_triples = n_layers * n;
 
-    return mul::preprocess_bin(id, rngs, network, n_triples);
-}
-
-std::vector<Ring> clip::equals_zero_preprocess_Dealer(Party id, RandomGenerators &rngs, size_t n) {
-    const size_t n_layers = 5;
-    const size_t n_triples = n_layers * n;
-
-    std::vector<Ring> vals_to_P1;
-    size_t idx = 0;
-
-    auto triples = mul::preprocess_bin(id, rngs, vals_to_P1, idx, n_triples);
-    return vals_to_P1;
-}
-
-std::vector<std::tuple<Ring, Ring, Ring>> clip::equals_zero_preprocess_Parties(Party id, RandomGenerators &rngs, size_t n, std::vector<Ring> &vals,
-                                                                               size_t &idx) {
-    const size_t n_layers = 5;
-    const size_t n_triples = n_layers * n;
-
-    auto triples = mul::preprocess_bin(id, rngs, vals, idx, n_triples);
+    std::vector<std::vector<std::tuple<Ring, Ring, Ring>>> triples(5);
+    for (size_t i = 0; i < n_layers; ++i) {
+        triples[i] = mul::preprocess_bin(id, rngs, network, n);
+    }
     return triples;
 }
 
@@ -32,55 +17,41 @@ std::vector<std::tuple<Ring, Ring, Ring>> clip::B2A_preprocess(Party id, RandomG
     return mul::preprocess(id, rngs, network, n);
 }
 
-std::vector<Ring> clip::B2A_preprocess_Dealer(Party id, RandomGenerators &rngs, size_t n) {
-    std::vector<Ring> vals_to_P1;
-    size_t idx = 0;
-
-    auto triples = mul::preprocess(id, rngs, vals_to_P1, idx, n);
-
-    return vals_to_P1;
-}
-
-std::vector<std::tuple<Ring, Ring, Ring>> clip::B2A_preprocess_Parties(Party id, RandomGenerators &rngs, size_t n, std::vector<Ring> &vals, size_t &idx) {
-    return mul::preprocess(id, rngs, vals, idx, n);
-}
-
 /* ----- Evaluation ----- */
 std::vector<Ring> clip::equals_zero_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network,
-                                             std::vector<std::tuple<Ring, Ring, Ring>> &triples, std::vector<Ring> &input_share) {
+                                             std::vector<std::vector<std::tuple<Ring, Ring, Ring>>> &triples, std::vector<Ring> &input_share) {
     const size_t n_layers = 5;
-    std::vector<Ring> result(input_share.size());
+    const size_t n = input_share.size();
+    std::vector<Ring> res(input_share);
 
-    for (size_t i = 0; i < input_share.size(); ++i) {
-        auto share = input_share[i];
+    /* x_0 == -x_1 <=> ~x_0 ^ -x_1 */
+    if (id == P0) {
+        for (auto &elem : res) elem = ~elem;
+    }
 
-        /* x_0 == -x_1 <=> ~x_0 ^ -x_1 */
-        if (id == P0)
-            share = ~share;
-        else if (id == P1)
-            share = -share;
+    else if (id == P1) {
+        for (auto &elem : res) elem = -elem;
+    }
 
-        for (size_t layer = 0; layer < 5; ++layer) {
-            if (id != D) {
-                auto left = share;
-                auto right = share;
+    for (size_t layer = 0; layer < 5; ++layer) {
+        if (id != D) {
+            std::vector<Ring> shares_left(res);
+            std::vector<Ring> shares_right(res);
 
-                size_t width = 1 << (4 - layer);
-                left >>= width;
+            size_t width = 1 << (4 - layer);
+            for (auto &elem : shares_left) elem >>= width;
 
-                auto res = mul::evaluate_one_bin(id, network, triples[(i * n_layers) + layer], left, right);
+            res = mul::evaluate_bin(id, network, n, triples[layer], shares_left, shares_right);
 
-                if (layer == 4) {
-                    res <<= 31;
-                    res >>= 31;
+            if (layer == 4) {
+                for (auto &elem : res) {
+                    elem <<= 31;
+                    elem >>= 31;
                 }
-
-                share = res;
             }
         }
-        result[i] = share;
     }
-    return result;
+    return res;
 }
 
 std::vector<Ring> clip::B2A_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network,

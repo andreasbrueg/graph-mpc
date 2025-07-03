@@ -1,11 +1,10 @@
 #include "deduplication.h"
 
 /* ----- Preprocessing ----- */
-DeduplicationPreprocessing deduplication_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n) {
+DeduplicationPreprocessing deduplication_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, size_t n_bits) {
     DeduplicationPreprocessing preproc;
 
-    size_t n_bits = 2 * sizeof(Ring) * 8;
-    SortPreprocessing sort_preproc = sort::get_sort_preprocess(id, rngs, network, n, n_bits);
+    SortPreprocessing sort_preproc = sort::get_sort_preprocess(id, rngs, network, n, 2 * n_bits);
     ShufflePre apply_perm_share = shuffle::get_shuffle(id, rngs, network, n, true);
     std::vector<Ring> unshuffle_B = shuffle::get_unshuffle(id, rngs, network, n, apply_perm_share);
     auto eqz_triples_1 = clip::equals_zero_preprocess(id, rngs, network, n);
@@ -62,8 +61,8 @@ void deduplication_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<Ne
 }
 
 /* ----- Ad-Hoc Preprocessing ----- */
-void deduplication(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, size_t BLOCK_SIZE,
-                   std::vector<std::vector<Ring>> &src_bits, std::vector<std::vector<Ring>> &dst_bits, std::vector<Ring> &src, std::vector<Ring> &dst) {
+void deduplication(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, std::vector<std::vector<Ring>> &src_bits,
+                   std::vector<std::vector<Ring>> &dst_bits, std::vector<Ring> &src, std::vector<Ring> &dst) {
     std::vector<std::vector<Ring>> src_dst_bits;
     src_dst_bits.insert(src_dst_bits.end(), src_bits.begin(), src_bits.end());
     src_dst_bits.insert(src_dst_bits.end(), dst_bits.begin(), dst_bits.end());

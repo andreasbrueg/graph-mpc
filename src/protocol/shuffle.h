@@ -35,30 +35,6 @@ std::vector<Ring> get_unshuffle(Party id, RandomGenerators &rngs, std::shared_pt
 ShufflePre get_merged_shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, ShufflePre &pi_share,
                               ShufflePre &omega_share);
 
-std::tuple<ShufflePre, std::vector<Ring>, std::vector<Ring>> get_shuffle_1(Party id, RandomGenerators &rngs, size_t n);
-
-ShufflePre get_shuffle_2(Party id, RandomGenerators &rngs, size_t n, std::vector<Ring> vals, size_t &idx, bool save);
-
-std::tuple<std::vector<Ring>, std::vector<Ring>> get_unshuffle_1(Party id, RandomGenerators &rngs, size_t n, ShufflePre &perm_share);
-
-std::vector<Ring> get_unshuffle_2(Party id, size_t n, std::vector<Ring> &vals, size_t &idx);
-
-std::tuple<ShufflePre, std::vector<Ring>, std::vector<Ring>, std::vector<Ring>, std::vector<Ring>> get_merged_shuffle_1(Party id, RandomGenerators &rngs,
-                                                                                                                        size_t n, ShufflePre &pi_share,
-                                                                                                                        ShufflePre &omega_share);
-
-ShufflePre get_merged_shuffle_2(Party id, size_t n, std::vector<Ring> &vals, size_t &idx);
-
-// std::vector<Ring> shuffle_1(Party id, RandomGenerators &rngs, size_t n, std::vector<Ring> &input_share, ShufflePre &perm_share);
-
-// std::vector<Ring> shuffle_1(Party id, RandomGenerators &rngs, size_t n, Permutation &input_share, ShufflePre &perm_share);
-
-// std::vector<Ring> shuffle_2(Party id, RandomGenerators &rngs, std::vector<Ring> &vec_A, ShufflePre &perm_share, size_t n);
-
-// std::vector<Ring> unshuffle_1(Party id, RandomGenerators &rngs, ShufflePre &shuffle_share, std::vector<Ring> &input_share, size_t n);
-
-// std::vector<Ring> unshuffle_2(Party id, ShufflePre &shuffle_share, std::vector<Ring> vec_t, std::vector<Ring> &B, size_t n);
-
 std::vector<Ring> shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, std::vector<Ring> &input_share, ShufflePre &perm_share,
                           size_t n);
 

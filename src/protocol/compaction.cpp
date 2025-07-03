@@ -1,94 +1,11 @@
 #include "compaction.h"
 
 /* ----- Preprocessing ----- */
-std::vector<Ring> compaction::preprocess_Dealer(Party id, RandomGenerators &rngs, size_t n) {
-    std::vector<Ring> shares_P1;
-    size_t idx = 0;
-
-    auto triples = mul::preprocess(id, rngs, shares_P1, idx, n);
-    return shares_P1;
-}
-
-std::vector<std::tuple<Ring, Ring, Ring>> compaction::preprocess_Parties(Party id, RandomGenerators &rngs, size_t n, std::vector<Ring> &shares_P1,
-                                                                         size_t &idx) {
-    return mul::preprocess(id, rngs, shares_P1, idx, n);
-}
-
 std::vector<std::tuple<Ring, Ring, Ring>> compaction::preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n) {
     return mul::preprocess(id, rngs, network, n);
 }
 
 /* ----- Evaluation ----- */
-std::vector<Ring> compaction::evaluate_1(Party id, size_t n, std::vector<std::tuple<Ring, Ring, Ring>> &triples, std::vector<Ring> &input_share) {
-    std::vector<Ring> output(n);
-    std::vector<Ring> vals;
-
-    size_t idx_mult = 0;
-
-    if (id != D) {
-        std::vector<Ring> f_0;
-        // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
-        for (size_t i = 0; i < n; ++i) {
-            f_0.push_back(-input_share[i]);
-            if (id == P0) {
-                f_0[i] += 1;  // 1 as constant only to one share
-            }
-        }
-
-        std::vector<Ring> s_0, s_1;
-        Ring s = 0;
-        // Set s_0 to prefix sum of f_0 and s_1 to prefix sum of f_1/input continuing from the prior final value
-        for (size_t i = 0; i < n; ++i) {
-            s += f_0[i];
-            s_0.push_back(s);
-        }
-        for (size_t i = 0; i < n; ++i) {
-            s += input_share[i];
-            s_1.push_back(s - s_0[i]);  // s_0[i] see below
-        }
-
-        mul::evaluate_1(triples, vals, input_share, s_1, n);
-    }
-    return vals;
-}
-
-Permutation compaction::evaluate_2(Party id, size_t n, std::vector<std::tuple<Ring, Ring, Ring>> &triples, std::vector<Ring> &vals,
-                                   std::vector<Ring> &input_share) {
-    std::vector<Ring> output(n);
-    if (id != D) {
-        std::vector<Ring> f_0;
-        // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
-        for (size_t i = 0; i < n; ++i) {
-            f_0.push_back(-input_share[i]);
-            if (id == P0) {
-                f_0[i] += 1;  // 1 as constant only to one share
-            }
-        }
-
-        std::vector<Ring> s_0, s_1;
-        Ring s = 0;
-        // Set s_0 to prefix sum of f_0 and s_1 to prefix sum of f_1/input continuing from the prior final value
-        for (size_t i = 0; i < n; ++i) {
-            s += f_0[i];
-            s_0.push_back(s);
-        }
-        for (size_t i = 0; i < n; ++i) {
-            s += input_share[i];
-            s_1.push_back(s - s_0[i]);  // s_0[i] see below
-        }
-
-        output = mul::evaluate_2(id, triples, vals, input_share, s_1, n);
-
-#pragma omp parallel for if (n > 10000)
-        for (size_t i = 0; i < output.size(); ++i) {
-            output[i] += s_0[i];
-            if (id == P0) output[i]--;
-        }
-    }
-
-    return Permutation(output);
-}
-
 Permutation compaction::evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n,
                                  std::vector<std::tuple<Ring, Ring, Ring>> &triples, std::vector<Ring> &input_share) {
     std::vector<Ring> output(n);

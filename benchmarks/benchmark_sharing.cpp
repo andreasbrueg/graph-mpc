@@ -3,9 +3,10 @@
 #include "../src/utils/random_generators.h"
 #include "../src/utils/sharing.h"
 
-void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t BLOCK_SIZE, size_t repeat, size_t n_vertices,
+void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, size_t BLOCK_SIZE, size_t repeat, size_t n_vertices,
                bool save_output, std::string save_file) {
     json output_data;
+    network->init();
 
     std::vector<Ring> input_table(n);
     for (size_t i = 0; i < n; ++i) input_table[i] = i;
@@ -30,7 +31,7 @@ void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> ne
     std::cout << std::endl;
 
     StatsPoint start_reveal(*network);
-    auto revealed = share::reveal_vec(id, network, BLOCK_SIZE, share);
+    auto revealed = share::reveal_vec(id, network, share);
     std::cout << "Reveal done." << std::endl;
     StatsPoint end_reveal(*network);
     network->sync();

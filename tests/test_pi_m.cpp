@@ -74,7 +74,7 @@ void test_pi_m(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
 
     std::vector<Ring> weights = {10000000, 100000, 1000, 1};
     const size_t n_iterations = weights.size();
-    const size_t n_bits = sizeof(Ring) * 8;
+    size_t n_bits = std::ceil(std::log2(n + 2));
 
     if (id != D) g.print();
 
@@ -95,7 +95,7 @@ void test_pi_m(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
     /* Preprocessing communication assertions */
     if (id == D) {
         /* n_elems * 4 Bytes per element */
-        size_t total_comm = 4 * mp_comm_pre(g.size, n_iterations);
+        size_t total_comm = 4 * mp_comm_pre(g.size, n_bits, n_iterations);
         assert(bytes_sent_pre == total_comm);
     }
 
@@ -113,7 +113,7 @@ void test_pi_m(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
 
     /* Evaluation communication assertions */
     if (id != D) {
-        size_t total_comm = 4 * mp_comm_online(g.size, n_iterations);
+        size_t total_comm = 4 * mp_comm_online(g.size, n_bits, n_iterations);
         assert(total_comm == bytes_sent);
     }
 

@@ -13,7 +13,8 @@
 std::vector<Ring> apply(std::vector<Ring> &old_payload, std::vector<Ring> &new_payload) { return new_payload; }
 
 void pre_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc) {
-    preproc.deduplication_pre = deduplication_preprocess(id, rngs, network, n);
+    size_t n_bits = std::ceil(std::log2(n + 2));
+    preproc.deduplication_pre = deduplication_preprocess(id, rngs, network, n, n_bits);
 }
 
 void post_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc) { return; }
@@ -59,6 +60,7 @@ void test_pi_k(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
     */
 
     Graph g;
+
     g.add_list_entry(1, 1, 1);
     g.add_list_entry(2, 2, 1);
     g.add_list_entry(1, 2, 0);
@@ -78,9 +80,9 @@ void test_pi_k(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
 
     n = g.size;
     std::vector<Ring> weights = {10000000, 100000, 1000, 1};
-    const size_t n_iterations = weights.size();
-    const size_t n_bits = sizeof(Ring) * 8;
     const size_t n_vertices = 4;
+    const size_t n_iterations = weights.size();
+    size_t n_bits = std::ceil(std::log2(n + 2));
 
     if (id != D) g.print();
 
@@ -101,7 +103,7 @@ void test_pi_k(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
     /* Preprocessing communication assertions */
     if (id == D) {
         /* n_elems * 4 Bytes per element */
-        size_t total_comm = 4 * pi_k_comm_pre(n, n_iterations);
+        size_t total_comm = 4 * pi_k_comm_pre(n, n_bits, n_iterations);
         assert(bytes_sent_pre == total_comm);
     }
 
@@ -119,7 +121,7 @@ void test_pi_k(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
 
     /* Evaluation communication assertions */
     if (id != D) {
-        size_t total_comm = 4 * pi_k_comm_online(n, n_iterations);
+        size_t total_comm = 4 * pi_k_comm_online(n, n_bits, n_iterations);
         assert(total_comm == bytes_sent);
     }
 

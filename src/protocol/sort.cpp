@@ -15,27 +15,6 @@ SortIterationPreprocessing sort::sort_iteration_preprocess(Party id, RandomGener
     return preproc;
 }
 
-SortIterationPreprocessing_Dealer sort::sort_iteration_preprocess_Dealer(Party id, RandomGenerators &rngs, size_t n) {
-    SortIterationPreprocessing_Dealer preproc;
-    auto [perm_share, B0, shares_P1] = shuffle::get_shuffle_1(id, rngs, n);
-    auto comp_vals_P1 = compaction::preprocess_Dealer(id, rngs, n);
-    auto [unshuffle_B0, unshuffle_B1] = shuffle::get_unshuffle_1(id, rngs, n, perm_share);
-    preproc.B0 = B0;
-    preproc.shares_P1 = shares_P1;
-    preproc.comp_vals_P1 = comp_vals_P1;
-    preproc.unshuffle_B0 = unshuffle_B0;
-    preproc.unshuffle_B1 = unshuffle_B1;
-    return preproc;
-}
-
-SortIterationPreprocessing sort::sort_iteration_preprocess_Parties(Party id, RandomGenerators &rngs, size_t n, std::vector<Ring> &vals, size_t &idx) {
-    SortIterationPreprocessing preproc;
-    preproc.perm_share = shuffle::get_shuffle_2(id, rngs, n, vals, idx, true);
-    preproc.triples = compaction::preprocess_Parties(id, rngs, n, vals, idx);
-    preproc.unshuffle_B = shuffle::get_unshuffle_2(id, n, vals, idx);
-    return preproc;
-}
-
 SortPreprocessing sort::get_sort_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, size_t n_bits) {
     SortPreprocessing preproc;
 
@@ -45,51 +24,6 @@ SortPreprocessing sort::get_sort_preprocess(Party id, RandomGenerators &rngs, st
     /* Compute the preprocessing for n_bits-1 sort_iteratinos */
     for (size_t i = 0; i < n_bits - 1; ++i) {
         SortIterationPreprocessing sort_iteration_pre = sort_iteration_preprocess(id, rngs, network, n);
-        preproc.sort_iteration_pre.push_back(sort_iteration_pre);
-    }
-
-    return preproc;
-}
-
-SortPreprocessing_Dealer sort::get_sort_preprocess_Dealer(Party id, RandomGenerators &rngs, size_t n, size_t n_bits) {
-    SortPreprocessing_Dealer preproc;
-
-    preproc.comp_shares_P1 = compaction::preprocess_Dealer(id, rngs, n);
-
-    for (size_t i = 0; i < n_bits - 1; ++i) {
-        SortIterationPreprocessing_Dealer sort_iteration_pre;
-        auto [perm_share, B0, shares_P1] = shuffle::get_shuffle_1(id, rngs, n);
-        sort_iteration_pre.B0 = B0;
-        sort_iteration_pre.shares_P1 = shares_P1;
-
-        auto [unshuffle_B0, unshuffle_B1] = shuffle::get_unshuffle_1(id, rngs, n, perm_share);
-        sort_iteration_pre.unshuffle_B0 = unshuffle_B0;
-        sort_iteration_pre.unshuffle_B1 = unshuffle_B1;
-
-        auto comp_shares_P1 = compaction::preprocess_Dealer(id, rngs, n);
-        sort_iteration_pre.comp_vals_P1 = comp_shares_P1;
-
-        preproc.sort_iteration_pre.push_back(sort_iteration_pre);
-    }
-    return preproc;
-}
-
-SortPreprocessing sort::get_sort_preprocess_Parties(Party id, RandomGenerators &rngs, size_t n, size_t n_bits, std::vector<Ring> &vals, size_t &idx) {
-    SortPreprocessing preproc;
-
-    auto triples = compaction::preprocess_Parties(id, rngs, n, vals, idx);
-    preproc.triples = triples;
-
-    for (size_t i = 0; i < n_bits - 1; ++i) {
-        SortIterationPreprocessing sort_iteration_pre;
-
-        ShufflePre shuffle_share = shuffle::get_shuffle_2(id, rngs, n, vals, idx, true);
-        auto triple = compaction::preprocess_Parties(id, rngs, n, vals, idx);
-        std::vector<Ring> unshuffle_B = shuffle::get_unshuffle_2(id, n, vals, idx);
-
-        sort_iteration_pre.perm_share = shuffle_share;
-        sort_iteration_pre.triples = triple;
-        sort_iteration_pre.unshuffle_B = unshuffle_B;
         preproc.sort_iteration_pre.push_back(sort_iteration_pre);
     }
 
@@ -131,16 +65,6 @@ Permutation sort::get_sort_evaluate(Party id, RandomGenerators &rngs, std::share
     }
     return sigma;
 }
-
-/*
-std::tuple<std::vector<Ring>, std::vector<Ring>> sort_iteration_evaluate_1(Party id, RandomGenerators &rngs, Permutation &perm,
-                                                                           std::vector<Ring> &bit_vec_share, SortIterationPreprocessing &preproc, size_t n) {
-    ShufflePre perm_share = preproc.perm_share;
-    std::vector<Ring> vec_A_1 = shuffle::shuffle_1(id, rngs, n, perm, perm_share);
-    std::vector<Ring> vec_A_2 = shuffle::shuffle_1(id, rngs, n, bit_vec_share, perm_share);
-    return {vec_A_1, vec_A_2};
-}
-*/
 
 /* ----- Ad-Hoc Preprocessing ----- */
 /**

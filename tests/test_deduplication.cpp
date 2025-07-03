@@ -38,7 +38,7 @@ void test_deduplication(Party id, RandomGenerators &rngs, std::shared_ptr<Networ
 
     /* Preprocessing */
     StatsPoint start_pre(*network);
-    auto preproc = deduplication_preprocess(id, rngs, network, g.size);
+    auto preproc = deduplication_preprocess(id, rngs, network, g.size, n_bits);
     StatsPoint end_pre(*network);
 
     auto rbench_pre = end_pre - start_pre;

@@ -15,7 +15,9 @@ Ring random_share_secret_2P(Party id, RandomGenerators &rngs, Ring &secret);
 
 Ring random_share_secret_2P_bin(Party id, RandomGenerators &rngs, Ring &secret);
 
-std::vector<Ring> random_share_secret_vec_2P(Party id, RandomGenerators &rngs, std::vector<Ring> &secret_vec);
+std::vector<Ring> random_share_secret_vec_2P(Party id, RandomGenerators &rngs, std::vector<Ring> &secret_perm);
+
+Permutation random_share_secret_perm_2P(Party id, RandomGenerators &rngs, Permutation &secret_vec);
 
 std::vector<Ring> random_share_secret_vec_2P_bin(Party id, RandomGenerators &rngs, std::vector<Ring> &secret_vec);
 

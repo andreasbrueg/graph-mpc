@@ -113,8 +113,7 @@ class TLSNetIO : public IOChannel<TLSNetIO> {
         BIO_set_buffer_size(buf_bio, NETWORK_BUFFER_SIZE);
         BIO_push(buf_bio, ssl_bio);
 
-        if (!quiet)
-            std::cout << "connected\n";
+        if (!quiet) std::cout << "connected\n";
     }
 
     TLSNetIO(int port, std::string certificate_chain_file, std::string private_key_file, bool quiet = false) {
@@ -208,8 +207,7 @@ class TLSNetIO : public IOChannel<TLSNetIO> {
         BIO_set_buffer_size(buf_bio, NETWORK_BUFFER_SIZE);
         BIO_push(buf_bio, ssl_bio);
 
-        if (!quiet)
-            std::cout << "connected\n";
+        if (!quiet) std::cout << "connected\n";
     }
 
     void sync() {

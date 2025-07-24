@@ -2,6 +2,7 @@
 #include <random>
 
 #include "../setup/setup.h"
+#include "../src/protocol/permute.h"
 #include "../src/protocol/sort.h"
 #include "../src/utils/perm.h"
 
@@ -38,6 +39,7 @@ void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
 
         StatsPoint start_pre(*network);
         auto sort_preproc = sort::get_sort_preprocess(id, rngs, network, n, bit_shares.size());
+        auto apply_preproc = shuffle::get_shuffle(id, rngs, network, n, true);
         StatsPoint end_pre(*network);
 
         auto rbench_pre = end_pre - start_pre;
@@ -51,6 +53,7 @@ void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
 
         StatsPoint start(*network);
         auto sort_share = sort::get_sort_evaluate(id, rngs, network, n, bit_shares, sort_preproc);
+        auto applied_sort = permute::apply_perm_evaluate(id, rngs, network, n, sort_share, apply_preproc, input_vector);
         StatsPoint end(*network);
 
         auto rbench = end - start;

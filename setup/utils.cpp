@@ -1,117 +1,228 @@
 #include "utils.h"
 
-#include <NTL/BasicThreadPool.h>
-#include <NTL/ZZ_p.h>
-#include <NTL/ZZ_pE.h>
-
-#include <fstream>
-#include <iostream>
-
-TimePoint::TimePoint() : time(timepoint_t::clock::now()) {}
-
-double TimePoint::operator-(const TimePoint &rhs) const { return std::chrono::duration_cast<timeunit_t>(time - rhs.time).count(); }
-
-CommPoint::CommPoint(NetworkInterface &network) : stats(network.network->nP) {
-    network.sync();
-    for (size_t i = 0; i < (size_t)network.network->nP; ++i) {
-        if (i != (size_t)network.network->party) {
-            stats[i] = network.network->get(i, false)->counter + network.network->get(i, true)->counter;
+void setup::print_vec(std::vector<Ring> &vec) {
+    for (size_t i = 0; i < vec.size(); ++i) {
+        if (i != vec.size() - 1) {
+            std::cout << vec[i] << ", ";
+        } else {
+            std::cout << vec[i] << std::endl;
         }
     }
 }
 
-std::vector<uint64_t> CommPoint::operator-(const CommPoint &rhs) const {
-    std::vector<uint64_t> res(stats.size());
-    for (size_t i = 0; i < stats.size(); ++i) {
-        res[i] = stats[i] - rhs.stats[i];
+bpo::options_description setup::programOptions() {
+    bpo::options_description desc(
+        "Following options are supported by config file too. Regarding seeds, "
+        "all, 01, 02, and 12 need to be equal among the parties using them. "
+        "Other parties, e.g., party 2 for seed 01 can take any value and in "
+        "fact must not know the value that 0 and 1 use");
+
+    desc.add_options()("pid,p", bpo::value<size_t>()->default_value(0), "Party ID.")(
+        "threads,t", bpo::value<size_t>()->default_value(6), "Number of threads (recommended 6).")("seed_self_h", bpo::value<uint64_t>()->default_value(100),
+                                                                                                   "Value of the private random seed, high bits.")(
+        "seed_self_l", bpo::value<uint64_t>()->default_value(0), "Value of the random seed, low bits (will add pid if 0/default).")(
+        "seed_all_h", bpo::value<uint64_t>()->default_value(4), "Value of the global random seed, high bits.")(
+        "seed_all_l", bpo::value<uint64_t>()->default_value(8), "Value of the global random seed, low bits.")(
+        "seed_01_h", bpo::value<uint64_t>()->default_value(15), "Value of the 01-shared random seed, high bits.")(
+        "seed_01_l", bpo::value<uint64_t>()->default_value(16), "Value of the 01-shared random seed, low bits.")(
+        "seed_02_h", bpo::value<uint64_t>()->default_value(23), "Value of the 02-shared random seed, high bits.")(
+        "seed_02_l", bpo::value<uint64_t>()->default_value(42), "Value of the 02-shared random seed, low bits.")(
+        "seed_12_h", bpo::value<uint64_t>()->default_value(108), "Value of the 12-shared random seed, high bits.")(
+        "seed_12_l", bpo::value<uint64_t>()->default_value(1337), "Value of the 12-shared random seed, low bits.")(
+        "seed_D0_unshuffle_h", bpo::value<uint64_t>()->default_value(21108), "Value of the D0-shared random seed for unshuffle, high bits.")(
+        "seed_D0_unshuffle_l", bpo::value<uint64_t>()->default_value(211337), "Value of the D0-shared random seed for unshuffle, low bits.")(
+        "seed_D1_unshuffle_h", bpo::value<uint64_t>()->default_value(1108), "Value of the D1-shared random seed for unshuffle, high bits.")(
+        "seed_D1_unshuffle_l", bpo::value<uint64_t>()->default_value(11337), "Value of the D1-shared random seed for unshuffle, low bits.")(
+        "seed_D0_comp_h", bpo::value<uint64_t>()->default_value(1111108), "Value of the D0-shared random seed for compaction, high bits.")(
+        "seed_D0_comp_l", bpo::value<uint64_t>()->default_value(11111337), "Value of the D0-shared random seed for compaction, low bits.")(
+        "seed_D1_comp_h", bpo::value<uint64_t>()->default_value(111108), "Value of the D1-shared random seed for compaction, high bits.")(
+        "seed_D1_comp_l", bpo::value<uint64_t>()->default_value(1111337), "Value of the D1-shared random seed for compaction, low bits.")(
+        "net-config", bpo::value<std::string>(), "Path to JSON file containing network details of all parties.")(
+        "localhost", bpo::bool_switch(), "All parties are on same machine.")("vec-size,v", bpo::value<size_t>()->default_value(10),
+                                                                             "Number of vector elements.")(
+        "certificate_path", bpo::value<std::string>()->default_value("certs/cert1.pem"), "Path to full certificate chain file for TLS server connections")(
+        "private_key_path", bpo::value<std::string>()->default_value("certs/key1.pem"), "Path to private key for TLS server connections")(
+        "trusted_cert_path", bpo::value<std::string>()->default_value("certs/cert_ca.pem"), "Path with trusted certificate for TLS client connections")(
+        "port", bpo::value<int>()->default_value(10000), "Base port for networking.")(
+        "nodes", bpo::value<size_t>()->default_value(5), "Number of nodes for benchmarking graph algorithms")("output,o", bpo::value<std::string>(),
+                                                                                                              "File to save benchmarks.")(
+        "repeat,r", bpo::value<size_t>()->default_value(1), "Number of times to run benchmarks.")("num_parties,np", bpo::value<size_t>()->default_value(3),
+                                                                                                  "Number of parties running the protocol.")(
+        "BLOCK_SIZE", bpo::value<size_t>()->default_value(100000), "BLOCK_SIZE for sending messages over the network.")(
+        "ssd", bpo::bool_switch(), "Preprocessing values are stored on disk before they are sent.");
+
+    return desc;
+}
+
+bpo::variables_map setup::parseOptions(bpo::options_description &cmdline, bpo::options_description &prog_opts, int argc, char *argv[]) {
+    bpo::variables_map opts;
+    bpo::store(bpo::command_line_parser(argc, argv).options(cmdline).run(), opts);
+
+    if (opts.count("help") != 0) {
+        std::cout << cmdline << std::endl;
+        return 0;
     }
-    return res;
-}
 
-StatsPoint::StatsPoint(NetworkInterface &network) : cpoint_(network) {}
+    if (opts.count("config") > 0) {
+        std::string cpath(opts["config"].as<std::string>());
+        std::ifstream fin(cpath.c_str());
 
-nlohmann::json StatsPoint::operator-(const StatsPoint &rhs) { return {{"time", tpoint_ - rhs.tpoint_}, {"communication", cpoint_ - rhs.cpoint_}}; }
-
-bool saveJson(const nlohmann::json &data, const std::string &fpath) {
-    std::ofstream fout;
-    // fout.open(fpath, std::fstream::out);
-    fout.open(fpath, std::fstream::app);
-    if (!fout.is_open()) {
-        std::cerr << "Could not open save file at " << fpath << "\n";
-        return false;
-    }
-
-    fout << data;
-    fout << std::endl;
-    fout.close();
-
-    std::cout << "Saved data in " << fpath << std::endl;
-
-    return true;
-}
-
-void initNTL(size_t num_threads) {
-    NTL::ZZ_p::init(NTL::conv<NTL::ZZ>("18446744073709551616"));
-    NTL::ZZ_pX P(NTL::INIT_MONO, 47);
-    NTL::SetCoeff(P, 5);
-    NTL::SetCoeff(P, 0);
-    NTL::ZZ_pE::init(P);
-
-    NTL::SetNumThreads(num_threads);
-}
-
-#ifdef __APPLE__
-
-#include <mach/mach.h>
-
-int64_t peakResidentSetSize() {
-    mach_task_basic_info_data_t info;
-    mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
-
-    kern_return_t ret = task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
-    if (ret != KERN_SUCCESS || count != MACH_TASK_BASIC_INFO_COUNT) {
-        return -1;
-    }
-
-    return info.resident_size_max;
-}
-
-int64_t peakVirtualMemory() {
-    // No way to get peak virtual memory usage on OSX.
-    return peakResidentSetSize();
-}
-#elif __linux__
-// Reference: https://gist.github.com/k3vur/4169316
-int64_t getProcStatus(const std::string &key) {
-    int64_t value = 0;
-
-    const char *filename = "/proc/self/status";
-
-    std::ifstream procfile(filename);
-    std::string word;
-    while (procfile.good()) {
-        procfile >> word;
-        if (word == key) {
-            procfile >> value;
-            break;
+        if (fin.fail()) {
+            std::cerr << "Could not open configuration file at " << cpath << "\n";
+            throw std::runtime_error("Conf file missing");
         }
 
-        // Skip to end of line.
-        procfile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        bpo::store(bpo::parse_config_file(fin, prog_opts), opts);
     }
 
-    if (procfile.fail()) {
-        return -1;
+    try {
+        bpo::notify(opts);
+
+        if (!opts["localhost"].as<bool>() && (opts.count("net-config") == 0)) {
+            throw std::runtime_error("Expected one of 'localhost' or 'net-config'");
+        }
+    } catch (const std::exception &ex) {
+        std::cerr << ex.what() << std::endl;
+        throw std::runtime_error("Error occured");
     }
 
-    return value;
+    return opts;
 }
 
-int64_t peakVirtualMemory() { return getProcStatus("VmPeak:"); }
+void setup::setupExecution(const bpo::variables_map &opts, size_t &pid, size_t &nP, size_t &repeat, size_t &threads, size_t &nodes, io::NetworkConfig &net_conf,
+                           uint64_t *seeds_h, uint64_t *seeds_l, bool &save_output, std::string &save_file, bool &save_to_disk) {
+    save_output = false;
+    if (opts.count("output") != 0) {
+        save_output = true;
+        save_file = opts["output"].as<std::string>();
+    }
 
-int64_t peakResidentSetSize() { return getProcStatus("VmHWM:"); }
-#else
-int64_t peakVirtualMemory() { return -1; }
+    pid = opts["pid"].as<size_t>();
+    nP = opts["num_parties"].as<size_t>();
+    threads = opts["threads"].as<size_t>();
+    nodes = opts["nodes"].as<size_t>();
+    seeds_h[0] = opts["seed_self_h"].as<uint64_t>();
+    seeds_h[1] = opts["seed_all_h"].as<uint64_t>();
+    seeds_h[2] = opts["seed_01_h"].as<uint64_t>();
+    seeds_h[3] = opts["seed_02_h"].as<uint64_t>();
+    seeds_h[4] = opts["seed_12_h"].as<uint64_t>();
+    seeds_h[5] = opts["seed_D0_unshuffle_h"].as<uint64_t>();
+    seeds_h[6] = opts["seed_D1_unshuffle_h"].as<uint64_t>();
+    seeds_h[7] = opts["seed_D0_comp_h"].as<uint64_t>();
+    seeds_h[8] = opts["seed_D1_comp_h"].as<uint64_t>();
+    seeds_l[0] = opts["seed_self_l"].as<uint64_t>();
+    if (seeds_l[0] == 0) {
+        // Default value, but as this is own seed, make unique per party
+        seeds_l[0] = pid;
+    }
+    seeds_l[1] = opts["seed_all_l"].as<uint64_t>();
+    seeds_l[2] = opts["seed_01_l"].as<uint64_t>();
+    seeds_l[3] = opts["seed_02_l"].as<uint64_t>();
+    seeds_l[4] = opts["seed_12_l"].as<uint64_t>();
+    seeds_l[5] = opts["seed_D0_unshuffle_l"].as<uint64_t>();
+    seeds_l[6] = opts["seed_D1_unshuffle_l"].as<uint64_t>();
+    seeds_l[7] = opts["seed_D0_comp_l"].as<uint64_t>();
+    seeds_l[8] = opts["seed_D1_comp_l"].as<uint64_t>();
 
-int64_t peakResidentSetSize() { return -1; }
-#endif
+    repeat = opts["repeat"].as<size_t>();
+    auto port = opts["port"].as<int>();
+
+    auto certificate_path = opts["certificate_path"].as<std::string>();
+    auto private_key_path = opts["private_key_path"].as<std::string>();
+    auto trusted_cert_path = opts["trusted_cert_path"].as<std::string>();
+    size_t BLOCK_SIZE = opts["BLOCK_SIZE"].as<size_t>();
+
+    net_conf.id = (Party)pid;
+    net_conf.n_parties = (int)nP;
+    net_conf.port = port;
+    net_conf.certificate_path = certificate_path;
+    net_conf.private_key_path = private_key_path;
+    net_conf.trusted_cert_path = trusted_cert_path;
+    net_conf.BLOCK_SIZE = BLOCK_SIZE;
+
+    if (opts["localhost"].as<bool>()) {
+        net_conf.IP = (char **)nullptr;
+        net_conf.localhost = true;
+
+    } else {
+        std::ifstream fnet(opts["net-config"].as<std::string>());
+        if (!fnet.good()) {
+            fnet.close();
+            throw std::runtime_error("Could not open network config file");
+        }
+        json netdata;
+        fnet >> netdata;
+        fnet.close();
+
+        std::vector<std::string> ipaddress(3);
+        std::array<char *, 5> ip{};
+        for (size_t i = 0; i < 3; ++i) {
+            ipaddress[i] = netdata[i].get<std::string>();
+            ip[i] = ipaddress[i].data();
+        }
+
+        net_conf.IP = ip.data();
+        net_conf.localhost = false;
+    }
+
+    save_to_disk = opts["ssd"].as<bool>();
+}
+
+void setup::run_test(const bpo::variables_map &opts, std::function<void(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n)> func) {
+    auto n = opts["vec-size"].as<size_t>();
+
+    size_t pid, nP, repeat, threads, shuffle_num, nodes;
+    json output_data;
+    io::NetworkConfig net_conf;
+    uint64_t seeds_h[9];
+    uint64_t seeds_l[9];
+    bool save_output;
+    std::string save_file;
+    bool save_to_disk;
+
+    setup::setupExecution(opts, pid, nP, repeat, threads, nodes, net_conf, seeds_h, seeds_l, save_output, save_file, save_to_disk);
+    output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads}, {"seeds_h", seeds_h},
+                              {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", n}};
+
+    std::cout << "--- Details ---\n";
+    for (const auto &[key, value] : output_data["details"].items()) {
+        std::cout << key << ": " << value << "\n";
+    }
+    std::cout << std::endl;
+
+    Party id = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
+    RandomGenerators rngs(seeds_h, seeds_l);
+
+    func(id, rngs, net_conf, n);
+}
+
+void setup::run_benchmark(const bpo::variables_map &opts,
+                          std::function<void(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, size_t repeat, size_t n_vertices,
+                                             bool save_output, std::string save_file, bool save_to_disk)>
+                              func) {
+    auto n = opts["vec-size"].as<size_t>();
+
+    json output_data;
+    size_t pid, nP, repeat, threads, nodes;
+    io::NetworkConfig net_conf;
+    uint64_t seeds_h[9];
+    uint64_t seeds_l[9];
+    bool save_output;
+    std::string save_file;
+    bool save_to_disk;
+
+    setup::setupExecution(opts, pid, nP, repeat, threads, nodes, net_conf, seeds_h, seeds_l, save_output, save_file, save_to_disk);
+    output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads}, {"seeds_h", seeds_h},
+                              {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", n}};
+
+    std::cout << "--- Details ---\n";
+    for (const auto &[key, value] : output_data["details"].items()) {
+        std::cout << key << ": " << value << "\n";
+    }
+    std::cout << std::endl;
+
+    Party id = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
+    RandomGenerators rngs(seeds_h, seeds_l);
+
+    func(id, rngs, net_conf, n, repeat, nodes, save_output, save_file, save_to_disk);
+}

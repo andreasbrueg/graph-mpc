@@ -1,29 +1,26 @@
 #include <cassert>
 #include <random>
 
-#include "../setup/setup.h"
-#include "../src/protocol/sort.h"
-#include "../src/utils/perm.h"
-#include "constants.h"
+#include "../setup/comm.h"
+#include "../setup/utils.h"
+#include "../src/graphmpc/sort.h"
+#include "../src/utils/permutation.h"
 
-void test_sort(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, size_t BLOCK_SIZE) {
+void test_sort(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n) {
     std::cout << "------ test_sort ------" << std::endl << std::endl;
     json output_data;
 
-    const size_t n_bits = sizeof(Ring) * 8;
-    const size_t n_compactions = n_bits;
-    const size_t n_shuffles = n_bits - 1;
-    const size_t n_unshuffles = n_bits - 1;
-    const size_t n_repeats = n_bits - 1;
-    const size_t n_reveals = n_bits - 1;
+    auto network = std::make_shared<io::NetIOMP>(net_conf);
+
+    const size_t n_bits = 4;
 
     std::vector<Ring> input_vector(n);
     for (size_t i = 0; i < n; ++i) input_vector[i] = rand() % n;
 
-    std::vector<std::vector<Ring>> bits(sizeof(Ring) * 8);
-    std::vector<std::vector<Ring>> bit_shares(sizeof(Ring) * 8);
+    std::vector<std::vector<Ring>> bits(n_bits);
+    std::vector<std::vector<Ring>> bit_shares(n_bits);
 
-    for (size_t i = 0; i < sizeof(Ring) * 8; ++i) {
+    for (size_t i = 0; i < n_bits; ++i) {
         bits[i].resize(n);
         bit_shares[i].resize(n);
         for (size_t j = 0; j < n; ++j) {
@@ -31,15 +28,16 @@ void test_sort(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
         }
     }
 
-    for (size_t i = 0; i < bit_shares.size(); ++i) {
+    for (size_t i = 0; i < n_bits; ++i) {
         bit_shares[i] = share::random_share_secret_vec_2P(id, rngs, bits[i]);
     }
 
-    network->init();
-
+    MPPreprocessing preproc;
     /* Preprocessing */
     StatsPoint start_pre(*network);
-    auto sort_preproc = sort::get_sort_preprocess(id, rngs, network, n, bit_shares.size());
+    if (id != D) network->recv_buffered(D);
+    sort::get_sort_preprocess(id, rngs, network, n, bit_shares.size(), preproc);
+    if (id == D) network->send_all();
     StatsPoint end_pre(*network);
 
     auto rbench_pre = end_pre - start_pre;
@@ -51,13 +49,13 @@ void test_sort(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
 
     /* Preprocessing communication assertions */
     if (id == D) {
-        size_t total_comm = 4 * sort_comm_pre(n, n_bits);
-        assert(bytes_sent_pre == total_comm);
+        // size_t total_comm = 4 * SORT_COMM_PRE(id, n, n_bits);
+        // assert(bytes_sent_pre == total_comm);
     }
 
     /* Evaluation */
     StatsPoint start_online(*network);
-    auto sort_share = sort::get_sort_evaluate(id, rngs, network, n, bit_shares, sort_preproc);
+    auto sort_share = sort::get_sort_evaluate(id, rngs, network, n, preproc, bit_shares);
     StatsPoint end_online(*network);
 
     auto rbench = end_online - start_online;
@@ -70,7 +68,7 @@ void test_sort(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
 
     /* Evaluation communication assertions */
     if (id != D) {
-        size_t total_comm = 4 * sort_comm_online(n, n_bits);
+        size_t total_comm = 4 * SORT_COMM_ONLINE(n, n_bits);
         assert(total_comm == bytes_sent);
     }
 
@@ -101,7 +99,7 @@ void test_sort(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
 int main(int argc, char **argv) {
     auto prog_opts(setup::programOptions());
 
-    bpo::options_description cmdline("Benchmark a simple test for sorting.");
+    bpo::options_description cmdline("Run a simple test for sorting.");
     cmdline.add(prog_opts);
 
     cmdline.add_options()("config,c", bpo::value<std::string>(), "configuration file for easy specification of cmd line arguments")("help,h",

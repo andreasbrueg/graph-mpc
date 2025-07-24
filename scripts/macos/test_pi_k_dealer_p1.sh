@@ -6,12 +6,12 @@ tell application "Terminal"
     activate
 
     -- Window 1
-    set w1 to do script "cd ~/CODE/GraphMPC/build/tests && ./test_pi_k -p 1 --localhost --size 10000 --nodes 10"
+    set w1 to do script "cd ~/CODE/GraphMPC/build/tests && ./test_pi_k -p 1 --localhost"
     delay 0.2
     set bounds of front window to {0, 0, 500, 800} -- {left, top, right, bottom}
 
     -- Window 2
-    set w2 to do script "cd ~/CODE/GraphMPC/build/tests && ./test_pi_k -p 2 --localhost --size 10000 --nodes 10"
+    set w2 to do script "cd ~/CODE/GraphMPC/build/tests && ./test_pi_k -p 2 --localhost"
     delay 0.2
     set bounds of front window to {500, 0, 1000, 800}
 end tell

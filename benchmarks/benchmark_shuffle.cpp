@@ -14,7 +14,16 @@ void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
 
         StatsPoint start_pre(*network);
+
+        size_t n_receive = id == P0 ? n : 2 * n;
+        if (id != D) {
+            network->add_recv(D, n_receive);
+            network->recv_queue(D);
+        }
+
         ShufflePre perm_share = shuffle::get_shuffle(id, rngs, network, n, false);
+        // if (id == D) network->send_all();
+
         StatsPoint end_pre(*network);
 
         auto rbench_pre = end_pre - start_pre;

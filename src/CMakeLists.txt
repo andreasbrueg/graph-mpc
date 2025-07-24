@@ -1,27 +1,25 @@
 add_library(GraphMPC_lib STATIC)
 target_sources(GraphMPC_lib 
     PRIVATE 
+    function_queue.h
     utils/bits.h
-    utils/types.h
     utils/graph.h
-    utils/random_generators.cpp 
+    utils/preprocessings.h
+    utils/permutation.h
+    utils/random_generators.h
     utils/sharing.cpp
-    utils/mul.cpp
-    io/tls_net_io_channel.h
+    utils/types.h
     io/netmp.h
-    io/comm.h
-    io/network_interface.cpp
-    protocol/clip.cpp
-    protocol/compaction.cpp
-    protocol/deduplication.cpp
-    protocol/message_passing.cpp
-    protocol/permute.cpp
-    protocol/shuffle.cpp
-    protocol/sort.cpp
+    graphmpc/compaction.cpp
+    graphmpc/message_passing.cpp
+    graphmpc/mul.cpp
+    graphmpc/shuffle.cpp
+    graphmpc/sort.cpp
     # Add further files if necessary
 )
-target_link_libraries(GraphMPC_lib PUBLIC OpenSSL::SSL EMPTool NTL GMP OpenMP::OpenMP_CXX nlohmann_json::nlohmann_json)
+target_link_libraries(GraphMPC_lib PUBLIC OpenSSL::SSL EMPTool GMP OpenMP::OpenMP_CXX nlohmann_json::nlohmann_json)
 target_include_directories(GraphMPC_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_features(GraphMPC_lib PRIVATE cxx_std_17)
 
 include_directories("opt/homebrew/opt/libomp/include")
 link_directories("/opt/homebrew/opt/libomp/lib/")

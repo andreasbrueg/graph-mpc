@@ -1,29 +1,16 @@
 #include <algorithm>
 
-#include "../setup/setup.h"
-#include "../src/protocol/message_passing.h"
+#include "../setup/comm.h"
+#include "../setup/utils.h"
+#include "../src/graphmpc/message_passing.h"
 #include "../src/utils/graph.h"
 
 std::vector<Ring> apply(std::vector<Ring> &old_payload, std::vector<Ring> &new_payload) { return new_payload; }
 
-void pre_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc) { return; }
-
-void post_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc) { return; }
-
-void pre_mp_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc, SecretSharedGraph &g) {
-    return;
-}
-
-void post_mp_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, SecretSharedGraph &g, MPPreprocessing &preproc,
-                      std::vector<Ring> &payload) {
-    g.payload = payload;
-    g.payload_bits = to_bits(payload, sizeof(Ring) * 8);
-}
-
-void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, size_t BLOCK_SIZE, size_t repeat, size_t n_vertices,
-               bool save_output, std::string save_file) {
+void benchmark(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, size_t repeat, size_t n_vertices, bool save_output,
+               std::string save_file, bool save_to_disk) {
     json output_data;
-    network->init();
+    auto network = std::make_shared<io::NetIOMP>(net_conf, save_to_disk);
 
     Graph g;
 
@@ -37,8 +24,6 @@ void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
 
     const size_t n_iterations = 1;
     size_t n_bits = std::ceil(std::log2(n_vertices + 2));
-    std::cout << "g.size: " << g.size << std::endl;
-    std::cout << "n: " << n << std::endl;
     std::cout << "n_bits: " << n_bits << std::endl;
 
     std::vector<Ring> weights = {0};
@@ -48,7 +33,9 @@ void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
         std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
 
         StatsPoint start_pre(*network);
-        auto preproc = mp::preprocess(id, rngs, network, n, n_bits, n_iterations, pre_mp_preprocess, post_mp_preprocess);
+        if (id != D) network->recv_buffered(D);
+        auto preproc = mp::preprocess(id, rngs, network, n, n_bits, n_iterations);
+        if (id == D) network->send_all();
         StatsPoint end_pre(*network);
 
         auto rbench = end_pre - start_pre;
@@ -63,7 +50,7 @@ void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
         std::cout << "preprocessing sent: " << bytes_sent << " bytes" << std::endl;
 
         StatsPoint start(*network);
-        mp::evaluate(id, rngs, network, n, n_bits, n_iterations, n_vertices, g_shared, weights, apply, pre_mp_evaluate, post_mp_evaluate, preproc);
+        mp::evaluate(id, rngs, network, g.size, n_bits, n_iterations, g.n_vertices, preproc, apply, weights, g_shared);
         StatsPoint end(*network);
 
         rbench = end - start;
@@ -73,6 +60,8 @@ void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
         for (const auto &val : rbench["communication"]) {
             bytes_sent += val.get<int64_t>();
         }
+
+        std::cout << "Communication (elements): " << bytes_sent / 4 / n << "n" << std::endl;
 
         std::cout << "online time: " << rbench["time"] << " ms" << std::endl;
         std::cout << "online sent: " << bytes_sent << " bytes" << std::endl;

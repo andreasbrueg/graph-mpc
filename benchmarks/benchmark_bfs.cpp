@@ -13,7 +13,9 @@ std::vector<Ring> apply(std::vector<Ring> &old_payload, std::vector<Ring> &new_p
     }
     return result;
 }
-void pre_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc) { return; }
+void pre_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, size_t n_bits, MPPreprocessing &preproc) {
+    return;
+}
 
 void post_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc) {
     preproc.eqz_triples = clip::equals_zero_preprocess(id, rngs, network, n);
@@ -40,7 +42,6 @@ void post_mp_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkI
 
     auto payload_v_flip = clip::flip(id, payload_v_B2A);
     g.payload = payload_v_flip;
-    g.payload_bits = to_bits(payload_v_flip, sizeof(Ring) * 8);
 }
 
 void benchmark(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, size_t BLOCK_SIZE, size_t repeat, size_t n_vertices,

@@ -1,40 +1,36 @@
 #pragma once
 
-#include <array>
-#include <chrono>
+#include <boost/program_options.hpp>
+#include <cmath>
+#include <cstdint>
+#include <cstring>
+#include <fstream>
+#include <functional>
+#include <iostream>
 #include <nlohmann/json.hpp>
-#include <string>
 
 #include "../src/io/netmp.h"
-#include "../src/io/network_interface.h"
+#include "../src/utils/random_generators.h"
+#include "comm.h"
+#include "stats.h"
 
-struct TimePoint {
-    using timepoint_t = std::chrono::high_resolution_clock::time_point;
-    using timeunit_t = std::chrono::duration<double, std::milli>;
+namespace bpo = boost::program_options;
+using json = nlohmann::json;
 
-    TimePoint();
-    double operator-(const TimePoint &rhs) const;
+namespace setup {
 
-    timepoint_t time;
-};
+void print_vec(std::vector<Ring> &vec);
 
-struct CommPoint {
-    std::vector<uint64_t> stats;
+bpo::options_description programOptions();
 
-    explicit CommPoint(NetworkInterface &network);
-    std::vector<uint64_t> operator-(const CommPoint &rhs) const;
-};
+bpo::variables_map parseOptions(bpo::options_description &cmdline, bpo::options_description &prog_opts, int argc, char *argv[]);
 
-class StatsPoint {
-    TimePoint tpoint_;
-    CommPoint cpoint_;
+void setupExecution(const bpo::variables_map &opts, size_t &pid, size_t &nP, size_t &repeat, size_t &threads, size_t &nodes, io::NetworkConfig &net_config,
+                    uint64_t *seeds_h, uint64_t *seeds_l, bool &save_output, std::string &save_file, bool &save_to_disk);
 
-   public:
-    explicit StatsPoint(NetworkInterface &network);
-    nlohmann::json operator-(const StatsPoint &rhs);
-};
+void run_test(const bpo::variables_map &opts, std::function<void(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n)> func);
 
-bool saveJson(const nlohmann::json &data, const std::string &fpath);
-int64_t peakVirtualMemory();
-int64_t peakResidentSetSize();
-void initNTL(size_t num_threads);
+void run_benchmark(const bpo::variables_map &opts, std::function<void(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, size_t repeat,
+                                                                      size_t n_vertices, bool save_output, std::string save_file, bool save_to_disk)>
+                                                       func);
+}  // namespace setup

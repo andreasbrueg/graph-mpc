@@ -1,14 +1,13 @@
 #include <cassert>
 
-#include "../setup/setup.h"
+#include "../setup/utils.h"
 #include "../src/utils/random_generators.h"
 #include "../src/utils/sharing.h"
 
-void test_sharing(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, size_t BLOCK_SIZE) {
+void test_sharing(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n) {
     std::cout << "------ test_sharing ------" << std::endl << std::endl;
     json output_data;
-
-    network->init();
+    auto network = std::make_shared<io::NetIOMP>(net_conf, false);
 
     std::vector<Ring> share(n);
     std::vector<Ring> input_table(n);

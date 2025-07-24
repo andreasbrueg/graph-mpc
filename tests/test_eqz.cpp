@@ -1,10 +1,10 @@
 #include <cassert>
 
+#include "../setup/constants.h"
 #include "../setup/setup.h"
 #include "../src/protocol/clip.h"
 #include "../src/utils/random_generators.h"
 #include "../src/utils/sharing.h"
-#include "constants.h"
 
 void test_eqz(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, size_t BLOCK_SIZE) {
     json output_data;
@@ -16,6 +16,12 @@ void test_eqz(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface
     auto test_vec_share = share::random_share_secret_vec_2P(id, rngs, test_vec);
 
     StatsPoint start_pre(*network);
+    if (id != D) {
+        size_t n_receive = eqz_comm_pre(id, n);
+        network->add_recv(D, n_receive);
+        network->recv_queue(D);
+    }
+
     auto eqz_triples = clip::equals_zero_preprocess(id, rngs, network, n);
     StatsPoint end_pre(*network);
 
@@ -29,11 +35,12 @@ void test_eqz(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface
     /* Preprocessing communication assertions */
     if (id == D) {
         /* n_elems * 4 Bytes per element */
-        size_t total_comm = 4 * eqz_comm_pre(n);
+        size_t total_comm = 4 * eqz_comm_pre(id, n);
         assert(bytes_sent_pre == total_comm);
     }
 
     StatsPoint start_online(*network);
+
     auto eqz_vec = clip::equals_zero_evaluate(id, rngs, network, eqz_triples, test_vec_share);
     StatsPoint end_online(*network);
 

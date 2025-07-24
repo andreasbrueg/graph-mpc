@@ -2,7 +2,7 @@
 #include <iostream>
 #include <numeric>
 
-#include "../src/utils/perm.h"
+#include "../src/utils/permutation.h"
 #include "../src/utils/random_generators.h"
 #include "../src/utils/types.h"
 

@@ -3,30 +3,29 @@
 #include <algorithm>
 #include <cassert>
 
+#include "../setup/constants.h"
 #include "../setup/setup.h"
 #include "../src/protocol/deduplication.h"
 #include "../src/protocol/message_passing.h"
 #include "../src/utils/bits.h"
 #include "../src/utils/perm.h"
-#include "constants.h"
 
 std::vector<Ring> apply(std::vector<Ring> &old_payload, std::vector<Ring> &new_payload) { return new_payload; }
 
-void pre_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc) {
-    size_t n_bits = std::ceil(std::log2(n + 2));
+void pre_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, size_t n_bits, MPPreprocessing &preproc) {
     preproc.deduplication_pre = deduplication_preprocess(id, rngs, network, n, n_bits);
 }
 
 void post_mp_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc) { return; }
 
 void pre_mp_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, MPPreprocessing &preproc, SecretSharedGraph &g) {
-    deduplication_evaluate(id, rngs, network, n, preproc.deduplication_pre, g.src_bits, g.dst_bits, g.src, g.dst);
+    deduplication_evaluate(id, rngs, network, n, preproc.deduplication_pre, g);
+    preproc.dst_order = preproc.deduplication_pre.dst_sort;
 }
 
 void post_mp_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, SecretSharedGraph &g, MPPreprocessing &preproc,
                       std::vector<Ring> &payload) {
     g.payload = payload;
-    g.payload_bits = to_bits(payload, sizeof(Ring) * 8);
 }
 
 void test_pi_k(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterface> network, size_t n, size_t BLOCK_SIZE) {
@@ -41,22 +40,22 @@ void test_pi_k(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
     v3   v4
 
     Which in list form is (kind of random order here for testing):
-    (1,1,1)
-    (2,2,1)
-    (1,2,0)
-    (2,1,0)
-    (1,3,0)
-    (1,3,0)
-    (3,1,0)
-    (4,4,1)
-    (3,3,1)
-    (3,1,0)
-    (3,2,0)
-    (2,3,0)
-    (2,4,0)
-    (4,2,0)
-    (2,4,0)
-    (4,2,0)
+    (1,1,1) // 0
+    (2,2,1) // 1
+    (1,2,0) // 2
+    (2,1,0) // 3
+    (1,3,0) // 4
+    (1,3,0) // 5
+    (3,1,0) // 6
+    (4,4,1) // 7
+    (3,3,1) // 8
+    (3,1,0) // 9
+    (3,2,0) // 10
+    (2,3,0) // 11
+    (2,4,0) // 12
+    (4,2,0) // 13
+    (2,4,0) // 14
+    (4,2,0) // 15
     */
 
     Graph g;
@@ -82,7 +81,7 @@ void test_pi_k(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
     std::vector<Ring> weights = {10000000, 100000, 1000, 1};
     const size_t n_vertices = 4;
     const size_t n_iterations = weights.size();
-    size_t n_bits = std::ceil(std::log2(n + 2));
+    size_t n_bits = std::ceil(std::log2(n_vertices + 2));
 
     if (id != D) g.print();
 
@@ -90,7 +89,12 @@ void test_pi_k(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
 
     /* Preprocessing */
     StatsPoint start_pre(*network);
-    auto preproc = mp::preprocess(id, rngs, network, n, n_bits + 1, n_iterations, pre_mp_preprocess, post_mp_preprocess);
+    if (id != D) {
+        size_t n_receive = pi_k_comm_pre(id, n, n_bits, n_iterations);
+        network->add_recv(D, n_receive);
+        network->recv_queue(D);
+    }
+    auto preproc = mp::preprocess(id, rngs, network, n, n_bits, n_iterations, pre_mp_preprocess, post_mp_preprocess);
     StatsPoint end_pre(*network);
 
     auto rbench_pre = end_pre - start_pre;
@@ -103,12 +107,13 @@ void test_pi_k(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
     /* Preprocessing communication assertions */
     if (id == D) {
         /* n_elems * 4 Bytes per element */
-        size_t total_comm = 4 * pi_k_comm_pre(n, n_bits, n_iterations);
+        size_t total_comm = 4 * pi_k_comm_pre(id, n, n_bits, n_iterations);
+        std::cout << "Expected comm: " << total_comm << " actual: " << bytes_sent_pre << std::endl;
         assert(bytes_sent_pre == total_comm);
     }
 
     StatsPoint start_online(*network);
-    mp::evaluate(id, rngs, network, n, n_bits + 1, n_iterations, n_vertices, g_shared, weights, apply, pre_mp_evaluate, post_mp_evaluate, preproc);
+    mp::evaluate(id, rngs, network, n, n_bits, n_iterations, n_vertices, g_shared, weights, apply, pre_mp_evaluate, post_mp_evaluate, preproc);
     StatsPoint end_online(*network);
 
     auto rbench = end_online - start_online;
@@ -122,6 +127,7 @@ void test_pi_k(Party id, RandomGenerators &rngs, std::shared_ptr<NetworkInterfac
     /* Evaluation communication assertions */
     if (id != D) {
         size_t total_comm = 4 * pi_k_comm_online(n, n_bits, n_iterations);
+        std::cout << "Expected comm: " << total_comm << " actual: " << bytes_sent << std::endl;
         assert(total_comm == bytes_sent);
     }
 

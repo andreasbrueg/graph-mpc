@@ -14,7 +14,7 @@ macro(add_benchmark source_name)
 endmacro()
 
 #add_benchmark(benchmark_bfs)
-#add_benchmark(benchmark_pi_k)
+add_benchmark(benchmark_pi_k)
 add_benchmark(benchmark_pi_m)
 #add_benchmark(benchmark_shuffle)
 #add_benchmark(benchmark_sharing)

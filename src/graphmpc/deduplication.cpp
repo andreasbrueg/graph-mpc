@@ -55,7 +55,7 @@ void deduplication_evaluate(Party id, RandomGenerators &rngs, std::shared_ptr<io
 
     auto src_eqz = clip::equals_zero_evaluate(id, rngs, network, preproc, src_dupl);
     auto dst_eqz = clip::equals_zero_evaluate(id, rngs, network, preproc, dst_dupl);
-    auto src_and_dst = mul::evaluate_bin(id, network, n - 1, preproc, src_eqz, dst_eqz);
+    auto src_and_dst = mul::evaluate(id, network, n - 1, preproc, src_eqz, dst_eqz, true);
     auto duplicates = clip::B2A_evaluate(id, rngs, network, n - 1, preproc, src_and_dst);
 
     /* Reverse perm */

@@ -9,35 +9,94 @@
 #include <sstream>
 
 #include "../utils/preprocessings.h"
-#include "../utils/types.h"
 
-class Disk {
+class FileWriter {
    public:
-    Disk() = default;
+    FileWriter() = default;
 
-    Disk(Party id, std::string filename) : id(id), filename(filename), file_idx(0) {}
+    FileWriter(Party id, std::string filename) : id(id), filename(filename), read_idx(0), size(0) {}
 
-    ~Disk() { std::filesystem::remove(filename); }
+    ~FileWriter() { std::filesystem::remove(filename); }
+
+    void reset_idx() { read_idx = 0; }
 
     void write_shuffle(ShufflePre &shuffle) {
-        if (shuffle.pi_0.not_null()) {
+        std::vector<Ring> log(6);
+        if (shuffle.pi_0.not_null()) log[0] = 1;
+        if (shuffle.pi_1.not_null()) log[1] = 1;
+        if (shuffle.pi_0_p.not_null()) log[2] = 1;
+        if (shuffle.pi_1_p.not_null()) log[3] = 1;
+        if (shuffle.B.size() > 0) log[4] = 1;
+        if (shuffle.R.size() > 0) log[5] = 1;
+
+        write_vec(log);
+
+        if (shuffle.pi_0.not_null()) write_vec(shuffle.pi_0.get_perm_vec());
+        if (shuffle.pi_1.not_null()) write_vec(shuffle.pi_1.get_perm_vec());
+        if (shuffle.pi_0_p.not_null()) write_vec(shuffle.pi_0_p.get_perm_vec());
+        if (shuffle.pi_1_p.not_null()) write_vec(shuffle.pi_1_p.get_perm_vec());
+        if (shuffle.B.size() > 0) write_vec(shuffle.B);
+        if (shuffle.R.size() > 0) write_vec(shuffle.R);
+    }
+
+    void write_vec(const std::vector<Ring> &data) {
+        std::ofstream out(filename, std::ios::binary | std::ios::app);
+        if (!out) throw std::runtime_error("Failed to open file for writing.");
+        out.write(reinterpret_cast<const char *>(data.data()), data.size() * sizeof(Ring));
+        size += data.size();
+    }
+
+    ShufflePre read_shuffle(size_t n, bool repeat = false) {
+        ShufflePre perm_share;
+
+        std::vector<Ring> log = read(6);
+        size_t n_read = 6;
+
+        if (log[0] == 1) {
+            auto pi_0_vec = read(n);
+            perm_share.pi_0 = Permutation(pi_0_vec);
+            n_read += n;
+        }
+        if (log[1] == 1) {
+            auto pi_1_vec = read(n);
+            perm_share.pi_1 = Permutation(pi_1_vec);
+            n_read += n;
+        }
+        if (log[2] == 1) {
+            auto pi_0_p_vec = read(n);
+            perm_share.pi_0_p = Permutation(pi_0_p_vec);
+            n_read += n;
+        }
+        if (log[3] == 1) {
+            auto pi_1_p_vec = read(n);
+            perm_share.pi_1_p = Permutation(pi_1_p_vec);
+            n_read += n;
+        }
+        if (log[4] == 1) {
+            perm_share.B = read(n);
+            n_read += n;
+        }
+        if (log[5] == 1) {
+            perm_share.R = read(n);
+            n_read += n;
+        }
+        if (repeat) read_idx -= (n_read * sizeof(Ring));
+
+        return perm_share;
+    }
+
+    void print_content() {
+        auto vec = read(size);
+        for (size_t i = 0; i < vec.size(); ++i) {
+            if (i != vec.size() - 1) {
+                std::cout << vec[i] << ", ";
+            } else {
+                std::cout << vec[i] << std::endl;
+            }
         }
     }
 
-    void write_triple(std::tuple<Ring, Ring, Ring> &triple) {
-        auto [a, b, c] = triple;
-        std::vector<Ring> vec = std::vector<Ring>({a, b, c});
-        write(vec);
-    }
-
-    void write(const std::vector<Ring> &data) {
-        std::ofstream out(filename, std::ios::binary | std::ios::app);
-        if (!out) throw std::runtime_error("Failed to open file for writing.");
-
-        out.write(reinterpret_cast<const char *>(data.data()), data.size() * sizeof(Ring));
-    }
-
-    std::vector<Ring> read(size_t n_elems, const size_t CHUNK_SIZE = -1) {
+    std::vector<Ring> read(size_t n_elems) {
         std::vector<Ring> output;
 
         std::ifstream in(filename, std::ios::binary);
@@ -46,30 +105,16 @@ class Disk {
         in.seekg(0, std::ios::end);
         size_t fileSize = in.tellg();
 
-        // No more values to read
-        if (file_idx >= fileSize) {
-            in.close();
-            std::ofstream out(filename, std::ios::binary | std::ios::trunc);
-            out.close();
-            file_idx = 0;
-            return {};
-        }
-
-        in.seekg(file_idx, std::ios::beg);
-        size_t max_elements = (fileSize - file_idx) / sizeof(Ring);
+        in.seekg(read_idx, std::ios::beg);
+        size_t max_elements = (fileSize - read_idx) / sizeof(Ring);
         size_t elements_to_read = std::min(n_elems, max_elements);
 
         output.resize(elements_to_read);
         in.read(reinterpret_cast<char *>(output.data()), elements_to_read * sizeof(Ring));
-        file_idx += in.gcount();  // in.gcount() is in bytes
+        size_t bytes_read = in.gcount();
         in.close();
 
-        // Optional: truncate file when all data is read
-        if (file_idx >= fileSize) {
-            std::ofstream out(filename, std::ios::binary | std::ios::trunc);
-            out.close();
-            file_idx = 0;
-        }
+        read_idx += bytes_read;
 
         return output;
     }
@@ -89,7 +134,6 @@ class Disk {
    private:
     Party id;
     std::string filename;
-    size_t file_idx;
-
-    std::unordered_map<std::string, size_t> files;
+    size_t read_idx;
+    size_t size;  // n_elems
 };

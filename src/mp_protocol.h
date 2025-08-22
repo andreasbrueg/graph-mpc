@@ -5,6 +5,7 @@
 
 #include "graphmpc/message_passing.h"
 #include "graphmpc/shuffle.h"
+#include "io/input_server.h"
 #include "io/netmp.h"
 #include "protocol_def.h"
 #include "utils/random_generators.h"
@@ -14,18 +15,6 @@ using json = nlohmann::json;
 
 class MPProtocol {
    public:
-    // MPProtocol(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t n_bits, size_t n_iterations, bool save_to_disk =
-    // false, bool save_output = false, std::string save_file = "")
-    //: id(id),
-    // rngs(rngs),
-    // network(network),
-    // n(n),
-    // n_bits(n_bits),
-    // n_iterations(n_iterations),
-    // save_to_disk(save_to_disk),
-    // save_output(save_output),
-    // save_file(save_file) {};
-
     MPProtocol(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t n_bits, size_t n_iterations, std::vector<Ring> &weights,
                bool save_to_disk = false, bool save_output = false, std::string save_file = "")
         : id(id),
@@ -37,7 +26,8 @@ class MPProtocol {
           save_to_disk(save_to_disk),
           weights(weights),
           save_output(save_output),
-          save_file(save_file) {
+          save_file(save_file),
+          input_socket(id, std::to_string(4242)) {
         assert(weights.size() >= n_iterations);
     };
 
@@ -45,10 +35,13 @@ class MPProtocol {
     size_t comm_eval() { return bytes_sent_eval / sizeof(Ring); }
 
     void run(Graph &g, Execution exc = TEST) {
+        init_DAG_list();
+
         /* Preprocessing */
         StatsPoint start_pre(*network);
         if (id != D) network->recv_buffered(D);
         mp_preprocess();
+        if (id != D) network->recv_disk.~FileWriter();
         if (id == D) network->send_all();
         StatsPoint end_pre(*network);
 
@@ -116,24 +109,28 @@ class MPProtocol {
     bool save_output;
     std::string save_file;
 
-    Party recv = P0;
+    Party recv_shuffle = P0;
+    Party recv_mul = P0;
+    InputServer input_socket;
+
+    void init_DAG_list() { input_socket.connect_clients(); }
 
     void mp_preprocess() {
-        MPFunctions::pre_mp_preprocessing(id, rngs, network, n, n_bits, preproc, recv, save_to_disk);
+        MPFunctions::pre_mp_preprocessing(id, rngs, network, n, n_bits, preproc, recv_shuffle, recv_mul, save_to_disk);
 
         auto sort_pre_start = std::chrono::system_clock::now();
 
         /* Sort preprocessing */
         if (preproc.deduplication) {  // TODO: change branch condition
-            sort::get_sort_preprocess(id, rngs, network, n, n_bits + 2, preproc, recv,
+            sort::get_sort_preprocess(id, rngs, network, n, n_bits + 2, preproc, recv_shuffle, recv_mul,
                                       save_to_disk);  // One bit more, as deduplication appends a bit to the end
-            sort::sort_iteration_preprocess(id, rngs, network, n, preproc, recv,
+            sort::sort_iteration_preprocess(id, rngs, network, n, preproc, recv_shuffle, recv_mul,
                                             save_to_disk);  // Only one iteration, as dst_sort has almost been completed during deduplication
         } else {
-            sort::get_sort_preprocess(id, rngs, network, n, n_bits + 1, preproc, recv, save_to_disk);
-            sort::get_sort_preprocess(id, rngs, network, n, n_bits + 1, preproc, recv, save_to_disk);
+            sort::get_sort_preprocess(id, rngs, network, n, n_bits + 1, preproc, recv_shuffle, recv_mul, save_to_disk);
+            sort::get_sort_preprocess(id, rngs, network, n, n_bits + 1, preproc, recv_shuffle, recv_mul, save_to_disk);
         }
-        sort::sort_iteration_preprocess(id, rngs, network, n, preproc, recv, save_to_disk);  // vtx_order sort iteration
+        sort::sort_iteration_preprocess(id, rngs, network, n, preproc, recv_shuffle, recv_mul, save_to_disk);  // vtx_order sort iteration
 
         auto sort_pre_end = std::chrono::system_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(sort_pre_end - sort_pre_start);
@@ -142,9 +139,9 @@ class MPProtocol {
         /* Apply / Switch Perm Preprocessing */
         auto sw_pre_start = std::chrono::system_clock::now();
 
-        preproc.vtx_order_shuffle = shuffle::get_shuffle(id, rngs, network, n, recv);  // Shuffle for applying/switching to vertex order
-        preproc.src_order_shuffle = shuffle::get_shuffle(id, rngs, network, n, recv);  // Shuffle for switching to src order
-        preproc.dst_order_shuffle = shuffle::get_shuffle(id, rngs, network, n, recv);  // Shuffle for switching to dst order
+        preproc.vtx_order_shuffle = shuffle::get_shuffle(id, rngs, network, n, recv_shuffle);  // Shuffle for applying/switching to vertex order
+        preproc.src_order_shuffle = shuffle::get_shuffle(id, rngs, network, n, recv_shuffle);  // Shuffle for switching to src order
+        preproc.dst_order_shuffle = shuffle::get_shuffle(id, rngs, network, n, recv_shuffle);  // Shuffle for switching to dst order
 
         preproc.vtx_src_merge = shuffle::get_merged_shuffle(id, rngs, network, n, preproc.vtx_order_shuffle,
                                                             preproc.src_order_shuffle);  // Merged shuffle to switch between vtx and src order
@@ -157,7 +154,7 @@ class MPProtocol {
         elapsed = std::chrono::duration_cast<std::chrono::seconds>(sw_pre_end - sw_pre_start);
         std::cout << "Switch Perm Preprocessing took: " << std::to_string(elapsed.count()) << " s" << std::endl;
 
-        MPFunctions::post_mp_preprocessing(id, rngs, network, n, n_bits, preproc, recv, save_to_disk);
+        MPFunctions::post_mp_preprocessing(id, rngs, network, n, n_bits, preproc, recv_shuffle, recv_mul, save_to_disk);
     }
 
     /**
@@ -240,7 +237,6 @@ class MPProtocol {
 
             /* ApplyV */
             MPFunctions::apply_v_eval(data_v, update, save_to_disk);
-            // payload_v = f_apply(payload_v, update);
         }
         /* Save new payload */
         g._data = data_v;

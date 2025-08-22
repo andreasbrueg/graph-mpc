@@ -13,6 +13,7 @@
 
 void test_pi_k(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file) {
     std::cout << "------ test_pi_k ------" << std::endl << std::endl;
+    bool save_to_disk = true;
     auto network = std::make_shared<io::NetIOMP>(net_conf, true);
 
     std::vector<Ring> weights = {10000000, 100000, 1000, 1};
@@ -20,7 +21,7 @@ void test_pi_k(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, si
     const size_t n_iterations = weights.size();
     size_t n_bits = std::ceil(std::log2(n_vertices + 2));
     n = 16;
-    MPProtocol mp(id, rngs, network, n, n_bits, n_iterations, weights, true);
+    MPProtocol mp(id, rngs, network, n, n_bits, n_iterations, weights, save_to_disk);
 
     /*
     Graph instance:

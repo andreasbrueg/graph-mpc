@@ -15,16 +15,19 @@ void mul::preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIO
     std::vector<Ring> c = share::random_share_secret_vec_3P(id, rngs, network, n, mul, recv, binary);
 
     // TODO: write to disk
-    if (id != D)
-        for (size_t i = 0; i < n; ++i) {
-            if (save_to_disk) {
-                auto triple = std::tuple<Ring, Ring, Ring>({a[i], b[i], c[i]});
-                network->preproc_disk.write_triple(triple);
-            } else {
-                preproc.triples.push({a[i], b[i], c[i]});
+    if (id != D) {
+        if (save_to_disk) {
+            std::vector<Ring> triples;
+            for (size_t i = 0; i < n; ++i) {
+                triples.push_back(a[i]);
+                triples.push_back(b[i]);
+                triples.push_back(c[i]);
             }
+            network->mul_disk.write_vec(triples);
+        } else {
+            for (size_t i = 0; i < n; ++i) preproc.triples.push({a[i], b[i], c[i]});
         }
-
+    }
     /* Alternate receiver */
     recv = recv == P0 ? P1 : P0;
 }
@@ -35,7 +38,7 @@ std::vector<Ring> mul::evaluate(Party id, std::shared_ptr<io::NetIOMP> network, 
 
     std::vector<std::tuple<Ring, Ring, Ring>> triples;
     if (save_to_disk) {
-        triples = network->preproc_disk.read_triples(n);
+        triples = network->mul_disk.read_triples(n);
     } else {
         triples = extract(preproc.triples, n);
     }

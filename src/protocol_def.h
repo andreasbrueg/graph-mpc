@@ -9,11 +9,12 @@
 
 namespace MPFunctions {
 void pre_mp_preprocessing(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t n_bits, MPPreprocessing &preproc,
-                          Party &recv, bool save_to_disk);
+                          Party &recv_shuffle, Party &recv_mul, bool save_to_disk);
+
 void apply_v_preprocessing(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t n_bits, MPPreprocessing &preproc,
-                           Party &recv, bool save_to_disk);
+                           Party &recv_shuffle, Party &recv_mul, bool save_to_disk);
 void post_mp_preprocessing(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t n_bits, MPPreprocessing &preproc,
-                           Party &recv, bool save_to_disk);
+                           Party &recv_shuffle, Party &recv_mul, bool save_to_disk);
 
 void pre_mp_eval(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t n_bits, MPPreprocessing &preproc, Graph &g,
                  bool save_to_disk);
@@ -23,5 +24,5 @@ void post_mp_eval(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP>
 };  // namespace MPFunctions
 
 // #define MP
-// #define PI_M
-#define PI_K
+#define PI_M
+// #define PI_K

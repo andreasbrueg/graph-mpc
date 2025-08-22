@@ -12,6 +12,8 @@ target_sources(GraphMPC_lib
     utils/types.h
     io/netmp.h
     io/disk.h
+    io/input_server.h
+    io/input_client.h
     graphmpc/clip.cpp
     graphmpc/compaction.cpp
     graphmpc/deduplication.cpp
@@ -21,7 +23,7 @@ target_sources(GraphMPC_lib
     graphmpc/sort.cpp
     # Add further files if necessary
 )
-target_link_libraries(GraphMPC_lib PUBLIC OpenSSL::SSL EMPTool GMP OpenMP::OpenMP_CXX nlohmann_json::nlohmann_json)
+target_link_libraries(GraphMPC_lib PUBLIC OpenSSL::SSL EMPTool SOCKET GMP OpenMP::OpenMP_CXX nlohmann_json::nlohmann_json)
 target_include_directories(GraphMPC_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(GraphMPC_lib PRIVATE cxx_std_17)
 

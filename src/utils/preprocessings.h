@@ -20,44 +20,6 @@ class ShufflePre {
     Permutation pi_1_p;
     std::vector<Ring> B;
     std::vector<Ring> R;
-
-    std::vector<Ring> serialize() {
-        std::vector<Ring> result;
-        if (pi_0.not_null()) {
-            auto vec = pi_0.get_perm_vec();
-            result.insert(result.end(), vec.begin(), vec.end());
-        }
-        if (pi_1.not_null()) {
-            auto vec = pi_1.get_perm_vec();
-            result.insert(result.end(), vec.begin(), vec.end());
-        }
-        if (pi_0_p.not_null()) {
-            auto vec = pi_0_p.get_perm_vec();
-            result.insert(result.end(), vec.begin(), vec.end());
-        }
-        if (pi_1_p.not_null()) {
-            auto vec = pi_1_p.get_perm_vec();
-            result.insert(result.end(), vec.begin(), vec.end());
-        }
-        result.insert(result.end(), B.begin(), B.end());
-        result.insert(result.end(), R.begin(), R.end());
-        return result;
-    }
-
-    static ShufflePre deserialize(std::vector<Ring> &input, size_t n) {
-        std::vector<Ring> _pi_0 = std::vector<Ring>(input.begin(), input.begin() + n);
-        std::vector<Ring> _pi_1 = std::vector<Ring>(input.begin() + n, input.begin() + 2 * n);
-        std::vector<Ring> _pi_0_p = std::vector<Ring>(input.begin() + 2 * n, input.begin() + 3 * n);
-        std::vector<Ring> _pi_1_p = std::vector<Ring>(input.begin() + 3 * n, input.begin() + 4 * n);
-        std::vector<Ring> B = std::vector<Ring>(input.begin() + 4 * n, input.begin() + 5 * n);
-        std::vector<Ring> R = std::vector<Ring>(input.begin() + 5 * n, input.begin() + 6 * n);
-
-        Permutation pi_0(_pi_0);
-        Permutation pi_1(_pi_1);
-        Permutation pi_0_p(_pi_0_p);
-        Permutation pi_1_p(_pi_1_p);
-        return {pi_0, pi_1, pi_0_p, pi_1_p, B, R};
-    }
 };
 
 /**
@@ -83,6 +45,7 @@ struct MPPreprocessing {
     std::queue<std::tuple<Ring, Ring, Ring>> triples;
     std::queue<ShufflePre> shuffles;
     std::queue<std::vector<Ring>> unshuffles;
+    std::queue<ShufflePre> shuffle_repeats;
 
     /* Apply / Switch Perm*/
     ShufflePre vtx_order_shuffle;  // size: n resp. 2n

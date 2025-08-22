@@ -14,40 +14,41 @@
 
 namespace shuffle {
 
-void get_shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, MPPreprocessing &preproc, bool save_to_disk = false);
+ShufflePre get_shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, Party &recv);
+
+void get_shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, MPPreprocessing &preproc, Party &recv,
+                 bool save_to_disk = false);
 
 ShufflePre get_shuffle_compute(Party id, RandomGenerators &rngs, size_t n, std::vector<Ring> &D0, std::vector<Ring> &D1, Party recv_larger_msg);
 
-ShufflePre get_shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n);
-
-ShufflePre get_shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, Party &recv);
-
-void get_unshuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, ShufflePre &perm_share, MPPreprocessing &preproc);
-
-std::vector<Ring> get_unshuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, ShufflePre &perm_share);
+void get_unshuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, MPPreprocessing &preproc, bool save_to_disk = false);
 
 ShufflePre get_merged_shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, ShufflePre &pi_share, ShufflePre &omega_share);
 
 std::vector<Ring> shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, ShufflePre &perm_share,
                           std::vector<Ring> &input_share);
 
-std::vector<Ring> shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, MPPreprocessing &preproc,
-                          std::vector<Ring> &input_share);
-
-Permutation shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, MPPreprocessing &preproc, Permutation &input_share);
-
 Permutation shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, ShufflePre &perm_share, Permutation &input_share);
 
-std::vector<Ring> unshuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, ShufflePre &shuffle_share, std::vector<Ring> &B,
-                            std::vector<Ring> &input_share);
+std::vector<Ring> shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, MPPreprocessing &preproc,
+                          std::vector<Ring> &input_share, bool save_to_disk = false, bool repeat = false);
 
-std::vector<Ring> unshuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, MPPreprocessing &preproc, ShufflePre &shuffle_pre,
-                            std::vector<Ring> &input_share);
+Permutation shuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, MPPreprocessing &preproc, Permutation &input_share,
+                    bool save_to_disk = false, bool repeat = false);
 
-Permutation unshuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, MPPreprocessing &preproc, ShufflePre &shuffle_pre,
+std::vector<Ring> shuffle_repeat(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, MPPreprocessing &preproc,
+                                 std::vector<Ring> &input_share, bool save_to_disk, bool delete_preprocessing = false);
+
+std::vector<Ring> unshuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, ShufflePre &shuffle_pre,
+                            std::vector<Ring> &unshuffle_B, std::vector<Ring> &input_share);
+
+Permutation unshuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, ShufflePre &shuffle_pre, std::vector<Ring> &unshuffle_B,
                       Permutation &input_share);
 
-Permutation unshuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, ShufflePre &shuffle_share, std::vector<Ring> &B,
-                      Permutation &input_share);
+std::vector<Ring> unshuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, MPPreprocessing &preproc,
+                            std::vector<Ring> &input_share, bool save_to_disk = false);
+
+Permutation unshuffle(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, MPPreprocessing &preproc, Permutation &input_share,
+                      bool save_to_disk = false);
 
 };  // namespace shuffle

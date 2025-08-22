@@ -13,10 +13,6 @@ namespace clip {
 /**
  * ----- F_eqz -----
  */
-// std::vector<Ring> equals_zero(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, std::vector<Ring> &input_share);
-
-// std::vector<Ring> equals_zero_two(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, std::vector<Ring> &input_share);
-
 void equals_zero_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, MPPreprocessing &preproc, Party &recv,
                             bool save_to_disk = false);
 
@@ -25,8 +21,6 @@ std::vector<Ring> equals_zero_evaluate(Party id, RandomGenerators &rngs, std::sh
 /**
  * ----- F_B2A -----
  */
-
-// std::vector<Ring> B2A(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, std::vector<Ring> &input_share);
 
 void B2A_preprocess(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, MPPreprocessing &preproc, Party &recv,
                     bool save_to_disk = false);

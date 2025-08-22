@@ -16,7 +16,7 @@ Permutation compaction::evaluate(Party id, RandomGenerators &rngs, std::shared_p
     std::vector<std::tuple<Ring, Ring, Ring>> triples;
 
     if (save_to_disk) {
-        triples = network->preproc_disk.read_triples(n);
+        triples = network->mul_disk.read_triples(n);
     } else {
         triples = extract(preproc.triples, n);
     }

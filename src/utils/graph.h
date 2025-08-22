@@ -237,6 +237,17 @@ class Graph {
         return g;
     }
 
+    std::vector<Ring> serialize() {
+        std::vector<Ring> entries(4 * _size);
+        for (size_t i = 0; i < _size; ++i) {
+            entries[i * 4 + 0] = _src[i];
+            entries[i * 4 + 1] = _dst[i];
+            entries[i * 4 + 2] = _isV[i];
+            entries[i * 4 + 3] = _data[i];
+        }
+        return entries;
+    }
+
     void init_mp(Party id) {
         /* Generate vector containing { 1-isV[0], 1-isV[1], ... 1-isV[n-1]} */
         isV_inv.resize(_isV.size());

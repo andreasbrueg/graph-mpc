@@ -49,8 +49,8 @@ bpo::options_description setup::programOptions() {
         "repeat,r", bpo::value<size_t>()->default_value(1), "Number of times to run benchmarks.")("num_parties,np", bpo::value<size_t>()->default_value(3),
                                                                                                   "Number of parties running the protocol.")(
         "BLOCK_SIZE", bpo::value<size_t>()->default_value(1000000), "BLOCK_SIZE for sending messages over the network.")(
-        "ssd", bpo::bool_switch(), "Preprocessing values are stored on disk before they are sent.")("input,i", bpo::value<std::string>(),
-                                                                                                    "File specifying the graph.");
+        "ssd", bpo::bool_switch(), "Preprocessing values are stored on disk before they are sent.")(
+        "input,i", bpo::value<std::string>(), "File specifying the graph.")("depth,d", bpo::value<size_t>()->default_value(0), "search depth parameter D");
 
     return desc;
 }

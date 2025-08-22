@@ -1,17 +1,17 @@
 #include "protocol_def.h"
 
 void MPFunctions::pre_mp_preprocessing(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t n_bits,
-                                       MPPreprocessing &preproc, Party &recv, bool save_to_disk) {
+                                       MPPreprocessing &preproc, Party &recv_shuffle, Party &recv_mul, bool save_to_disk) {
 #if defined PI_K
-    deduplication_preprocess(id, rngs, network, n, n_bits, preproc, recv, save_to_disk);
+    deduplication_preprocess(id, rngs, network, n, n_bits, preproc, recv_shuffle, recv_mul, save_to_disk);
 #endif
 }
 
 void MPFunctions::apply_v_preprocessing(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t n_bits,
-                                        MPPreprocessing &preproc, Party &recv, bool save_to_disk) {}
+                                        MPPreprocessing &preproc, Party &recv_shuffle, Party &recv_mul, bool save_to_disk) {}
 
 void MPFunctions::post_mp_preprocessing(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t n_bits,
-                                        MPPreprocessing &preproc, Party &recv, bool save_to_disk) {}
+                                        MPPreprocessing &preproc, Party &recv_shuffle, Party &recv_mul, bool save_to_disk) {}
 
 void MPFunctions::pre_mp_eval(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n, size_t n_bits, MPPreprocessing &preproc,
                               Graph &g, bool save_to_disk) {

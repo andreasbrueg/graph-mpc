@@ -6,7 +6,7 @@
 #include "../src/graphmpc/shuffle.h"
 #include "../src/utils/sharing.h"
 
-void test_shuffle(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file) {
+void test_shuffle(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file, Graph &g) {
     std::cout << "------ test_shuffle ------" << std::endl << std::endl;
     bool save_to_disk = true;
     std::shared_ptr<io::NetIOMP> network = std::make_shared<io::NetIOMP>(net_conf, save_to_disk);

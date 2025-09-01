@@ -1,11 +1,12 @@
 #pragma once
 
+#include <emp-tool/emp-tool.h>
 #include <socket/TCPSSLClient.h>
 
 #include <future>
 
-#include "../utils/graph.h"
-#include "../utils/types.h"
+#include "../../src/utils/graph.h"
+#include "../../src/utils/types.h"
 
 class InputClient {
    public:
@@ -15,7 +16,7 @@ class InputClient {
         std::vector<Ring> entries;
     };
 
-    InputClient(Party id) : id(id), connected(false) {
+    InputClient(int id) : id(id), connected(false) {
         auto PRINT_LOG = [](const std::string &strLogMsg) { std::cout << strLogMsg << std::endl; };
 
         m_pSSLTCPClient.reset(new CTCPSSLClient(PRINT_LOG));
@@ -24,6 +25,7 @@ class InputClient {
     ~InputClient() { m_pSSLTCPClient->Disconnect(); };
 
     void connect(std::string ip, int port) {
+        m_pSSLTCPClient->Disconnect();
         auto ConnectTask = [&]() -> bool {
             bool bRet = m_pSSLTCPClient->Connect(ip, std::to_string(port));
             return bRet;
@@ -38,7 +40,7 @@ class InputClient {
         connected = true;
     }
 
-    void send_graph(Graph &g, size_t start = 0) {
+    void send_graph(Graph &g, size_t start) {
         Packet pkt;
         pkt.start = start;
         pkt.end = start + g.size() * 4;
@@ -63,7 +65,7 @@ class InputClient {
     }
 
    private:
-    Party id;
+    int id;
     bool connected;
     std::unique_ptr<CTCPSSLClient> m_pSSLTCPClient;
 };

@@ -4,7 +4,6 @@
 #include <tuple>
 #include <vector>
 
-#include "../setup/utils.h"
 #include "../utils/preprocessings.h"
 #include "../utils/random_generators.h"
 #include "../utils/sharing.h"

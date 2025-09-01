@@ -5,7 +5,7 @@
 #include "../setup/utils.h"
 #include "../src/io/netmp.h"
 
-void test_network(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file) {
+void test_network(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file, Graph &g) {
     std::cout << "------ test_network ------" << std::endl << std::endl;
     json output_data;
 

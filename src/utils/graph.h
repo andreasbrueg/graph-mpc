@@ -1,5 +1,6 @@
 #pragma once
 
+#include <emp-tool/emp-tool.h>
 #include <omp.h>
 
 #include <cassert>
@@ -89,7 +90,73 @@ class Graph {
         return g;
     }
 
-    Graph secret_share(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n_bits, Party sender) {
+    std::tuple<Graph, Graph> secret_share(emp::PRG &rng, size_t n_bits) {
+        std::vector<Ring> src_0, src_1;
+        std::vector<Ring> dst_0, dst_1;
+        std::vector<Ring> isV_0, isV_1;
+        std::vector<Ring> data_0, data_1;
+
+        /* Secret share src */
+        for (size_t i = 0; i < _size; ++i) {
+            Ring r;
+            rng.random_data(&r, sizeof(Ring));
+            src_0.push_back(r);
+            src_1.push_back(_src[i] - r);
+        }
+        for (size_t i = 0; i < _size; ++i) {
+            Ring r;
+            rng.random_data(&r, sizeof(Ring));
+            dst_0.push_back(r);
+            dst_1.push_back(_dst[i] - r);
+        }
+        for (size_t i = 0; i < _size; ++i) {
+            Ring r;
+            rng.random_data(&r, sizeof(Ring));
+            isV_0.push_back(r);
+            isV_1.push_back(_isV[i] - r);
+        }
+        for (size_t i = 0; i < _size; ++i) {
+            Ring r;
+            rng.random_data(&r, sizeof(Ring));
+            data_0.push_back(r);
+            data_1.push_back(_data[i] - r);
+        }
+
+        std::vector<std::vector<Ring>> src_bits_0, src_bits_1, dst_bits_0, dst_bits_1;
+        auto src_bits = to_bits(_src, n_bits);
+        auto dst_bits = to_bits(_src, n_bits);
+
+        src_bits_0.resize(n_bits);
+        src_bits_1.resize(n_bits);
+        dst_bits_0.resize(n_bits);
+        dst_bits_1.resize(n_bits);
+
+        for (size_t i = 0; i < n_bits; ++i) {
+            src_bits_0[i].resize(_size);
+            src_bits_1[i].resize(_size);
+
+            for (size_t j = 0; j < _size; ++j) {
+                Ring r;
+                rng.random_data(&r, sizeof(Ring));
+                src_bits_0[i].push_back(r);
+                src_bits_1[i].push_back(r - src_bits[i][j]);
+            }
+
+            dst_bits_0[i].resize(_size);
+            dst_bits_1[i].resize(_size);
+
+            for (size_t j = 0; j < _size; ++j) {
+                Ring r;
+                rng.random_data(&r, sizeof(Ring));
+                dst_bits_0[i].push_back(r);
+                dst_bits_1[i].push_back(r - dst_bits[i][j]);
+            }
+        }
+
+        return {{src_0, dst_0, isV_0, data_0, src_bits_0, dst_bits_0, _n_vertices}, {src_1, dst_1, isV_1, data_1, src_bits_1, dst_bits_1, _n_vertices}};
+    }
+
+    Graph secret_share_parties(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n_bits, Party sender) {
         if (id == D) {
             return {};
         }
@@ -160,15 +227,15 @@ class Graph {
         size_t size_other;
 
         if (id == P0) {
-            auto g1 = secret_share(id, rngs, network, n_bits, id);
-            auto g2 = secret_share(id, rngs, network, n_bits, P1);
+            auto g1 = secret_share_parties(id, rngs, network, n_bits, id);
+            auto g2 = secret_share_parties(id, rngs, network, n_bits, P1);
 
             auto concat = g1 + g2;
             return concat;
         }
         if (id == P1) {
-            auto g1 = secret_share(id, rngs, network, n_bits, P0);
-            auto g2 = secret_share(id, rngs, network, n_bits, id);
+            auto g1 = secret_share_parties(id, rngs, network, n_bits, P0);
+            auto g2 = secret_share_parties(id, rngs, network, n_bits, id);
             auto concat = g1 + g2;
             return concat;
         }

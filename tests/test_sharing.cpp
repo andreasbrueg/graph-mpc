@@ -5,7 +5,7 @@
 #include "../src/utils/random_generators.h"
 #include "../src/utils/sharing.h"
 
-void test_sharing(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file) {
+void test_sharing(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file, Graph &g) {
     std::cout << "------ test_sharing ------" << std::endl << std::endl;
     json output_data;
     auto network = std::make_shared<io::NetIOMP>(net_conf, false);
@@ -61,7 +61,7 @@ void test_sharing(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf,
     std::cout << std::endl << std::endl;
 
     /* Test Graph Sharing */
-    Graph g = Graph::parse(input_file);
+    g = Graph::parse(input_file);
 
     std::cout << "Personal graph: " << std::endl;
     g.print();

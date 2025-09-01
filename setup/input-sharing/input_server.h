@@ -2,9 +2,11 @@
 
 #include <socket/TCPSSLServer.h>
 
+#include <cassert>
 #include <future>
 
-#include "../src/utils/types.h"
+#include "../../src/utils/graph.h"
+#include "../../src/utils/types.h"
 
 class InputServer {
    public:
@@ -16,7 +18,7 @@ class InputServer {
 
     InputServer(Party id, std::string port, size_t n_clients = 1) : id(id), n_clients(n_clients), clients(n_clients) {
         auto PRINT_LOG = [](const std::string &strLogMsg) { std::cout << strLogMsg << std::endl; };
-        m_pSSLTCPServer.reset(new CTCPSSLServer(PRINT_LOG, port));  // creates an SSL/TLS TCP server to listen on port 1000
+        m_pSSLTCPServer.reset(new CTCPSSLServer(PRINT_LOG, port));  // creates an SSL/TLS TCP server
 
         std::string SSL_CERT_FILE = "certs/socket_cert.pem";
         std::string SSL_KEY_FILE = "certs/socket_key.pem";
@@ -40,9 +42,17 @@ class InputServer {
     Graph recv_graph() {
         auto pkts = recv_packets();
 
-        std::vector<Ring> entries;
+        size_t total_size = 0;
         for (auto &pkt : pkts) {
-            entries.insert(entries.end() + pkt.start, pkt.entries.begin(), pkt.entries.end());
+            assert(pkt.start < pkt.end);
+            size_t pkt_size = pkt.end - pkt.start;
+            assert(pkt.entries.size() == pkt_size);
+            total_size += pkt_size;
+        }
+
+        std::vector<Ring> entries(total_size);
+        for (auto &pkt : pkts) {
+            std::copy(pkt.entries.begin(), pkt.entries.end(), entries.begin() + pkt.start * 4);
         }
 
         Graph g;
@@ -102,7 +112,7 @@ class InputServer {
         n_bytes_recvd = futEntriesReceive.get();
 
         if (n_bytes_recvd != static_cast<int>(n_entries * sizeof(Ring))) {
-            throw std::runtime_error("Failed to receive all Ring entries");
+            throw std::runtime_error("Failed to receive all ring elements.");
         }
 
         return pkt;

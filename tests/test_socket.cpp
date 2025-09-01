@@ -1,57 +1,27 @@
+#include "../setup/input-sharing/input_client.h"
+#include "../setup/input-sharing/input_server.h"
 #include "../setup/utils.h"
-#include "../src/input-sharing/input_client.h"
-#include "../src/input-sharing/input_server.h"
 #include "../src/utils/graph.h"
 
-void test_socket(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file) {
+void test_socket(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file, Graph &g) {
+    auto network = std::make_shared<io::NetIOMP>(net_conf);
+
     if (id == P0) {
         InputServer server(id, std::to_string(4242), 2);  // Server expecting two clients
         server.connect_clients();
-        Graph g = server.recv_graph();
+        g = server.recv_graph();
         g.print();
     }
 
-    if (id == P1) {  // Client 1
-        Graph g;
-        g.add_list_entry(0, 0, 1, 10);
-        g.add_list_entry(1, 1, 1, 20);
-        g.add_list_entry(2, 2, 1, 30);
-        g.add_list_entry(0, 1, 0, 0);
-        g.add_list_entry(0, 2, 0, 0);
-        g.add_list_entry(1, 2, 0, 0);
-        g.add_list_entry(2, 0, 0, 0);
+    if (id == P1) {
+        InputServer server(id, std::to_string(4243), 2);  // Server expecting two clients
+        server.connect_clients();
+        g = server.recv_graph();
         g.print();
-
-        InputClient::Packet pkt;
-        pkt.start = 0;
-        pkt.end = g.size() * 4;
-        pkt.entries = g.serialize();
-
-        InputClient client(id);
-        client.connect("localhost", 4242);
-        client.send_graph(g);
     }
 
-    if (id == D) {  // Client 2
-        Graph g;
-        g.add_list_entry(0, 0, 1, 10);
-        g.add_list_entry(1, 1, 1, 20);
-        g.add_list_entry(2, 2, 1, 30);
-        g.add_list_entry(0, 1, 0, 0);
-        g.add_list_entry(0, 2, 0, 0);
-        g.add_list_entry(1, 2, 0, 0);
-        g.add_list_entry(2, 0, 0, 0);
-        g.print();
-
-        InputClient::Packet pkt;
-        pkt.start = 4 * 7;
-        pkt.end = pkt.start + g.size() * 4;
-        pkt.entries = g.serialize();
-
-        InputClient client(id);
-        client.connect("localhost", 4242);
-        client.send_graph(g);
-    }
+    network->sync();
+    std::cout << "Terminating..." << std::endl;
 
     return;
 }

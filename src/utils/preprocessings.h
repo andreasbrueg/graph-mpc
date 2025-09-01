@@ -69,7 +69,7 @@ struct MPPreprocessing {
 template <typename T>
 std::vector<T> extract(std::queue<T> &q, size_t n) {
     std::vector<T> result;
-    result.reserve(n);  // Reserve space for efficiency
+    result.reserve(n);
     while (n-- > 0 && !q.empty()) {
         result.push_back(q.front());
         q.pop();

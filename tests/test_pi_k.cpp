@@ -11,7 +11,7 @@
 #include "../src/utils/graph.h"
 #include "../src/utils/permutation.h"
 
-void test_pi_k(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file) {
+void test_pi_k(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file, Graph &g) {
     std::cout << "------ test_pi_k ------" << std::endl << std::endl;
     bool save_to_disk = true;
     auto network = std::make_shared<io::NetIOMP>(net_conf, true);
@@ -48,7 +48,6 @@ void test_pi_k(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, si
     (4,2,0) // 15
     */
 
-    Graph g;
     if (id == P0) {
         g.add_list_entry(1, 1, 1);
         g.add_list_entry(2, 2, 1);

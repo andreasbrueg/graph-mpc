@@ -6,7 +6,7 @@
 #include "../src/graphmpc/sort.h"
 #include "../src/utils/permutation.h"
 
-void test_sort(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file) {
+void test_sort(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file, Graph &g) {
     std::cout << "------ test_sort ------" << std::endl << std::endl;
     json output_data;
     bool save_to_disk = true;

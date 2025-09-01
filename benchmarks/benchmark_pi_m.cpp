@@ -6,7 +6,7 @@
 #include "../src/utils/graph.h"
 
 void benchmark(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, size_t repeat, size_t n_vertices, bool save_output,
-               std::string save_file, bool save_to_disk, std::string input_file) {
+               std::string save_file, bool save_to_disk, std::string input_file, Graph &g) {
     auto network = std::make_shared<io::NetIOMP>(net_conf, save_to_disk);
     size_t n_bits = std::ceil(std::log2(n_vertices + 2));
     std::cout << "n_bits: " << n_bits << std::endl;
@@ -15,7 +15,6 @@ void benchmark(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, si
     MPProtocol mp(id, rngs, network, n, n_bits, n_iterations, weights, save_to_disk);
 
     /* Construct and share graph */
-    Graph g;
     if (id == P0) {
         for (size_t i = 0; i < n_vertices / 2; i++) g.add_list_entry(i + 1, i + 1, 1);
         for (size_t i = 0; i < (n - n_vertices) / 2; i++) g.add_list_entry(1, 2, 0);

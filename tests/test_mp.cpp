@@ -7,7 +7,7 @@
 #include "../src/mp_protocol.h"
 #include "../src/utils/permutation.h"
 
-void test_mp(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file) {
+void test_mp(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file, Graph &g) {
     std::cout << "------ test_mp ------" << std::endl << std::endl;
     auto network = std::make_shared<io::NetIOMP>(net_conf, false);
 
@@ -22,7 +22,7 @@ void test_mp(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size
     size_t n_bits = std::ceil(std::log2(n));  // Optimization
     std::cout << "n_bits: " << n_bits << std::endl;
 
-    Graph g = Graph::parse(input_file);
+    g = Graph::parse(input_file);
     // Graph g;
     // g.add_list_entry(0, 0, 1, 1);
     // g.add_list_entry(1, 1, 1, 2);
@@ -34,7 +34,7 @@ void test_mp(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size
     // g.add_list_entry(2, 1, 0, 0);
 
     std::vector<Ring> weights(n_iterations);
-    Graph g_shared = g.secret_share(id, rngs, network, n_bits, P0);
+    Graph g_shared = g.secret_share_parties(id, rngs, network, n_bits, P0);
 
     MPProtocol mp(id, rngs, network, n, n_bits, n_iterations, weights, true);
     mp.run(g_shared, TEST);

@@ -50,7 +50,24 @@ bpo::options_description setup::programOptions() {
                                                                                                   "Number of parties running the protocol.")(
         "BLOCK_SIZE", bpo::value<size_t>()->default_value(1000000), "BLOCK_SIZE for sending messages over the network.")(
         "ssd", bpo::bool_switch(), "Preprocessing values are stored on disk before they are sent.")(
-        "input,i", bpo::value<std::string>(), "File specifying the graph.")("depth,d", bpo::value<size_t>()->default_value(0), "search depth parameter D");
+        "input,i", bpo::value<std::string>(), "File specifying the graph.")("depth,d", bpo::value<size_t>()->default_value(0), "search depth parameter D")(
+        "clients,c", bpo::value<size_t>()->default_value(0), "Number of clients participating in input-sharing.");
+
+    return desc;
+}
+
+bpo::options_description setup::clientProgramOptions() {
+    bpo::options_description desc(
+        "Following options are supported by config file too. Regarding seeds, "
+        "all, 01, 02, and 12 need to be equal among the parties using them. "
+        "Other parties, e.g., party 2 for seed 01 can take any value and in "
+        "fact must not know the value that 0 and 1 use");
+
+    desc.add_options()("cid", bpo::value<int>()->default_value(0), "Client ID.")("start", bpo::value<size_t>()->default_value(0), "Start index of subgraph")(
+        "input,i", bpo::value<std::string>(), "Input file from which subgraph is read.")("ip_0", bpo::value<std::string>(), "IP Address of P0.")(
+        "ip_1", bpo::value<std::string>(), "IP Address of P1.")("port_0", bpo::value<int>()->default_value(4242), "Port of P0.")(
+        "port_1", bpo::value<int>()->default_value(4243), "Port of P1.")("n_bits", bpo::value<size_t>()->default_value(32),
+                                                                         "Number of bits used for representing ring elements.");
 
     return desc;
 }
@@ -79,9 +96,10 @@ bpo::variables_map setup::parseOptions(bpo::options_description &cmdline, bpo::o
     try {
         bpo::notify(opts);
 
-        if (!opts["localhost"].as<bool>() && (opts.count("net-config") == 0)) {
-            throw std::runtime_error("Expected one of 'localhost' or 'net-config'");
-        }
+        // if (!opts["localhost"].as<bool>() && (opts.count("net-config") == 0)) {
+        // throw std::runtime_error("Expected one of 'localhost' or 'net-config'");
+        //}
+
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << std::endl;
         throw std::runtime_error("Error occured");
@@ -90,8 +108,21 @@ bpo::variables_map setup::parseOptions(bpo::options_description &cmdline, bpo::o
     return opts;
 }
 
-void setup::setupExecution(const bpo::variables_map &opts, size_t &pid, size_t &nP, size_t &repeat, size_t &threads, size_t &nodes, io::NetworkConfig &net_conf,
-                           uint64_t *seeds_h, uint64_t *seeds_l, bool &save_output, std::string &save_file, bool &save_to_disk, std::string &input_file) {
+void setup::setupClient(const bpo::variables_map &opts, int &id, size_t &start_idx, std::string &ip_0, std::string &ip_1, int &port_0, int &port_1,
+                        std::string &input_file, size_t &n_bits) {
+    id = opts["cid"].as<int>();
+    start_idx = opts["start"].as<size_t>();
+    ip_0 = opts["ip_0"].as<std::string>();
+    ip_1 = opts["ip_1"].as<std::string>();
+    port_0 = opts["port_0"].as<int>();
+    port_1 = opts["port_1"].as<int>();
+    input_file = opts["input"].as<std::string>();
+    n_bits = opts["n_bits"].as<size_t>();
+}
+
+void setup::setupExecution(const bpo::variables_map &opts, size_t &pid, size_t &nP, size_t &nC, size_t &repeat, size_t &threads, size_t &nodes,
+                           io::NetworkConfig &net_conf, uint64_t *seeds_h, uint64_t *seeds_l, bool &save_output, std::string &save_file, bool &save_to_disk,
+                           std::string &input_file) {
     save_output = false;
     if (opts.count("output") != 0) {
         save_output = true;
@@ -104,6 +135,7 @@ void setup::setupExecution(const bpo::variables_map &opts, size_t &pid, size_t &
 
     pid = opts["pid"].as<size_t>();
     nP = opts["num_parties"].as<size_t>();
+    nC = opts["clients"].as<size_t>();
     threads = opts["threads"].as<size_t>();
     nodes = opts["nodes"].as<size_t>();
     seeds_h[0] = opts["seed_self_h"].as<uint64_t>();
@@ -174,10 +206,10 @@ void setup::setupExecution(const bpo::variables_map &opts, size_t &pid, size_t &
 }
 
 void setup::run_test(const bpo::variables_map &opts,
-                     std::function<void(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file)> func) {
+                     std::function<void(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file, Graph &g)> func) {
     auto n = opts["vec-size"].as<size_t>();
 
-    size_t pid, nP, repeat, threads, shuffle_num, nodes;
+    size_t pid, nP, nC, repeat, threads, shuffle_num, nodes;
     json output_data;
     io::NetworkConfig net_conf;
     uint64_t seeds_h[9];
@@ -187,7 +219,7 @@ void setup::run_test(const bpo::variables_map &opts,
     bool save_to_disk;
     std::string input_file;
 
-    setup::setupExecution(opts, pid, nP, repeat, threads, nodes, net_conf, seeds_h, seeds_l, save_output, save_file, save_to_disk, input_file);
+    setup::setupExecution(opts, pid, nP, nC, repeat, threads, nodes, net_conf, seeds_h, seeds_l, save_output, save_file, save_to_disk, input_file);
     output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads}, {"seeds_h", seeds_h},
                               {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", n}};
 
@@ -200,17 +232,18 @@ void setup::run_test(const bpo::variables_map &opts,
     Party id = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
 
-    func(id, rngs, net_conf, n, input_file);
+    Graph g;
+    func(id, rngs, net_conf, n, input_file, g);
 }
 
 void setup::run_benchmark(const bpo::variables_map &opts,
                           std::function<void(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, size_t repeat, size_t n_vertices,
-                                             bool save_output, std::string save_file, bool save_to_disk, std::string input_file)>
+                                             bool save_output, std::string save_file, bool save_to_disk, std::string input_file, Graph &g)>
                               func) {
     auto n = opts["vec-size"].as<size_t>();
 
     json output_data;
-    size_t pid, nP, repeat, threads, nodes;
+    size_t pid, nP, nC, repeat, threads, nodes;
     io::NetworkConfig net_conf;
     uint64_t seeds_h[9];
     uint64_t seeds_l[9];
@@ -219,7 +252,7 @@ void setup::run_benchmark(const bpo::variables_map &opts,
     bool save_to_disk;
     std::string input_file;
 
-    setup::setupExecution(opts, pid, nP, repeat, threads, nodes, net_conf, seeds_h, seeds_l, save_output, save_file, save_to_disk, input_file);
+    setup::setupExecution(opts, pid, nP, nC, repeat, threads, nodes, net_conf, seeds_h, seeds_l, save_output, save_file, save_to_disk, input_file);
     output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads}, {"seeds_h", seeds_h},
                               {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", n}};
 
@@ -232,5 +265,12 @@ void setup::run_benchmark(const bpo::variables_map &opts,
     Party id = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
 
-    func(id, rngs, net_conf, n, repeat, nodes, save_output, save_file, save_to_disk, input_file);
+    Graph g;
+    // if (nC > 0) {
+    // InputServer server(id, std::to_string(4242), nC);  // Server expecting two clients
+    // server.connect_clients();
+    // g = server.recv_graph();
+    //}
+
+    func(id, rngs, net_conf, n, repeat, nodes, save_output, save_file, save_to_disk, input_file, g);
 }

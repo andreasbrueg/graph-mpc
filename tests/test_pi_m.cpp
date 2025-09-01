@@ -8,7 +8,7 @@
 #include "../src/mp_protocol.h"
 #include "../src/utils/permutation.h"
 
-void test_pi_m(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file) {
+void test_pi_m(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file, Graph &g) {
     std::cout << "------ test_pi_m ------" << std::endl << std::endl;
     auto network = std::make_shared<io::NetIOMP>(net_conf, true);
     std::vector<Ring> weights = {10000000, 100000, 1000, 1};
@@ -41,7 +41,6 @@ void test_pi_m(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, si
     */
 
     // Graph g = Graph::parse(input_file);
-    Graph g;
     g.add_list_entry(1, 1, 1);
     g.add_list_entry(2, 2, 1);
     g.add_list_entry(1, 2, 0);
@@ -59,7 +58,7 @@ void test_pi_m(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, si
     g.add_list_entry(2, 4, 0);
     g.add_list_entry(4, 2, 0);
     if (id != D) g.print();
-    Graph g_shared = g.secret_share(id, rngs, network, n_bits, P0);
+    Graph g_shared = g.secret_share_parties(id, rngs, network, n_bits, P0);
 
     mp.run(g_shared, TEST);
 

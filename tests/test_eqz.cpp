@@ -6,7 +6,7 @@
 #include "../src/utils/random_generators.h"
 #include "../src/utils/sharing.h"
 
-void test_eqz(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file) {
+void test_eqz(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file, Graph &g) {
     json output_data;
     auto network = std::make_shared<io::NetIOMP>(net_conf, true);
 

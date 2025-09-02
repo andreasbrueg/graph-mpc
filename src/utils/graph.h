@@ -27,6 +27,15 @@ class Graph {
             if (isV[i]) _n_vertices++;
     }
 
+    Graph(std::vector<Ring> &src, std::vector<Ring> &dst, std::vector<Ring> &isV, std::vector<Ring> &data, size_t n_vertices)
+        : _src(src), _dst(dst), _isV(isV), _data(data), _n_vertices(n_vertices), is_shared(true) {
+        assert(src.size() == dst.size());
+        assert(dst.size() == isV.size());
+        assert(isV.size() == data.size());
+
+        _size = src.size();
+    }
+
     Graph(std::vector<Ring> &src, std::vector<Ring> &dst, std::vector<Ring> &isV, std::vector<Ring> &data, std::vector<std::vector<Ring>> &src_bits,
           std::vector<std::vector<Ring>> &dst_bits, size_t n_vertices)
         : _src(src), _dst(dst), _isV(isV), _data(data), _src_bits(src_bits), _dst_bits(dst_bits), _n_vertices(n_vertices), is_shared(true) {
@@ -46,6 +55,7 @@ class Graph {
     std::vector<Ring> src() const { return _src; }
     std::vector<Ring> dst() const { return _dst; }
     std::vector<Ring> isV() const { return _isV; }
+    std::vector<Ring> data() const { return _data; }
     size_t size() { return _size; }
     size_t n_vertices() { return _n_vertices; }
     std::vector<std::vector<Ring>> src_bits() { return _src_bits; }
@@ -124,7 +134,7 @@ class Graph {
 
         std::vector<std::vector<Ring>> src_bits_0, src_bits_1, dst_bits_0, dst_bits_1;
         auto src_bits = to_bits(_src, n_bits);
-        auto dst_bits = to_bits(_src, n_bits);
+        auto dst_bits = to_bits(_dst, n_bits);
 
         src_bits_0.resize(n_bits);
         src_bits_1.resize(n_bits);
@@ -132,24 +142,20 @@ class Graph {
         dst_bits_1.resize(n_bits);
 
         for (size_t i = 0; i < n_bits; ++i) {
-            src_bits_0[i].resize(_size);
-            src_bits_1[i].resize(_size);
-
             for (size_t j = 0; j < _size; ++j) {
                 Ring r;
                 rng.random_data(&r, sizeof(Ring));
                 src_bits_0[i].push_back(r);
-                src_bits_1[i].push_back(r - src_bits[i][j]);
+                src_bits_1[i].push_back(src_bits[i][j] - r);
             }
+        }
 
-            dst_bits_0[i].resize(_size);
-            dst_bits_1[i].resize(_size);
-
+        for (size_t i = 0; i < n_bits; ++i) {
             for (size_t j = 0; j < _size; ++j) {
                 Ring r;
                 rng.random_data(&r, sizeof(Ring));
                 dst_bits_0[i].push_back(r);
-                dst_bits_1[i].push_back(r - dst_bits[i][j]);
+                dst_bits_1[i].push_back(dst_bits[i][j] - r);
             }
         }
 
@@ -251,7 +257,10 @@ class Graph {
         std::vector<Ring> isV_revealed = share::reveal_vec(id, network, _isV);
         std::vector<Ring> data_revealed = share::reveal_vec(id, network, _data);
 
-        return {src_revealed, dst_revealed, isV_revealed, data_revealed};
+        Graph revealed(src_revealed, dst_revealed, isV_revealed, data_revealed);
+        revealed._n_vertices = _n_vertices;
+
+        return revealed;
     }
 
     Graph operator+(const Graph &other) const {
@@ -304,13 +313,24 @@ class Graph {
         return g;
     }
 
-    std::vector<Ring> serialize() {
+    std::vector<Ring> serialize(size_t n_bits = 32) {
         std::vector<Ring> entries(4 * _size);
         for (size_t i = 0; i < _size; ++i) {
             entries[i * 4 + 0] = _src[i];
             entries[i * 4 + 1] = _dst[i];
             entries[i * 4 + 2] = _isV[i];
             entries[i * 4 + 3] = _data[i];
+        }
+
+        for (size_t i = 0; i < n_bits; ++i) {
+            for (size_t j = 0; j < _size; ++j) {
+                entries.push_back(_src_bits[i][j]);
+            }
+        }
+        for (size_t i = 0; i < n_bits; ++i) {
+            for (size_t j = 0; j < _size; ++j) {
+                entries.push_back(_dst_bits[i][j]);
+            }
         }
         return entries;
     }

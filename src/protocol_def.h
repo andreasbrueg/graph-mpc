@@ -23,6 +23,6 @@ void post_mp_eval(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP>
 
 };  // namespace MPFunctions
 
-// #define MP
+#define MP
 // #define PI_M
-#define PI_K
+// #define PI_K

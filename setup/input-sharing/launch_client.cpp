@@ -1,5 +1,6 @@
-
+#include <chrono>
 #include <iostream>
+#include <thread>
 
 #include "../../src/utils/types.h"
 #include "../utils.h"
@@ -9,12 +10,14 @@ void launch_client(int id, size_t start_idx, std::string ip_0, std::string ip_1,
     Graph g = Graph::parse(input_file);
     std::cout << "Graph loaded from file." << std::endl;
     g.print();
+    std::cout << "Nodes: " << g.n_vertices() << std::endl;
 
     auto [share_0, share_1] = g.secret_share(rng, n_bits);
 
-    /* Send shares*/
-    InputClient client(id);
+    std::this_thread::sleep_for(std::chrono::seconds(5));
 
+    /* Send shares*/
+    InputClient client(id, n_bits);
     client.connect(ip_0, port_0);
     std::cout << "Connected to P0." << std::endl;
     client.send_graph(share_0, start_idx);

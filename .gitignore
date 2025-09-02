@@ -21,5 +21,7 @@ RES.md
 upload.sh
 TODO
 scripts
-socket-cpp-master/** 
+socket-cpp-master
 GraphMPC.code-workspace
+config
+example_graphs

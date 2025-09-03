@@ -85,7 +85,7 @@ class Graph {
 
         std::ifstream file(filename);
         if (!file) {
-            std::cerr << "Error: Could not open graph file " << filename << std::endl;
+            throw std::invalid_argument("Error: Could not open graph file " + filename);
         }
 
         Ring src, dst, isV, data;

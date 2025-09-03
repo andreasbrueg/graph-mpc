@@ -6,7 +6,8 @@
 #include "../utils.h"
 #include "input_client.h"
 
-void launch_client(int id, size_t start_idx, std::string ip_0, std::string ip_1, int port_0, int port_1, std::string input_file, emp::PRG rng, size_t n_bits) {
+void launch_client(int id, size_t start_idx, std::string ip_0, std::string ip_1, int port_0, int port_1, std::string input_file, emp::PRG rng, size_t n_bits,
+                   std::string &password) {
     Graph g = Graph::parse(input_file);
     std::cout << "Graph loaded from file." << std::endl;
     g.print();
@@ -14,19 +15,13 @@ void launch_client(int id, size_t start_idx, std::string ip_0, std::string ip_1,
 
     auto [share_0, share_1] = g.secret_share(rng, n_bits);
 
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-
     /* Send shares*/
-    InputClient client(id, n_bits);
+    InputClient client(id, n_bits, password);
     client.connect(ip_0, port_0);
-    std::cout << "Connected to P0." << std::endl;
     client.send_graph(share_0, start_idx);
-    std::cout << "Sent graph." << std::endl;
 
     client.connect(ip_1, port_1);
-    std::cout << "Connected to P1." << std::endl;
     client.send_graph(share_1, start_idx);
-    std::cout << "Sent graph." << std::endl;
 }
 
 int main(int argc, char **argv) {
@@ -42,13 +37,13 @@ int main(int argc, char **argv) {
 
     int id, port_0, port_1;
     size_t start_idx, n_bits;
-    std::string ip_0, ip_1, input_file;
+    std::string ip_0, ip_1, input_file, password;
 
-    setup::setupClient(opts, id, start_idx, ip_0, ip_1, port_0, port_1, input_file, n_bits);
+    setup::setupClient(opts, id, start_idx, ip_0, ip_1, port_0, port_1, input_file, n_bits, password);
 
     emp::PRG rng;
     auto seed_block = emp::makeBlock(14132, 68436);
     rng.reseed(&seed_block, 0);
 
-    launch_client(id, start_idx, ip_0, ip_1, port_0, port_1, input_file, rng, n_bits);
+    launch_client(id, start_idx, ip_0, ip_1, port_0, port_1, input_file, rng, n_bits, password);
 }

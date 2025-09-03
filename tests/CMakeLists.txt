@@ -32,3 +32,4 @@ add_dependencies(tests ${testbin})
 
 
 file(COPY ../certs DESTINATION ${PROJECT_BINARY_DIR}/tests)
+file(COPY ../config DESTINATION ${PROJECT_BINARY_DIR}/tests)

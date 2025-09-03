@@ -15,20 +15,6 @@ void test_socket(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, 
     n = 16;
     MPProtocol mp(id, rngs, network, n, n_bits, n_iterations, weights, save_to_disk);
 
-    if (id == P0) {
-        InputServer server(id, n_bits, std::to_string(4242), 2);  // Server expecting two clients
-        server.connect_clients();
-        g = server.recv_graph();
-        g.print();
-    }
-
-    if (id == P1) {
-        InputServer server(id, n_bits, std::to_string(4243), 2);  // Server expecting two clients
-        server.connect_clients();
-        g = server.recv_graph();
-        g.print();
-    }
-
     std::cout << "Graph size: " << g.size() << std::endl;
     std::cout << "Nodes: " << g.n_vertices() << std::endl;
     std::cout << "Bits: " << n_bits << std::endl;

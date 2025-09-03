@@ -38,8 +38,7 @@ bpo::options_description setup::programOptions() {
         "seed_D1_comp_h", bpo::value<uint64_t>()->default_value(111108), "Value of the D1-shared random seed for compaction, high bits.")(
         "seed_D1_comp_l", bpo::value<uint64_t>()->default_value(1111337), "Value of the D1-shared random seed for compaction, low bits.")(
         "net-config", bpo::value<std::string>(), "Path to JSON file containing network details of all parties.")(
-        "localhost", bpo::bool_switch(), "All parties are on same machine.")("vec-size,v", bpo::value<size_t>()->default_value(10),
-                                                                             "Number of vector elements.")(
+        "localhost", bpo::bool_switch(), "All parties are on same machine.")("size,s", bpo::value<size_t>()->default_value(10), "Number of graph entries.")(
         "certificate_path", bpo::value<std::string>()->default_value("certs/cert1.pem"), "Path to full certificate chain file for TLS server connections")(
         "private_key_path", bpo::value<std::string>()->default_value("certs/key1.pem"), "Path to private key for TLS server connections")(
         "trusted_cert_path", bpo::value<std::string>()->default_value("certs/cert_ca.pem"), "Path with trusted certificate for TLS client connections")(
@@ -51,7 +50,9 @@ bpo::options_description setup::programOptions() {
         "BLOCK_SIZE", bpo::value<size_t>()->default_value(1000000), "BLOCK_SIZE for sending messages over the network.")(
         "ssd", bpo::bool_switch(), "Preprocessing values are stored on disk before they are sent.")(
         "input,i", bpo::value<std::string>(), "File specifying the graph.")("depth,d", bpo::value<size_t>()->default_value(0), "search depth parameter D")(
-        "clients,c", bpo::value<size_t>()->default_value(0), "Number of clients participating in input-sharing.");
+        "clients", bpo::value<size_t>()->default_value(0), "Number of clients participating in input-sharing.")(
+        "passwords", bpo::value<std::string>()->default_value(""), "Path to .txt file containing passwords used for authenticating clients.")(
+        "input-port", bpo::value<int>()->default_value(4242), "Port used for receiving input shares from clients.");
 
     return desc;
 }
@@ -66,6 +67,7 @@ bpo::options_description setup::clientProgramOptions() {
     desc.add_options()("cid", bpo::value<int>()->default_value(0), "Client ID.")("start", bpo::value<size_t>()->default_value(0), "Start index of subgraph")(
         "input,i", bpo::value<std::string>(), "Input file from which subgraph is read.")("ip_0", bpo::value<std::string>(), "IP Address of P0.")(
         "ip_1", bpo::value<std::string>(), "IP Address of P1.")("port_0", bpo::value<int>()->default_value(4242), "Port of P0.")(
+        "password", bpo::value<std::string>()->default_value(""), "Password used by client for authentication.")(
         "port_1", bpo::value<int>()->default_value(4243), "Port of P1.")("n_bits", bpo::value<size_t>()->default_value(32),
                                                                          "Number of bits used for representing ring elements.");
 
@@ -109,7 +111,7 @@ bpo::variables_map setup::parseOptions(bpo::options_description &cmdline, bpo::o
 }
 
 void setup::setupClient(const bpo::variables_map &opts, int &id, size_t &start_idx, std::string &ip_0, std::string &ip_1, int &port_0, int &port_1,
-                        std::string &input_file, size_t &n_bits) {
+                        std::string &input_file, size_t &n_bits, std::string &password) {
     id = opts["cid"].as<int>();
     start_idx = opts["start"].as<size_t>();
     ip_0 = opts["ip_0"].as<std::string>();
@@ -118,11 +120,12 @@ void setup::setupClient(const bpo::variables_map &opts, int &id, size_t &start_i
     port_1 = opts["port_1"].as<int>();
     input_file = opts["input"].as<std::string>();
     n_bits = opts["n_bits"].as<size_t>();
+    password = opts["password"].as<std::string>();
 }
 
 void setup::setupExecution(const bpo::variables_map &opts, size_t &pid, size_t &nP, size_t &nC, size_t &repeat, size_t &threads, size_t &nodes,
                            io::NetworkConfig &net_conf, uint64_t *seeds_h, uint64_t *seeds_l, bool &save_output, std::string &save_file, bool &save_to_disk,
-                           std::string &input_file) {
+                           std::string &input_file, std::string &passwords_file, int &input_port) {
     save_output = false;
     if (opts.count("output") != 0) {
         save_output = true;
@@ -131,6 +134,10 @@ void setup::setupExecution(const bpo::variables_map &opts, size_t &pid, size_t &
 
     if (opts.count("input") != 0) {
         input_file = opts["input"].as<std::string>();
+    }
+
+    if (opts.count("passwords") != 0) {
+        passwords_file = opts["passwords"].as<std::string>();
     }
 
     pid = opts["pid"].as<size_t>();
@@ -203,11 +210,15 @@ void setup::setupExecution(const bpo::variables_map &opts, size_t &pid, size_t &
     }
 
     save_to_disk = opts["ssd"].as<bool>();
+    input_port = opts["input-port"].as<int>();
+    if (pid == 1 && input_port == 4242) {
+        input_port++;
+    }
 }
 
 void setup::run_test(const bpo::variables_map &opts,
                      std::function<void(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file, Graph &g)> func) {
-    auto n = opts["vec-size"].as<size_t>();
+    auto n = opts["size"].as<size_t>();
 
     size_t pid, nP, nC, repeat, threads, shuffle_num, nodes;
     json output_data;
@@ -218,10 +229,22 @@ void setup::run_test(const bpo::variables_map &opts,
     std::string save_file;
     bool save_to_disk;
     std::string input_file;
+    std::string passwords_file;
+    int input_port;
 
-    setup::setupExecution(opts, pid, nP, nC, repeat, threads, nodes, net_conf, seeds_h, seeds_l, save_output, save_file, save_to_disk, input_file);
-    output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads}, {"seeds_h", seeds_h},
-                              {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", n}};
+    setup::setupExecution(opts, pid, nP, nC, repeat, threads, nodes, net_conf, seeds_h, seeds_l, save_output, save_file, save_to_disk, input_file,
+                          passwords_file, input_port);
+
+    size_t n_bits = std::ceil(std::log2(nodes));
+    output_data["details"] = {{"pid", pid},
+                              {"seeds_h", seeds_h},
+                              {"seeds_l", seeds_l},
+                              {"repeat", repeat},
+                              {"size", n},
+                              {"bits", n_bits},
+                              {"nodes", nodes},
+                              {"edges", (n - nodes)},
+                              {"SSD utilization", save_to_disk}};
 
     std::cout << "--- Details ---\n";
     for (const auto &[key, value] : output_data["details"].items()) {
@@ -231,8 +254,26 @@ void setup::run_test(const bpo::variables_map &opts,
 
     Party id = (pid == 0) ? P0 : ((pid == 1) ? P1 : D);
     RandomGenerators rngs(seeds_h, seeds_l);
-
     Graph g;
+
+    if (nC > 0) {
+        if (id != D) {
+            std::cout << "Using pwds from " << passwords_file << std::endl;
+            InputServer server(id, passwords_file, std::to_string(input_port), nC, n_bits);  // Server expecting two clients
+            std::cout << "Awaiting " << nC << " shares at " << "localhost:" << std::to_string(input_port) << std::endl;
+            server.connect_clients();
+            g = server.recv_graph();
+            g.print();
+        }
+    } else if (input_file != "" && id != D) {
+        try {
+            g = Graph::parse(input_file);
+        } catch (const std::exception &e) {
+            std::cerr << e.what() << std::endl;
+            return;
+        }
+    }
+
     func(id, rngs, net_conf, n, input_file, g);
 }
 
@@ -240,7 +281,7 @@ void setup::run_benchmark(const bpo::variables_map &opts,
                           std::function<void(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, size_t repeat, size_t n_vertices,
                                              bool save_output, std::string save_file, bool save_to_disk, std::string input_file, Graph &g)>
                               func) {
-    auto n = opts["vec-size"].as<size_t>();
+    auto n = opts["size"].as<size_t>();
 
     json output_data;
     size_t pid, nP, nC, repeat, threads, nodes;
@@ -251,10 +292,21 @@ void setup::run_benchmark(const bpo::variables_map &opts,
     std::string save_file;
     bool save_to_disk;
     std::string input_file;
+    std::string passwords_file;
+    int input_port;
 
-    setup::setupExecution(opts, pid, nP, nC, repeat, threads, nodes, net_conf, seeds_h, seeds_l, save_output, save_file, save_to_disk, input_file);
-    output_data["details"] = {{"pid", pid},         {"num_parties", nP}, {"threads", threads}, {"seeds_h", seeds_h},
-                              {"seeds_l", seeds_l}, {"repeat", repeat},  {"vec-size", n}};
+    setup::setupExecution(opts, pid, nP, nC, repeat, threads, nodes, net_conf, seeds_h, seeds_l, save_output, save_file, save_to_disk, input_file,
+                          passwords_file, input_port);
+    size_t n_bits = std::ceil(std::log2(nodes));
+    output_data["details"] = {{"pid", pid},
+                              {"seeds_h", seeds_h},
+                              {"seeds_l", seeds_l},
+                              {"repeat", repeat},
+                              {"size", n},
+                              {"bits", n_bits},
+                              {"nodes", nodes},
+                              {"edges", (n - nodes)},
+                              {"SSD utilization", save_to_disk}};
 
     std::cout << "--- Details ---\n";
     for (const auto &[key, value] : output_data["details"].items()) {
@@ -266,11 +318,23 @@ void setup::run_benchmark(const bpo::variables_map &opts,
     RandomGenerators rngs(seeds_h, seeds_l);
 
     Graph g;
-    // if (nC > 0) {
-    // InputServer server(id, std::to_string(4242), nC);  // Server expecting two clients
-    // server.connect_clients();
-    // g = server.recv_graph();
-    //}
+    if (nC > 0) {
+        if (id != D) {
+            std::cout << "Using pwds from " << passwords_file << std::endl;
+            InputServer server(id, passwords_file, std::to_string(input_port), nC, n_bits);
+            std::cout << "Awaiting " << nC << " shares at " << "localhost:" << std::to_string(input_port) << std::endl;
+            server.connect_clients();
+            g = server.recv_graph();
+            g.print();
+        }
+    } else if (input_file != "" && id != D) {
+        try {
+            g = Graph::parse(input_file);
+        } catch (const std::exception &e) {
+            std::cerr << e.what() << std::endl;
+            return;
+        }
+    }
 
     func(id, rngs, net_conf, n, repeat, nodes, save_output, save_file, save_to_disk, input_file, g);
 }

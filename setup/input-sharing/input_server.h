@@ -16,7 +16,8 @@ class InputServer {
         std::vector<Ring> entries;
     };
 
-    InputServer(Party id, size_t n_bits, std::string port, size_t n_clients = 1) : id(id), n_bits(n_bits), n_clients(n_clients), clients(n_clients) {
+    InputServer(Party id, std::string passwords_file, std::string port, size_t n_clients, size_t n_bits)
+        : id(id), passwords_file(passwords_file), n_clients(n_clients), n_bits(n_bits), clients(n_clients) {
         auto PRINT_LOG = [](const std::string &strLogMsg) { std::cout << strLogMsg << std::endl; };
         m_pSSLTCPServer.reset(new CTCPSSLServer(PRINT_LOG, port));  // creates an SSL/TLS TCP server
 
@@ -41,6 +42,21 @@ class InputServer {
     }
 
     Graph recv_graph() {
+        /* Receive passwords */
+        size_t password_size;
+        std::string password;
+        for (auto &client : clients) {
+            m_pSSLTCPServer->Receive(client, reinterpret_cast<char *>(&password_size), sizeof(size_t));
+            std::cout << "Received password size: " << password_size << std::endl;
+
+            password.resize(password_size);
+            m_pSSLTCPServer->Receive(client, password.data(), password_size);
+            std::cout << "Received password: " << password << std::endl;
+            if (!check_password(password)) {
+                throw std::runtime_error("A client failed to authenticate.");
+            }
+        }
+
         /* Receive n_vertices */
         size_t n_vertices_total = 0;
         for (auto &client : clients) {
@@ -48,7 +64,7 @@ class InputServer {
             auto n_bytes_recvd = m_pSSLTCPServer->Receive(client, reinterpret_cast<char *>(&n_vertices), sizeof(size_t));
             n_vertices_total += n_vertices;
         }
-        std::cout << "n_vertices received." << std::endl;
+        std::cout << "n_vertices received: " << n_vertices_total << std::endl;
 
         /* Receive contents */
         std::vector<Packet> pkts;
@@ -126,6 +142,9 @@ class InputServer {
 
         pkt.start = header[0];
         pkt.end = header[1];
+        std::cout << "Received packet." << std::endl;
+        std::cout << "Start: " << pkt.start << std::endl;
+        std::cout << "End: " << pkt.end << std::endl;
 
         if (pkt.end < pkt.start) {
             throw std::runtime_error("Invalid packet: end < start");
@@ -147,9 +166,24 @@ class InputServer {
         return pkt;
     }
 
+    /* Not safe against side-channel attacks */
+    bool check_password(std::string &pwd) {
+        std::ifstream file(passwords_file);
+        if (!file.is_open()) {
+            throw std::invalid_argument("Could not open file.");
+        }
+
+        std::string password;
+        while (std::getline(file, password)) {
+            if (password == pwd) return true;
+        }
+        return false;
+    }
+
     Party id;
-    size_t n_bits;
+    std::string passwords_file;
     size_t n_clients;
+    size_t n_bits;
     std::vector<ASecureSocket::SSLSocket> clients;
     std::unique_ptr<CTCPSSLServer> m_pSSLTCPServer;
 };

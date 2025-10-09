@@ -34,14 +34,14 @@ class InputClient {
     void send_graph(Graph &g, size_t start) {
         Packet pkt;
         pkt.start = start;
-        pkt.end = start + g.size();
+        pkt.end = start + g.size;
         pkt.entries = g.serialize(n_bits);
 
         if (connected) {
             size_t password_size = password.size();
             send(password_size);
             send(password);
-            auto n_vertices = g.n_vertices();
+            auto n_vertices = g.n_vertices;
             send(n_vertices);
             send_packet(pkt);
             std::cout << "Graph sent successfully." << std::endl;

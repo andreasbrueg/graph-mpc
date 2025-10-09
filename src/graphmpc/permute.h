@@ -14,26 +14,24 @@ class Permute : public Function {
     void evaluate_send() override {}
 
     void evaluate_recv() override {
-        Permutation apply;
+        std::vector<Ring> result(size);
         if (inverse) {
             std::vector<Ring> inverse_vec(perm->size());
-#pragma omp parallel for if (perm->size() > 10000)
+            // #pragma omp parallel for if (size > 10000)
             for (size_t i = 0; i < perm->size(); ++i) {
                 inverse_vec[perm->at(i)] = i;
             }
-#pragma omp parallel for if (inverse_vec.size() > 10000)
+            // #pragma omp parallel for if (inverse_vec.size() > 10000)
             for (size_t i = 0; i < inverse_vec.size(); ++i) {
-                output->at(inverse_vec[i]) = input->at(i);
+                result[inverse_vec[i]] = input->at(i);
             }
         } else {
-#pragma omp parallel for if (perm->size() > 10000)
+            // #pragma omp parallel for if (size > 10000)
             for (size_t i = 0; i < perm->size(); ++i) {
-                output->at(perm->at(i)) = input->at(i);
+                result[perm->at(i)] = input->at(i);
             }
         }
-        //   apply = *perm;
-
-        //*output = apply(*input);
+        *output = result;
     }
 
    private:

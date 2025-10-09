@@ -79,10 +79,10 @@ class TestPiK : public Test {
         if (id != D) {
             result.print();
 
-            assert(result._data[0] == 20510023);  // 2 of length 1, 5 of length 2, 10 of length 3, 23 of length 4
-            assert(result._data[1] == 30513025);  // 3 of length 1, 5 of length 2, 13 of length 3, 25 of length 4
-            assert(result._data[2] == 20510023);  // 2 of length 1, 5 of length 2, 10 of length 3, 23 of length 4
-            assert(result._data[3] == 10305013);  // 1 of length 1, 3 of length 2,  5 of length 3, 13 of length 4
+            assert(result.data[0] == 20510023);  // 2 of length 1, 5 of length 2, 10 of length 3, 23 of length 4
+            assert(result.data[1] == 30513025);  // 3 of length 1, 5 of length 2, 13 of length 3, 25 of length 4
+            assert(result.data[2] == 20510023);  // 2 of length 1, 5 of length 2, 10 of length 3, 23 of length 4
+            assert(result.data[3] == 10305013);  // 1 of length 1, 3 of length 2,  5 of length 3, 13 of length 4
         }
     }
 };

@@ -9,7 +9,7 @@ class Mul : public Function {
         : Function(conf, preproc_vals, online_vals, input1, input2, output), recv(recv), binary(binary) {}
 
     Mul(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input1,
-        std::vector<Ring> *input2, std::vector<Ring> *output, Party &recv, bool binary, size_t &size)
+        std::vector<Ring> *input2, std::vector<Ring> *output, Party &recv, bool binary, size_t size)
         : Function(conf, preproc_vals, online_vals, input1, input2, output, size), recv(recv), binary(binary) {}
 
     void preprocess() override {
@@ -44,9 +44,7 @@ class Mul : public Function {
     }
 
     void evaluate_send() override {
-        if (id == D) return;
-
-#pragma omp parallel for if (size > 10000)
+        // #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
             auto [a, b, _] = triples[i];
             Ring xa, yb;
@@ -63,18 +61,21 @@ class Mul : public Function {
     }
 
     void evaluate_recv() override {
-#pragma omp parallel for if (size > 10000)
+        auto data_recv = read_online(2 * size);
+        std::vector<Ring> result(size);
+        // #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
             auto [a, b, mul] = triples[i];
 
-            auto xa = online_vals->at(2 * i);
-            auto yb = online_vals->at(2 * i + 1);
+            auto xa = data_recv[2 * i];
+            auto yb = data_recv[2 * i + 1];
 
             if (binary)
-                output->at(i) = (xa & yb) * (id) ^ xa & b ^ yb & a ^ mul;
+                result[i] = (xa & yb) * (id) ^ xa & b ^ yb & a ^ mul;
             else
-                output->at(i) = (xa * yb * (id)) - (xa * b) - (yb * a) + mul;
+                result[i] = (xa * yb * (id)) - (xa * b) - (yb * a) + mul;
         }
+        *output = result;
     }
 
    protected:

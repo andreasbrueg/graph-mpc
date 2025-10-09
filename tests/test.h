@@ -81,7 +81,8 @@ class Test {
         }
         std::cout << std::endl;
 
-        auto result = g.reveal(id, network);
+        auto result = prot->get_output();
+        result = result.reveal(id, network);
         run_assertions(result);
     }
 

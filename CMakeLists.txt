@@ -9,6 +9,7 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
+#set(CMAKE_CXX_FLAGS_DEBUG "-fsanitize=address")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
@@ -52,4 +53,4 @@ enable_testing()
 
 add_subdirectory(src)
 add_subdirectory(tests)
-#add_subdirectory(benchmarks)
+add_subdirectory(benchmarks)

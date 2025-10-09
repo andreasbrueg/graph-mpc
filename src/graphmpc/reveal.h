@@ -9,14 +9,7 @@ class Reveal : public Function {
 
     void preprocess() override {}
 
-    void evaluate_send() override {}
+    void evaluate_send() override { online_vals->insert(online_vals->end(), input->begin(), input->end()); }
 
-    void evaluate_recv() override {
-        auto share_other = read_online(size);
-        std::vector<Ring> result(size);
-        for (size_t i = 0; i < size; ++i) {
-            result[i] = share_other[i] + input->at(i);
-        }
-        *output = result;
-    }
+    void evaluate_recv() override { *output = read_online(size); }
 };

@@ -29,6 +29,8 @@ class Permutation {
 
     Permutation(std::vector<Ring> _perm_vec) : perm_vec(_perm_vec) {};
 
+    std::vector<Ring> perm_vec;
+
     [[nodiscard]] static Permutation random(int n_rows, emp::PRG &rng) {
         Permutation p = Permutation(n_rows);
         for (int i = 0; i < n_rows; ++i) {
@@ -147,7 +149,4 @@ class Permutation {
         }
         std::cout << perm_vec[perm_vec.size() - 1] << "}" << std::endl;
     }
-
-   private:
-    std::vector<Ring> perm_vec;
 };

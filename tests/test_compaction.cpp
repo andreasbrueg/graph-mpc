@@ -1,9 +1,7 @@
 #include <algorithm>
 #include <cassert>
 
-#include "../src/graphmpc/shuffle.h"
-#include "../src/graphmpc/shuffle_repeat.h"
-#include "../src/graphmpc/unshuffle.h"
+#include "../src/graphmpc/compaction.h"
 #include "../src/setup/cmdline.h"
 #include "../src/utils/sharing.h"
 
@@ -21,17 +19,13 @@ void test_shuffle(bpo::variables_map &opts) {
     preproc[P0] = {};
     preproc[P1] = {};
 
-    std::vector<Ring> test_vector = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<Ring> test_vector = {0, 1, 1, 0, 1, 0, 0, 1, 0, 1};
     auto test_vector_shared = share::random_share_secret_vec_2P(id, conf.rngs, test_vector);
-    std::vector<Ring> shuffled_vector(10);
-    std::vector<Ring> repeat_vector(10);
-    std::vector<Ring> unshuffle_vector(10);
+    std::vector<Ring> sorted_vector1(10);
+    std::vector<Ring> sorted_vector2(10);
 
-    ShufflePre current_shuffle;
-    Shuffle shuffle(&conf, &preproc, &online_vals, &test_vector_shared, &shuffled_vector, recv, &current_shuffle);
-
-    ShuffleRepeat repeat(&conf, &preproc, &online_vals, &test_vector_shared, &repeat_vector, &current_shuffle, recv);
-    Unshuffle unshuffle(&conf, &preproc, &online_vals, &shuffled_vector, &unshuffle_vector, &current_shuffle, recv);
+    Compaction compaction1(&conf, &preproc, &online_vals, &test_vector_shared, &sorted_vector1, recv);
+    Compaction compaction2(&conf, &preproc, &online_vals, &test_vector_shared, &sorted_vector2, recv);
 
     if (id != D) {
         size_t n_recv;
@@ -39,9 +33,8 @@ void test_shuffle(bpo::variables_map &opts) {
         std::cout << "Receiving " << n_recv << " preprocessing values." << std::endl;
         network->recv_vec(D, n_recv, preproc.at(id));
     }
-    shuffle.preprocess();
-    repeat.preprocess();
-    unshuffle.preprocess();
+    compaction1.preprocess();
+    compaction2.preprocess();
     if (id == D) {
         for (auto &party : {P0, P1}) {
             auto &data_send = preproc.at(party);
@@ -53,42 +46,41 @@ void test_shuffle(bpo::variables_map &opts) {
         return;
     }
 
-    shuffle.evaluate_send();
-    repeat.evaluate_send();
+    compaction1.evaluate_send();
     size_t n_send = 20;
     size_t n_recv = 20;
+    std::vector<Ring> data_recv(n_recv);
     if (id == P0) {
         network->send_vec(P1, n_send, online_vals);
-        network->recv_vec(P1, n_recv, online_vals);
+        network->recv_vec(P1, n_recv, data_recv);
     } else {
-        std::vector<Ring> data_recv(n_recv);
         network->recv_vec(P0, n_recv, data_recv);
         network->send_vec(P0, n_send, online_vals);
-        online_vals = data_recv;
     }
-    shuffle.evaluate_recv();
-    repeat.evaluate_recv();
+    for (size_t i = 0; i < n_recv; ++i) {
+        online_vals[i] += data_recv[i];
+    }
+    compaction1.evaluate_recv();
 
-    unshuffle.evaluate_send();
-    n_send = 10;
-    n_recv = 10;
+    compaction2.evaluate_send();
     if (id == P0) {
         network->send_vec(P1, n_send, online_vals);
-        network->recv_vec(P1, n_recv, online_vals);
+        network->recv_vec(P1, n_recv, data_recv);
     } else {
-        std::vector<Ring> data_recv(n_recv);
         network->recv_vec(P0, n_recv, data_recv);
         network->send_vec(P0, n_send, online_vals);
-        online_vals = data_recv;
     }
-    unshuffle.evaluate_recv();
+    for (size_t i = 0; i < n_recv; ++i) {
+        online_vals[i] += data_recv[i];
+    }
+    compaction2.evaluate_recv();
 
-    auto result = share::reveal_vec(id, network, shuffled_vector);
-    auto result1 = share::reveal_vec(id, network, repeat_vector);
-    auto result2 = share::reveal_vec(id, network, unshuffle_vector);
-    setup::print_vec(result);
+    auto result1 = share::reveal_vec(id, network, sorted_vector1);
+    auto result2 = share::reveal_vec(id, network, sorted_vector2);
     setup::print_vec(result1);
     setup::print_vec(result2);
+    std::vector<Ring> expected_result({0, 5, 6, 1, 7, 2, 3, 8, 4, 9});
+    assert(result1 == expected_result);
 }
 
 int main(int argc, char **argv) {

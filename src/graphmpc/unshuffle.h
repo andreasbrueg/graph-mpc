@@ -1,12 +1,12 @@
 #pragma once
 
-#include "function.h"
+#include "shuffle.h"
 
-class Unshuffle : public Function {
+class Unshuffle : public Shuffle {
    public:
     Unshuffle(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-              std::vector<Ring> *output, ShufflePre &perm_share, Party &recv)
-        : Function(conf, preproc_vals, online_vals, input, output), perm_share(perm_share), recv(recv) {}
+              std::vector<Ring> *output, std::shared_ptr<ShufflePre> perm_share, Party &recv)
+        : Shuffle(conf, preproc_vals, online_vals, input, output, recv, perm_share) {}
 
     void preprocess() override {
         std::vector<Ring> B_0(size);
@@ -32,7 +32,7 @@ class Unshuffle : public Function {
                 Ring R;
                 rngs->rng_self().random_data(&R, sizeof(Ring));
 
-                Permutation pi_inv = (perm_share.pi_0 * perm_share.pi_1).inverse();
+                Permutation pi_inv = (perm_share->pi_0 * perm_share->pi_1).inverse();
 
                 B_0 = pi_inv(R_1);
                 B_1 = pi_inv(R_0);
@@ -87,7 +87,7 @@ class Unshuffle : public Function {
 #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) vec_t[i] = input->at(i) + R[i];
 
-        Permutation perm = id == P0 ? perm_share.pi_0 : perm_share.pi_1_p;
+        Permutation perm = id == P0 ? perm_share->pi_0 : perm_share->pi_1_p;
         vec_t = perm.inverse()(vec_t);
 
         online_vals->insert(online_vals->end(), vec_t.begin(), vec_t.end());
@@ -95,8 +95,8 @@ class Unshuffle : public Function {
 
     void evaluate_recv() override {
         Permutation perm;
-        perm = id == P0 ? perm_share.pi_0_p : perm_share.pi_1;
-        std::vector<Ring> vec_t = *input;
+        perm = id == P0 ? perm_share->pi_0_p : perm_share->pi_1;
+        std::vector<Ring> vec_t = read_online(size);
 
         /* Apply inverse */
         std::vector<Ring> output_share = perm.inverse()(vec_t);
@@ -104,14 +104,11 @@ class Unshuffle : public Function {
         /* Last step: subtract B_0 / B_1 */
 #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) output_share[i] -= unshuffle[i];
+
         *output = output_share;
     }
 
    protected:
-    Party &recv;
-
-    ShufflePre perm_share;
     std::vector<Ring> unshuffle;
-    FileWriter *shuffles_disk;
     FileWriter *unshuffles_disk;
 };

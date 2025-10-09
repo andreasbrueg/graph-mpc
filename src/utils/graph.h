@@ -14,68 +14,68 @@ class Graph {
     Graph() = default;
 
     Graph(std::vector<Ring> &src, std::vector<Ring> &dst, std::vector<Ring> &isV, std::vector<Ring> &data)
-        : _src(src), _dst(dst), _isV(isV), _data(data), is_shared(false) {
+        : src(src), dst(dst), isV(isV), data(data), is_shared(false) {
         assert(src.size() == dst.size());
         assert(dst.size() == isV.size());
         assert(isV.size() == data.size());
 
-        _size = src.size();
+        size = src.size();
 
         for (size_t i = 0; i < isV.size(); ++i)
-            if (isV[i]) _n_vertices++;
+            if (isV[i]) n_vertices++;
     }
 
     Graph(std::vector<Ring> &src, std::vector<Ring> &dst, std::vector<Ring> &isV, std::vector<Ring> &data, size_t n_vertices)
-        : _src(src), _dst(dst), _isV(isV), _data(data), _n_vertices(n_vertices), is_shared(true) {
+        : src(src), dst(dst), isV(isV), data(data), n_vertices(n_vertices), is_shared(true) {
         assert(src.size() == dst.size());
         assert(dst.size() == isV.size());
         assert(isV.size() == data.size());
 
-        _size = src.size();
+        size = src.size();
     }
 
     Graph(std::vector<Ring> &src, std::vector<Ring> &dst, std::vector<Ring> &isV, std::vector<Ring> &data, std::vector<std::vector<Ring>> &src_bits,
           std::vector<std::vector<Ring>> &dst_bits, size_t n_vertices)
-        : _src(src), _dst(dst), _isV(isV), _data(data), _src_bits(src_bits), _dst_bits(dst_bits), _n_vertices(n_vertices), is_shared(true) {
-        assert(_src.size() == _dst.size());
-        assert(_dst.size() == _isV.size());
-        assert(_isV.size() == _data.size());
-        assert(_src_bits.size() == _dst_bits.size());
+        : src(src), dst(dst), isV(isV), data(data), src_bits(src_bits), dst_bits(dst_bits), n_vertices(n_vertices), is_shared(true) {
+        assert(src.size() == dst.size());
+        assert(dst.size() == isV.size());
+        assert(isV.size() == data.size());
+        assert(src_bits.size() == dst_bits.size());
 
-        _size = _src.size();
+        size = src.size();
     }
+
+    std::vector<Ring> src;
+    std::vector<Ring> dst;
+    std::vector<Ring> isV;
+    bool is_shared = false;
+
+    /* Specifically for Message-Passing */
+    std::vector<std::vector<Ring>> src_bits;
+    std::vector<std::vector<Ring>> dst_bits;
 
     std::vector<std::vector<Ring>> src_order_bits;
     std::vector<std::vector<Ring>> dst_order_bits;
     std::vector<Ring> isV_inv;
-    std::vector<Ring> _data;
-    size_t _size = 0;
-    size_t _n_vertices = 0;
+    std::vector<Ring> data;
+    size_t size = 0;
+    size_t n_vertices = 0;
 
-    std::vector<Ring> &src() { return _src; }
-    std::vector<Ring> &dst() { return _dst; }
-    std::vector<Ring> &isV() { return _isV; }
-    std::vector<Ring> &data() { return _data; }
-    size_t size() { return _size; }
-    size_t n_vertices() { return _n_vertices; }
-    std::vector<std::vector<Ring>> src_bits() { return _src_bits; }
-    std::vector<std::vector<Ring>> dst_bits() { return _dst_bits; }
+    void add_list_entry(Ring _src, Ring _dst, Ring _isV, Ring _data) {
+        src.push_back(_src);
+        dst.push_back(_dst);
+        isV.push_back(_isV);
+        data.push_back(_data);
+        size++;
 
-    void add_list_entry(Ring src, Ring dst, Ring isV, Ring data) {
-        _src.push_back(src);
-        _dst.push_back(dst);
-        _isV.push_back(isV);
-        _data.push_back(data);
-        _size++;
-
-        if (isV) _n_vertices++;
+        if (_isV) n_vertices++;
     }
 
     void add_list_entry(Ring src, Ring dst, Ring isV) { add_list_entry(src, dst, isV, 0); }
 
     void print() {
-        for (size_t i = 0; i < _size; ++i) {
-            std::cout << _src[i] << " " << _dst[i] << " " << _isV[i] << " " << _data[i] << std::endl;
+        for (size_t i = 0; i < size; ++i) {
+            std::cout << src[i] << " " << dst[i] << " " << isV[i] << " " << data[i] << std::endl;
         }
         std::cout << std::endl;
     }
@@ -107,34 +107,34 @@ class Graph {
         std::vector<Ring> data_0, data_1;
 
         /* Secret share src */
-        for (size_t i = 0; i < _size; ++i) {
+        for (size_t i = 0; i < size; ++i) {
             Ring r;
             rng.random_data(&r, sizeof(Ring));
             src_0.push_back(r);
-            src_1.push_back(_src[i] - r);
+            src_1.push_back(src[i] - r);
         }
-        for (size_t i = 0; i < _size; ++i) {
+        for (size_t i = 0; i < size; ++i) {
             Ring r;
             rng.random_data(&r, sizeof(Ring));
             dst_0.push_back(r);
-            dst_1.push_back(_dst[i] - r);
+            dst_1.push_back(dst[i] - r);
         }
-        for (size_t i = 0; i < _size; ++i) {
+        for (size_t i = 0; i < size; ++i) {
             Ring r;
             rng.random_data(&r, sizeof(Ring));
             isV_0.push_back(r);
-            isV_1.push_back(_isV[i] - r);
+            isV_1.push_back(isV[i] - r);
         }
-        for (size_t i = 0; i < _size; ++i) {
+        for (size_t i = 0; i < size; ++i) {
             Ring r;
             rng.random_data(&r, sizeof(Ring));
             data_0.push_back(r);
-            data_1.push_back(_data[i] - r);
+            data_1.push_back(data[i] - r);
         }
 
         std::vector<std::vector<Ring>> src_bits_0, src_bits_1, dst_bits_0, dst_bits_1;
-        auto src_bits = to_bits(_src, n_bits);
-        auto dst_bits = to_bits(_dst, n_bits);
+        auto src_bits = to_bits(src, n_bits);
+        auto dst_bits = to_bits(dst, n_bits);
 
         src_bits_0.resize(n_bits);
         src_bits_1.resize(n_bits);
@@ -142,7 +142,7 @@ class Graph {
         dst_bits_1.resize(n_bits);
 
         for (size_t i = 0; i < n_bits; ++i) {
-            for (size_t j = 0; j < _size; ++j) {
+            for (size_t j = 0; j < size; ++j) {
                 Ring r;
                 rng.random_data(&r, sizeof(Ring));
                 src_bits_0[i].push_back(r);
@@ -151,7 +151,7 @@ class Graph {
         }
 
         for (size_t i = 0; i < n_bits; ++i) {
-            for (size_t j = 0; j < _size; ++j) {
+            for (size_t j = 0; j < size; ++j) {
                 Ring r;
                 rng.random_data(&r, sizeof(Ring));
                 dst_bits_0[i].push_back(r);
@@ -159,7 +159,7 @@ class Graph {
             }
         }
 
-        return {{src_0, dst_0, isV_0, data_0, src_bits_0, dst_bits_0, _n_vertices}, {src_1, dst_1, isV_1, data_1, src_bits_1, dst_bits_1, _n_vertices}};
+        return {{src_0, dst_0, isV_0, data_0, src_bits_0, dst_bits_0, n_vertices}, {src_1, dst_1, isV_1, data_1, src_bits_1, dst_bits_1, n_vertices}};
     }
 
     Graph secret_share_parties(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n_bits, Party sender) {
@@ -167,66 +167,66 @@ class Graph {
             return {};
         }
 
-        std::vector<Ring> src;
-        std::vector<Ring> dst;
-        std::vector<Ring> isV;
-        std::vector<Ring> data;
-        size_t size;
-        size_t n_vertices;
+        std::vector<Ring> _src;
+        std::vector<Ring> _dst;
+        std::vector<Ring> _isV;
+        std::vector<Ring> _data;
+        size_t _size;
+        size_t _n_vertices;
 
-        std::vector<std::vector<Ring>> src_bits(n_bits);
-        std::vector<std::vector<Ring>> dst_bits(n_bits);
+        std::vector<std::vector<Ring>> _src_bits(n_bits);
+        std::vector<std::vector<Ring>> _dst_bits(n_bits);
 
         Party partner = (id == P0) ? P1 : P0;
         if (id == sender) {
-            src = _src;
-            dst = _dst;
-            isV = _isV;
-            data = _data;
-            size = _size;
-            n_vertices = _n_vertices;
-            network->send(partner, &size, sizeof(size_t));
-            network->send(partner, &n_vertices, sizeof(size_t));
-            src_bits = to_bits(src, n_bits);
-            dst_bits = to_bits(dst, n_bits);
+            _src = src;
+            _dst = dst;
+            _isV = isV;
+            _data = data;
+            _size = size;
+            _n_vertices = n_vertices;
+            network->send(partner, &_size, sizeof(size_t));
+            network->send(partner, &_n_vertices, sizeof(size_t));
+            _src_bits = to_bits(_src, n_bits);
+            _dst_bits = to_bits(_dst, n_bits);
         } else {
-            network->recv(partner, &size, sizeof(size_t));
-            network->recv(partner, &n_vertices, sizeof(size_t));
+            network->recv(partner, &_size, sizeof(size_t));
+            network->recv(partner, &_n_vertices, sizeof(size_t));
 
-            src.resize(size);
-            dst.resize(size);
-            isV.resize(size);
-            data.resize(size);
+            _src.resize(_size);
+            _dst.resize(_size);
+            _isV.resize(_size);
+            _data.resize(_size);
 
             for (size_t i = 0; i < n_bits; ++i) {
-                src_bits[i].resize(size);
-                dst_bits[i].resize(size);
+                _src_bits[i].resize(_size);
+                _dst_bits[i].resize(_size);
             }
         }
 
         std::vector<std::vector<Ring>> src_bits_shared(n_bits);
         std::vector<std::vector<Ring>> dst_bits_shared(n_bits);
-        std::vector<Ring> src_shared(size);
-        std::vector<Ring> dst_shared(size);
-        std::vector<Ring> isV_shared(size);
-        std::vector<Ring> data_shared(size);
+        std::vector<Ring> src_shared(_size);
+        std::vector<Ring> dst_shared(_size);
+        std::vector<Ring> isV_shared(_size);
+        std::vector<Ring> data_shared(_size);
 
         for (size_t i = 0; i < n_bits; ++i) {
-            src_bits_shared[i].resize(size);
-            dst_bits_shared[i].resize(size);
+            src_bits_shared[i].resize(_size);
+            dst_bits_shared[i].resize(_size);
         }
 
         for (size_t i = 0; i < n_bits; ++i) {
-            src_bits_shared[i] = share::random_share_secret_vec_2P(id, rngs, src_bits[i], sender);
-            dst_bits_shared[i] = share::random_share_secret_vec_2P(id, rngs, dst_bits[i], sender);
+            src_bits_shared[i] = share::random_share_secret_vec_2P(id, rngs, _src_bits[i], sender);
+            dst_bits_shared[i] = share::random_share_secret_vec_2P(id, rngs, _dst_bits[i], sender);
         }
 
-        src_shared = share::random_share_secret_vec_2P(id, rngs, src, sender);
-        dst_shared = share::random_share_secret_vec_2P(id, rngs, dst, sender);
-        isV_shared = share::random_share_secret_vec_2P(id, rngs, isV, sender);
-        data_shared = share::random_share_secret_vec_2P(id, rngs, data, sender);
+        src_shared = share::random_share_secret_vec_2P(id, rngs, _src, sender);
+        dst_shared = share::random_share_secret_vec_2P(id, rngs, _dst, sender);
+        isV_shared = share::random_share_secret_vec_2P(id, rngs, _isV, sender);
+        data_shared = share::random_share_secret_vec_2P(id, rngs, _data, sender);
 
-        return {src_shared, dst_shared, isV_shared, data_shared, src_bits_shared, dst_bits_shared, n_vertices};
+        return {src_shared, dst_shared, isV_shared, data_shared, src_bits_shared, dst_bits_shared, _n_vertices};
     }
 
     Graph share_subgraphs(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n_bits) {
@@ -250,13 +250,13 @@ class Graph {
     Graph reveal(Party id, std::shared_ptr<io::NetIOMP> network) {
         if (id == D) return {};
 
-        std::vector<Ring> src_revealed = share::reveal_vec(id, network, _src);
-        std::vector<Ring> dst_revealed = share::reveal_vec(id, network, _dst);
-        std::vector<Ring> isV_revealed = share::reveal_vec(id, network, _isV);
-        std::vector<Ring> data_revealed = share::reveal_vec(id, network, _data);
+        std::vector<Ring> src_revealed = share::reveal_vec(id, network, src);
+        std::vector<Ring> dst_revealed = share::reveal_vec(id, network, dst);
+        std::vector<Ring> isV_revealed = share::reveal_vec(id, network, isV);
+        std::vector<Ring> data_revealed = share::reveal_vec(id, network, data);
 
         Graph revealed(src_revealed, dst_revealed, isV_revealed, data_revealed);
-        revealed._n_vertices = _n_vertices;
+        revealed.n_vertices = n_vertices;
 
         return revealed;
     }
@@ -265,69 +265,69 @@ class Graph {
         if (is_shared ^ other.is_shared) throw new std::logic_error("Cannot concatenate a shared graph with a non-shared graph.");
 
         Graph g;
-        if (other._size <= 0) return g;
-        if (_size <= 0) return other;
+        if (other.size <= 0) return g;
+        if (size <= 0) return other;
         g.is_shared = is_shared;
 
-        size_t n_bits = _src_bits.size();
-        assert(other._src_bits.size() == n_bits);
-        assert(other._dst_bits.size() == n_bits);
+        size_t n_bits = src_bits.size();
+        assert(other.src_bits.size() == n_bits);
+        assert(other.dst_bits.size() == n_bits);
 
-        g._src_bits.resize(n_bits);
-        g._dst_bits.resize(n_bits);
+        g.src_bits.resize(n_bits);
+        g.dst_bits.resize(n_bits);
 
-        g._size = _size + other._size;
-        g._n_vertices = _n_vertices + other._n_vertices;
+        g.size = size + other.size;
+        g.n_vertices = n_vertices + other.n_vertices;
 
         /* Add values of this graph */
         for (size_t i = 0; i < n_bits; ++i) {
-            for (size_t j = 0; j < _size; ++j) {
-                g._src_bits[i].push_back(_src_bits[i][j]);
-                g._dst_bits[i].push_back(_dst_bits[i][j]);
+            for (size_t j = 0; j < size; ++j) {
+                g.src_bits[i].push_back(src_bits[i][j]);
+                g.dst_bits[i].push_back(dst_bits[i][j]);
             }
         }
         /* Add values of other graph*/
         for (size_t i = 0; i < n_bits; ++i) {
-            for (size_t j = 0; j < other._size; ++j) {
-                g._src_bits[i].push_back(other._src_bits[i][j]);
-                g._dst_bits[i].push_back(other._dst_bits[i][j]);
+            for (size_t j = 0; j < other.size; ++j) {
+                g.src_bits[i].push_back(other.src_bits[i][j]);
+                g.dst_bits[i].push_back(other.dst_bits[i][j]);
             }
         }
 
-        for (size_t i = 0; i < _size; ++i) {
-            g._src.push_back(_src[i]);
-            g._dst.push_back(_dst[i]);
-            g._isV.push_back(_isV[i]);
-            g._data.push_back(_data[i]);
+        for (size_t i = 0; i < size; ++i) {
+            g.src.push_back(src[i]);
+            g.dst.push_back(dst[i]);
+            g.isV.push_back(isV[i]);
+            g.data.push_back(data[i]);
         }
 
-        for (size_t i = 0; i < other._size; ++i) {
-            g._src.push_back(other._src[i]);
-            g._dst.push_back(other._dst[i]);
-            g._isV.push_back(other._isV[i]);
-            g._data.push_back(other._data[i]);
+        for (size_t i = 0; i < other.size; ++i) {
+            g.src.push_back(other.src[i]);
+            g.dst.push_back(other.dst[i]);
+            g.isV.push_back(other.isV[i]);
+            g.data.push_back(other.data[i]);
         }
 
         return g;
     }
 
     std::vector<Ring> serialize(size_t n_bits = 32) {
-        std::vector<Ring> entries(4 * _size);
-        for (size_t i = 0; i < _size; ++i) {
-            entries[i * 4 + 0] = _src[i];
-            entries[i * 4 + 1] = _dst[i];
-            entries[i * 4 + 2] = _isV[i];
-            entries[i * 4 + 3] = _data[i];
+        std::vector<Ring> entries(4 * size);
+        for (size_t i = 0; i < size; ++i) {
+            entries[i * 4 + 0] = src[i];
+            entries[i * 4 + 1] = dst[i];
+            entries[i * 4 + 2] = isV[i];
+            entries[i * 4 + 3] = data[i];
         }
 
         for (size_t i = 0; i < n_bits; ++i) {
-            for (size_t j = 0; j < _size; ++j) {
-                entries.push_back(_src_bits[i][j]);
+            for (size_t j = 0; j < size; ++j) {
+                entries.push_back(src_bits[i][j]);
             }
         }
         for (size_t i = 0; i < n_bits; ++i) {
-            for (size_t j = 0; j < _size; ++j) {
-                entries.push_back(_dst_bits[i][j]);
+            for (size_t j = 0; j < size; ++j) {
+                entries.push_back(dst_bits[i][j]);
             }
         }
         return entries;
@@ -335,30 +335,20 @@ class Graph {
 
     void init_mp(Party id) {
         /* Generate vector containing { 1-isV[0], 1-isV[1], ... 1-isV[n-1]} */
-        isV_inv.resize(_isV.size());
+        isV_inv.resize(isV.size());
         for (size_t i = 0; i < isV_inv.size(); ++i) {
-            isV_inv[i] = -_isV[i];
+            isV_inv[i] = -isV[i];
             if (id == P0) isV_inv[i] += 1;
         }
 
         /* Generate vector containing { 1-isV, src_bits[0], src_bits[1], ..., src_bits[n_bits - 1] } */
-        src_order_bits.resize(_src_bits.size() + 1);
-        std::copy(_src_bits.begin(), _src_bits.end(), src_order_bits.begin() + 1);
+        src_order_bits.resize(src_bits.size() + 2);  // +2 if deduplication happens (in order to fix pointer issues)
+        std::copy(src_bits.begin(), src_bits.end(), src_order_bits.begin() + 1);
         src_order_bits[0] = isV_inv;
 
         /* Generate vector containing { isV, dst_bits[0], dst_bits[1], ..., dst_bits[n_bits - 1] } */
-        dst_order_bits.resize(_dst_bits.size() + 1);
-        std::copy(_dst_bits.begin(), _dst_bits.end(), dst_order_bits.begin() + 1);
-        dst_order_bits[0] = _isV;
+        dst_order_bits.resize(dst_bits.size() + 2);  // +2 if deduplication happens (in order to fix pointer issues)
+        std::copy(dst_bits.begin(), dst_bits.end(), dst_order_bits.begin() + 1);
+        dst_order_bits[0] = isV;
     }
-
-   private:
-    std::vector<Ring> _src;
-    std::vector<Ring> _dst;
-    std::vector<Ring> _isV;
-    bool is_shared = false;
-
-    /* Specifically for Message-Passing */
-    std::vector<std::vector<Ring>> _src_bits;
-    std::vector<std::vector<Ring>> _dst_bits;
 };

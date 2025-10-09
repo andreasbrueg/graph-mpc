@@ -141,7 +141,10 @@ bpo::options_description setup::programOptionsTest() {
         "input,i", bpo::value<std::string>(), "File specifying the graph.")("clients", bpo::value<size_t>()->default_value(0),
                                                                             "Number of clients participating in input-sharing.")(
         "passwords", bpo::value<std::string>()->default_value(""), "Path to .txt file containing passwords used for authenticating clients.")(
-        "input-port", bpo::value<int>()->default_value(4242), "Port used for receiving input shares from clients.");
+        "input-port", bpo::value<int>()->default_value(4242), "Port used for receiving input shares from clients.")(
+        "size,s", bpo::value<size_t>()->default_value(10), "Number of graph entries.")(
+        "nodes", bpo::value<size_t>()->default_value(0), "Number of nodes for benchmarking graph algorithms")("depth,d", bpo::value<size_t>()->default_value(0),
+                                                                                                              "search depth parameter D");
 
     return desc;
 }

@@ -243,8 +243,7 @@ class NetIOMP {
             send(dst, data_send_i.data(), sizeof(Ring) * BLOCK_SIZE);
         }
 
-        std::vector<Ring> data_send_last;
-        data_send_last.resize(last_msg_size);
+        std::vector<Ring> data_send_last(last_msg_size);
         for (size_t j = 0; j < last_msg_size; j++) {
             data_send_last[j] = data[n_msgs * BLOCK_SIZE + j];
         }

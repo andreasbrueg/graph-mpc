@@ -20,6 +20,7 @@ class ShufflePre {
     Permutation pi_1_p;
     std::vector<Ring> B;
     std::vector<Ring> R;
+    bool preprocessed = false;
 };
 
 /**

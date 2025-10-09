@@ -1,64 +1,150 @@
+#include <algorithm>
 #include <cassert>
 
-#include "../setup/comm.h"
-#include "../setup/utils.h"
-#include "../src/graphmpc/clip.h"
-#include "../src/utils/random_generators.h"
+#include "../src/graphmpc/equals_zero.h"
+#include "../src/setup/cmdline.h"
 #include "../src/utils/sharing.h"
 
-void test_eqz(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file, Graph &g) {
-    json output_data;
-    auto network = std::make_shared<io::NetIOMP>(net_conf, true);
+void test_shuffle(bpo::variables_map &opts) {
+    std::cout << "--- Test EqualsZero ---" << std::endl;
 
-    std::cout << std::endl << "------ test_eqz ------" << std::endl;
+    Party id = (Party)opts["pid"].as<size_t>();
+    auto conf = setup::setupProtocol(opts);
+    auto network = setup::setupNetwork(opts);
+    auto rngs = setup::setupRNGs(opts);
 
-    std::vector<Ring> test_vec(n);
-    for (size_t i = 0; i < n; ++i) test_vec[i] = i;
-    auto test_vec_share = share::random_share_secret_vec_2P(id, rngs, test_vec);
+    Party recv = P0;
+    size_t size = 10;
+    std::unordered_map<Party, std::vector<Ring>> preproc;
+    std::vector<Ring> online_vals;
+    preproc[P0] = {};
+    preproc[P1] = {};
 
-    MPPreprocessing preproc;
-    Party recv = P1;
+    std::vector<Ring> test_vector = {0, 1, 1, 1, 1, 1, 1, 1, 1, 0};
+    auto test_vector_shared = share::random_share_secret_vec_2P(id, conf.rngs, test_vector);
+    std::vector<Ring> result(10);
 
-    if (id != D) network->recv_buffered(D);
-
-    clip::equals_zero_preprocess(id, rngs, network, n, preproc, recv, true);
-    clip::B2A_preprocess(id, rngs, network, n, preproc, recv, true);
-    if (id == D) network->send_all();
-
-    // network->sync();
-
-    auto res = clip::equals_zero_evaluate(id, rngs, network, preproc, test_vec_share, true);
-    res = clip::B2A_evaluate(id, rngs, network, n, preproc, res, true);
-
-    /* Correctness assertions */
-    auto result = share::reveal_vec(id, network, res);
+    EQZ eqz0(&conf, &preproc, &online_vals, &test_vector_shared, &result, recv, size, 0);
+    EQZ eqz1(&conf, &preproc, &online_vals, &result, &result, recv, size, 1);
+    EQZ eqz2(&conf, &preproc, &online_vals, &result, &result, recv, size, 2);
+    EQZ eqz3(&conf, &preproc, &online_vals, &result, &result, recv, size, 3);
+    EQZ eqz4(&conf, &preproc, &online_vals, &result, &result, recv, size, 4);
 
     if (id != D) {
-        std::cout << "Result of eqz: ";
-        setup::print_vec(result);
-
-        for (size_t i = 0; i < n; ++i) {
-            if (i == 0)
-                assert(result[i] == 1);
-            else
-                assert(result[i] == 0);
-        }
+        size_t n_recv;
+        network->recv(D, &n_recv, sizeof(size_t));
+        std::cout << "Receiving " << n_recv << " preprocessing values." << std::endl;
+        network->recv_vec(D, n_recv, preproc.at(id));
     }
+    eqz0.preprocess();
+    eqz1.preprocess();
+    eqz2.preprocess();
+    eqz3.preprocess();
+    eqz4.preprocess();
+    if (id == D) {
+        for (auto &party : {P0, P1}) {
+            auto &data_send = preproc.at(party);
+            size_t n_send = data_send.size();
+            std::cout << "Sending " << n_send << " preprocessing values." << std::endl;
+            network->send(party, &n_send, sizeof(size_t));
+            network->send_vec(party, n_send, data_send);
+        }
+        return;
+    }
+
+    /* EQZ Layer 1 */
+    eqz0.evaluate_send();
+    size_t n_send = 20;
+    size_t n_recv = 20;
+    std::vector<Ring> data_recv(n_recv);
+    if (id == P0) {
+        network->send_vec(P1, n_send, online_vals);
+        network->recv_vec(P1, n_recv, data_recv);
+    } else {
+        network->recv_vec(P0, n_recv, data_recv);
+        network->send_vec(P0, n_send, online_vals);
+    }
+    for (size_t i = 0; i < n_recv; ++i) {
+        online_vals[i] ^= data_recv[i];
+    }
+    eqz0.evaluate_recv();
+
+    /* EQZ Layer 1 */
+    eqz1.evaluate_send();
+    if (id == P0) {
+        network->send_vec(P1, n_send, online_vals);
+        network->recv_vec(P1, n_recv, data_recv);
+    } else {
+        network->recv_vec(P0, n_recv, data_recv);
+        network->send_vec(P0, n_send, online_vals);
+    }
+    for (size_t i = 0; i < n_recv; ++i) {
+        online_vals[i] ^= data_recv[i];
+    }
+    eqz1.evaluate_recv();
+
+    /* EQZ Layer 2 */
+    eqz2.evaluate_send();
+    if (id == P0) {
+        network->send_vec(P1, n_send, online_vals);
+        network->recv_vec(P1, n_recv, data_recv);
+    } else {
+        network->recv_vec(P0, n_recv, data_recv);
+        network->send_vec(P0, n_send, online_vals);
+    }
+    for (size_t i = 0; i < n_recv; ++i) {
+        online_vals[i] ^= data_recv[i];
+    }
+    eqz2.evaluate_recv();
+
+    /* EQZ Layer 3 */
+    eqz3.evaluate_send();
+    if (id == P0) {
+        network->send_vec(P1, n_send, online_vals);
+        network->recv_vec(P1, n_recv, data_recv);
+    } else {
+        network->recv_vec(P0, n_recv, data_recv);
+        network->send_vec(P0, n_send, online_vals);
+    }
+    for (size_t i = 0; i < n_recv; ++i) {
+        online_vals[i] ^= data_recv[i];
+    }
+    eqz3.evaluate_recv();
+
+    /* EQZ Layer 4 */
+    eqz4.evaluate_send();
+    if (id == P0) {
+        network->send_vec(P1, n_send, online_vals);
+        network->recv_vec(P1, n_recv, data_recv);
+    } else {
+        network->recv_vec(P0, n_recv, data_recv);
+        network->send_vec(P0, n_send, online_vals);
+    }
+    for (size_t i = 0; i < n_recv; ++i) {
+        online_vals[i] ^= data_recv[i];
+    }
+    eqz4.evaluate_recv();
+
+    /* Assertions */
+    auto result1 = share::reveal_vec_bin(id, network, result);
+    setup::print_vec(result1);
+
+    std::vector<Ring> expected_result({1, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+    assert(result1 == expected_result);
 }
 
 int main(int argc, char **argv) {
-    auto prog_opts(setup::programOptions());
+    auto prog_opts(setup::programOptionsTest());
 
-    bpo::options_description cmdline("Benchmark a simple test for shuffling and unshuffling");
+    bpo::options_description cmdline("Test for the secure computation of the Reach Score.");
     cmdline.add(prog_opts);
-
     cmdline.add_options()("config,c", bpo::value<std::string>(), "configuration file for easy specification of cmd line arguments")("help,h",
                                                                                                                                     "produce help message");
 
     bpo::variables_map opts = setup::parseOptions(cmdline, prog_opts, argc, argv);
 
     try {
-        setup::run_test(opts, test_eqz);
+        test_shuffle(opts);
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\nFatal error" << std::endl;
         return 1;

@@ -4,20 +4,26 @@
 
 class Propagate_1 : public Function {
    public:
-    Propagate_1(ProtocolConfig *conf, std::vector<Ring> *input, std::vector<Ring> *output) : Function(conf, {}, {}, input, output) {}
+    Propagate_1(ProtocolConfig *conf, std::vector<Ring> *input, std::vector<Ring> *output) : Function(conf, {}, {}, input, output), nodes(conf->nodes) {}
 
     void preprocess() override {}
 
     void evaluate_send() override {}
 
     void evaluate_recv() override {
-        auto share_other = read_online(size);
-        std::vector<Ring> result(size);
-        for (size_t i = 0; i < size; ++i) {
-            result[i] = share_other[i] + input->at(i);
+        std::vector<Ring> data(input->size());
+        for (size_t i = nodes - 1; i > 0; --i) {
+            data[i] = input->at(i) - input->at(i - 1);
         }
-        *output = result;
+        data[0] = input->at(0);
+        for (size_t i = nodes; i < data.size(); ++i) {
+            data[i] = input->at(i);
+        }
+        *output = data;
     }
+
+   private:
+    size_t nodes;
 };
 
 class Propagate_2 : public Function {

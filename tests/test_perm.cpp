@@ -2,10 +2,11 @@
 #include <iostream>
 #include <numeric>
 
-#include "../setup/types.h"
 #include "../src/utils/permutation.h"
+#include "../src/utils/types.h"
 
-RandomGenerators rngs((uint64_t[4]){123456789, 123456789, 123456789, 123456789}, (uint64_t[4]){123456789, 123456789, 123456789, 123456789});
+RandomGenerators rngs(std::vector<uint64_t>({123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789}),
+                      std::vector<uint64_t>({123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789}));
 
 bool contains_duplicates(Permutation p) {
     for (int i = 0; i < p.size(); ++i) {
@@ -103,10 +104,21 @@ void test_observation_2_4() {
 
 int main(int argc, char **argv) {
     test_plausibility();
+    std::cout << "Passed plausibility." << std::endl;
+
     test_associativity();
+    std::cout << "Passed associativity." << std::endl;
+
     test_inverse();
+    std::cout << "Passed inverse." << std::endl;
+
     test_pi_1_p();
+    std::cout << "Passed pi_1_p." << std::endl;
+
     test_fact_2_3();
+    std::cout << "Passed fact_2_3." << std::endl;
+
     test_observation_2_4();
+    std::cout << "Passed observation_2_4." << std::endl;
     return 0;
 }

@@ -6,15 +6,17 @@ class Shuffle : public Function {
    public:
     Shuffle(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
             std::vector<Ring> *output, Party &recv)
-        : Function(conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd) {}
+        : Function(conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(std::make_shared<ShufflePre>()) {}
 
     Shuffle(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-            std::vector<Ring> *output, Party &recv, ShufflePre &perm_share)
+            std::vector<Ring> *output, Party &recv, std::shared_ptr<ShufflePre> perm_share)
         : Function(conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(perm_share) {}
 
-    ShufflePre perm_share;
+    std::shared_ptr<ShufflePre> perm_share;
 
     void preprocess() override {
+        if (perm_share->preprocessed) return;
+
         size_t P0_recv_size, P1_recv_size;
         /* Load balancing */
         if (recv == P1) {
@@ -69,8 +71,8 @@ class Shuffle : public Function {
                     pi_0_p = (pi_1_p_inv * pi_0 * pi_1);
                 }
 
-                perm_share.pi_0 = pi_0;
-                perm_share.pi_1 = pi_1;
+                perm_share->pi_0 = pi_0;
+                perm_share->pi_1 = pi_1;
 
                 for (size_t i = 0; i < size; ++i) {
                     if (recv == P1) {
@@ -84,15 +86,15 @@ class Shuffle : public Function {
                     }
                 }
 
-                /* Compute B_0, B_1 */
                 std::vector<Ring> B_0(size);
                 std::vector<Ring> B_1(size);
 
                 Ring R;
                 rngs->rng_self().random_data(&R, sizeof(Ring));
 
-                B_0 = (pi_0 * pi_1)(R_1);
-                B_1 = (pi_0 * pi_1)(R_0);
+                Permutation pi = perm_share->pi_0 * perm_share->pi_1;
+                B_0 = (pi)(R_1);
+                B_1 = (pi)(R_0);
 
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < B_0.size(); ++i) B_0[i] -= R;
@@ -123,7 +125,7 @@ class Shuffle : public Function {
                         perm_vec[i] = D0[D0_idx];
                         D0_idx++;
                     }
-                    perm_share.pi_0_p = Permutation(perm_vec);
+                    perm_share->pi_0_p = Permutation(perm_vec);
                 }
 
                 std::vector<Ring> B(size);
@@ -131,7 +133,7 @@ class Shuffle : public Function {
                     B[i] = D0[D0_idx];
                     D0_idx++;
                 }
-                perm_share.B = B;
+                perm_share->B = B;
                 break;
             }
             case P1: {
@@ -143,7 +145,7 @@ class Shuffle : public Function {
                         perm_vec[i] = D1[D1_idx];
                         D1_idx++;
                     }
-                    perm_share.pi_1_p = Permutation(perm_vec);
+                    perm_share->pi_1_p = Permutation(perm_vec);
                 }
 
                 std::vector<Ring> B(size);
@@ -151,25 +153,25 @@ class Shuffle : public Function {
                     B[i] = D1[D1_idx];
                     D1_idx++;
                 }
-                perm_share.B = B;
+                perm_share->B = B;
                 break;
             }
         }
 
         /* Alternate receiver of larger message */
         recv = recv == P0 ? P1 : P0;
+        perm_share->preprocessed = true;
     }
 
     void evaluate_send() override {
         if (id == D) return;
 
-        std::vector<Ring> vec_A(size);
+        std::vector<Ring> t(size);
         std::vector<Ring> R;
         Permutation perm;
 
-        if (perm_share.R.empty()) {
+        if (is_null(perm_share->R)) {
             Ring rand;
-
             /* Sampling 1: R_0 / R_1 */
             for (size_t i = 0; i < size; ++i) {
                 if (id == P0)
@@ -178,68 +180,67 @@ class Shuffle : public Function {
                     rngs->rng_D1().random_data(&rand, sizeof(Ring));
                 R.push_back(rand);
             }
-            perm_share.R = R;
+            perm_share->R = R;
         } else {
-            R = perm_share.R;
+            R = perm_share->R;
         }
 
         /* Sampling 2: pi_0_p / pi_1 */
         if (id == P0) {
             /* Reuse pi_0_p if saved earlier */
-            if (perm_share.pi_0_p.not_null()) {
-                perm = perm_share.pi_0_p;
+            if (perm_share->pi_0_p.not_null()) {
+                perm = perm_share->pi_0_p;
             } else {
                 perm = Permutation::random(size, rngs->rng_D0());
-                perm_share.pi_0_p = perm;
+                perm_share->pi_0_p = perm;
             }
         } else {
             /* Reuse pi_1 if saved earlier */
-            if (perm_share.pi_1.not_null()) {
-                perm = perm_share.pi_1;
+            if (perm_share->pi_1.not_null()) {
+                perm = perm_share->pi_1;
             } else {
                 perm = Permutation::random(size, rngs->rng_D1());
-                perm_share.pi_1 = perm;
+                perm_share->pi_1 = perm;
             }
         }
 
         /* Compute input + R */
 #pragma omp parallel for if (size > 10000)
         for (size_t j = 0; j < size; ++j) {
-            vec_A[j] = input->at(j) + R[j];
+            t[j] = input->at(j) + R[j];
         }
 
         /* Compute perm(input + R) */
-        vec_A = perm(vec_A);
+        t = perm(t);
 
-        online_vals->insert(online_vals->end(), vec_A.begin(), vec_A.end());
+        online_vals->insert(online_vals->end(), t.begin(), t.end());
     }
 
     void evaluate_recv() override {
         Permutation perm;
         if (id == P0) {
-            /* Sampling 3: pi_0 */
-            if (perm_share.pi_0.not_null()) {
-                perm = perm_share.pi_0;
+            if (perm_share->pi_0.not_null()) {
+                perm = perm_share->pi_0;
             } else {
                 perm = Permutation::random(size, rngs->rng_D0());
-                perm_share.pi_0 = perm;
+                perm_share->pi_0 = perm;
             }
         } else {
-            if (perm_share.pi_1_p.not_null()) {
-                perm = perm_share.pi_1_p;
+            if (perm_share->pi_1_p.not_null()) {
+                perm = perm_share->pi_1_p;
             } else {
                 perm = Permutation::random(size, rngs->rng_D1());
-                perm_share.pi_1_p = perm;
+                perm_share->pi_1_p = perm;
             }
         }
-        std::vector<Ring> vec_A(*input);
-        vec_A = perm(vec_A);  // vec_A!!
+        std::vector<Ring> t = read_online(size);  // t1
+        t = perm(t);
 
 #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
-            vec_A[i] -= perm_share.B[i];
+            t[i] -= perm_share->B[i];
         }
-        *output = vec_A;
+        *output = t;
     }
 
    protected:
@@ -248,4 +249,11 @@ class Shuffle : public Function {
 
     FileWriter *shuffles_disk;
     FileWriter *repeat_disk;
+
+    bool is_null(std::vector<Ring> &vec) {
+        for (auto &elem : vec) {
+            if (elem != 0) return false;
+        }
+        return true;
+    }
 };

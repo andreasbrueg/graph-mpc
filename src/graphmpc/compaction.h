@@ -6,7 +6,7 @@ class Compaction : public Mul {
    public:
     Compaction(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
                std::vector<Ring> *output, Party &recv)
-        : Mul(conf, preproc_vals, online_vals, input, input, output, recv, false) {}
+        : Mul(conf, preproc_vals, online_vals, input, {}, output, recv, false) {}
 
     void evaluate_send() override {
         if (id == D) return;
@@ -29,7 +29,12 @@ class Compaction : public Mul {
             s_0.push_back(s);
         }
 
-#pragma omp parallel for if (size > 10000)
+        for (size_t i = 0; i < size; ++i) {
+            s += input->at(i);
+            s_1.push_back(s - s_0[i]);
+        }
+
+        // #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
             auto [a, b, _] = triples[i];
             auto xa = input->at(i) + a;
@@ -41,6 +46,7 @@ class Compaction : public Mul {
     }
 
     void evaluate_recv() override {
+        std::vector<Ring> result(size);
         std::vector<Ring> f_0;
         // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
         for (size_t i = 0; i < size; ++i) {
@@ -58,14 +64,23 @@ class Compaction : public Mul {
             s_0.push_back(s);
         }
 
-#pragma omp parallel for if (size > 10000)
+        auto data_recv = read_online(2 * size);
+
+        // #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
             auto [a, b, mul] = triples[i];
 
-            auto xa = online_vals->at(2 * i);
-            auto yb = online_vals->at(2 * i + 1);
+            auto xa = data_recv[2 * i];
+            auto yb = data_recv[2 * i + 1];
 
-            output->at(i) = (xa * yb * (id)) - (xa * b) - (yb * a) + mul;
+            result[i] = (xa * yb * (id)) - (xa * b) - (yb * a) + mul;
         }
+
+        // #pragma omp parallel for if (size > 10000)
+        for (size_t i = 0; i < output->size(); ++i) {
+            result[i] += s_0[i];
+            if (id == P0) result[i]--;
+        }
+        *output = result;
     }
 };

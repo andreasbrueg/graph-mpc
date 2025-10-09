@@ -10,5 +10,5 @@ class Update : public Function {
 
     void evaluate_send() override {}
 
-    void evaluate_recv() override { output = input; }
+    void evaluate_recv() override { *output = *input; }
 };

@@ -28,6 +28,7 @@ target_sources(GraphMPC_lib
     graphmpc/propagate.h
     graphmpc/reveal.h
     graphmpc/shuffle.h
+    graphmpc/shuffle_repeat.h
     graphmpc/sort.cpp
     graphmpc/unshuffle.h
     graphmpc/update.h

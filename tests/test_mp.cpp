@@ -1,91 +1,105 @@
+#include <algorithm>
 #include <cassert>
-#include <random>
 
-#include "../setup/comm.h"
-#include "../setup/utils.h"
-#include "../src/graphmpc/message_passing.h"
-#include "../src/mp_protocol.h"
-#include "../src/utils/permutation.h"
+#include "../algorithms/pi_k.h"
+#include "../src/utils/comm.h"
+#include "test.h"
 
-void test_mp(Party id, RandomGenerators &rngs, io::NetworkConfig &net_conf, size_t n, std::string input_file, Graph &g) {
-    std::cout << "------ test_mp ------" << std::endl << std::endl;
-    auto network = std::make_shared<io::NetIOMP>(net_conf, false);
+class TestMP : public Test {
+   public:
+    TestMP(bpo::variables_map &opts) : Test(opts) {}
 
-    /**
-     *      0 == 1
-     *       \  //
-     *         2
-     */
+    virtual MPProtocol *create_protocol() {
+        bool ssd = false;
+        const size_t nodes = 4;
+        const size_t depth = 4;
+        std::vector<Ring> weights = {10000000, 100000, 1000, 1};
+        bits = std::ceil(std::log2(nodes + 2));
+        size_t size = 16;
 
-    n = 8;
-    const size_t n_iterations = 2;
-    size_t n_bits = std::ceil(std::log2(n));  // Optimization
-    std::cout << "n_bits: " << n_bits << std::endl;
+        ProtocolConfig conf = {id, size, nodes, depth, rngs, ssd, weights};
+        PiKProtocol *prot = new PiKProtocol(conf, network);
 
-    g = Graph::parse(input_file);
-    // Graph g;
-    // g.add_list_entry(0, 0, 1, 1);
-    // g.add_list_entry(1, 1, 1, 2);
-    // g.add_list_entry(2, 2, 1, 3);
-    // g.add_list_entry(0, 1, 0, 0);
-    // g.add_list_entry(1, 0, 0, 0);
-    // g.add_list_entry(2, 1, 0, 0);
-    // g.add_list_entry(2, 0, 0, 0);
-    // g.add_list_entry(2, 1, 0, 0);
-
-    std::vector<Ring> weights(n_iterations);
-    Graph g_shared = g.secret_share_parties(id, rngs, network, n_bits, P0);
-
-    MPProtocol mp(id, rngs, network, n, n_bits, n_iterations, weights, true);
-    mp.run(g_shared, TEST);
-
-    /* Preprocessing communication assertions */
-    if (id == D) {
-        size_t expected_comm_pre = MP_COMM_PRE(n, n_bits) + 4;
-        size_t actual_comm_pre = mp.comm_pre();
-        std::cout << "Expected: " << expected_comm_pre << std::endl;
-        std::cout << "Actual: " << actual_comm_pre << std::endl;
-        assert(expected_comm_pre == actual_comm_pre);
+        return prot;
     }
 
-    /* Evaluation communication assertions */
-    if (id != D) {
-        size_t expected_comm_eval = MP_COMM_ONLINE(n, n_bits, n_iterations);
-        size_t actual_comm_eval = mp.comm_eval();
-        std::cout << "Expected: " << expected_comm_eval << std::endl;
-        std::cout << "Actual: " << actual_comm_eval << std::endl;
-        assert(expected_comm_eval == actual_comm_eval);
+    virtual Graph create_graph() {
+        /*
+            Graph instance:
+            v1 - v2
+            || / ||
+            v3   v4
+
+            Which in list form is (kind of random order here for testing):
+            (1,1,1)
+            (2,2,1)
+            (1,2,0)
+            (2,1,0)
+            (1,3,0)
+            (1,3,0)
+            (3,1,0)
+            (4,4,1)
+            (3,3,1)
+            (3,1,0)
+            (3,2,0)
+            (2,3,0)
+            (2,4,0)
+            (4,2,0)
+            (2,4,0)
+            (4,2,0)
+        */
+
+        Graph g;
+        if (id == P0) {
+            g.add_list_entry(1, 1, 1);
+            g.add_list_entry(2, 2, 1);
+            g.add_list_entry(1, 2, 0);
+            g.add_list_entry(2, 1, 0);
+            g.add_list_entry(1, 3, 0);
+            g.add_list_entry(1, 3, 0);
+            g.add_list_entry(3, 1, 0);
+            g.add_list_entry(4, 4, 1);
+        }
+        if (id == P1) {
+            g.add_list_entry(3, 3, 1);
+            g.add_list_entry(3, 1, 0);
+            g.add_list_entry(3, 2, 0);
+            g.add_list_entry(2, 3, 0);
+            g.add_list_entry(2, 4, 0);
+            g.add_list_entry(4, 2, 0);
+            g.add_list_entry(2, 4, 0);
+            g.add_list_entry(4, 2, 0);
+        }
+        Graph g_shared = g.share_subgraphs(id, rngs, network, bits);
+        g_shared.init_mp(id);
+        return g_shared;
     }
 
-    /* Correctness assertions */
-    auto res_g = g_shared.reveal(id, network);
+    virtual void run_assertions(Graph &result) {
+        if (id != D) {
+            result.print();
 
-    if (id != D) {
-        res_g.print();
-        assert(res_g._data[0] == 18);
-        assert(res_g._data[1] == 21);
-        assert(res_g._data[2] == 3);
-        assert(res_g._data[3] == 0);
-        assert(res_g._data[4] == 0);
-        assert(res_g._data[5] == 0);
-        assert(res_g._data[6] == 0);
-        assert(res_g._data[7] == 0);
+            assert(result.data[0] == 20510023);  // 2 of length 1, 5 of length 2, 10 of length 3, 23 of length 4
+            assert(result.data[1] == 30513025);  // 3 of length 1, 5 of length 2, 13 of length 3, 25 of length 4
+            assert(result.data[2] == 20510023);  // 2 of length 1, 5 of length 2, 10 of length 3, 23 of length 4
+            assert(result.data[3] == 10305013);  // 1 of length 1, 3 of length 2,  5 of length 3, 13 of length 4
+        }
     }
-}
+};
 
 int main(int argc, char **argv) {
-    auto prog_opts(setup::programOptions());
+    auto prog_opts(setup::programOptionsTest());
 
-    bpo::options_description cmdline("Run a simple test for message-passing.");
+    bpo::options_description cmdline("Test for the secure computation of the Reach Score.");
     cmdline.add(prog_opts);
-
     cmdline.add_options()("config,c", bpo::value<std::string>(), "configuration file for easy specification of cmd line arguments")("help,h",
                                                                                                                                     "produce help message");
 
     bpo::variables_map opts = setup::parseOptions(cmdline, prog_opts, argc, argv);
 
     try {
-        setup::run_test(opts, test_mp);
+        auto test = TestPiK(opts);
+        test.run();
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\nFatal error" << std::endl;
         return 1;

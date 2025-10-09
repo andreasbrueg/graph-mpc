@@ -5,8 +5,8 @@
 class MergedShuffle : public Shuffle {
    public:
     MergedShuffle(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-                  std::vector<Ring> *output, Party &recv, ShufflePre &pi_share, ShufflePre &omega_share)
-        : Shuffle(conf, preproc_vals, online_vals, input, output, recv), pi_share(pi_share), omega_share(omega_share) {}
+                  std::vector<Ring> *output, Party &recv, ShufflePre &perm_share, ShufflePre &pi_share, ShufflePre &omega_share)
+        : Shuffle(conf, preproc_vals, online_vals, input, output, recv, &perm_share), pi_share(pi_share), omega_share(omega_share) {}
 
     void preprocess() override {
         std::vector<Ring> sigma_0_p_vec(size);
@@ -46,8 +46,8 @@ class MergedShuffle : public Shuffle {
                 sigma_0_p_vec = sigma_0_p.get_perm_vec();
                 sigma_1_vec = sigma_1.get_perm_vec();
 
-                perm_share.pi_0 = sigma_0;
-                perm_share.pi_1 = sigma_1;
+                perm_share->pi_0 = sigma_0;
+                perm_share->pi_1 = sigma_1;
 
                 Ring R;
                 rngs->rng_self().random_data(&R, sizeof(Ring));
@@ -73,15 +73,15 @@ class MergedShuffle : public Shuffle {
             case P0: {
                 sigma_0_p_vec = read_preproc(size);
                 B_0 = read_preproc(size);
-                perm_share.pi_0_p = Permutation(sigma_0_p_vec);
-                perm_share.B = B_0;
+                perm_share->pi_0_p = Permutation(sigma_0_p_vec);
+                perm_share->B = B_0;
                 break;
             }
             case P1: {
                 sigma_1_vec = read_preproc(size);
                 B_1 = read_preproc(size);
-                perm_share.pi_1 = Permutation(sigma_1_vec);
-                perm_share.B = B_1;
+                perm_share->pi_1 = Permutation(sigma_1_vec);
+                perm_share->B = B_1;
 
                 break;
             }

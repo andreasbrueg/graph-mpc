@@ -28,7 +28,7 @@ class Function {
           preproc_vals(preproc_vals),
           online_vals(online_vals),
           input(input),
-          input2(input),
+          input2(input2),
           output(output) {}
 
     Function(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
@@ -40,7 +40,7 @@ class Function {
           preproc_vals(preproc_vals),
           online_vals(online_vals),
           input(input),
-          input2(input),
+          input2(input2),
           output(output) {}
 
     virtual ~Function() = default;

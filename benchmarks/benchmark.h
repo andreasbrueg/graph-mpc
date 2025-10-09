@@ -31,20 +31,26 @@ class Benchmark {
 
     void run(bool parallel = false) {
         print();
-
-        // network->sync();
         for (size_t r = 0; r < repeat; ++r) {
             std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
             /* Construct and share graph */
             Graph g = prot->benchmark_graph();
+            prot->set_input(g);
+            prot->build();
+
+            network->sync();
 
             size_t bytes_sent_pre = 0;
             size_t bytes_sent_eval = 0;
 
             /* Preprocessing */
             StatsPoint start_pre(*network);
-            prot->preprocess(parallel);
+            // prot->preprocess(parallel);
+            prot->preprocess();
             StatsPoint end_pre(*network);
+
+            /* Network Sync */
+            network->sync();
 
             auto rbench_pre = end_pre - start_pre;
             output_data["benchmarks_pre"].push_back(rbench_pre);
@@ -55,18 +61,16 @@ class Benchmark {
             std::cout << "preprocessing time: " << rbench_pre["time"] << " ms" << std::endl;
             std::cout << "preprocessing sent: " << bytes_sent_pre << " bytes" << std::endl;
 
-            /* Network Sync */
-            network->sync();
-
             /* Evaluation */
             StatsPoint start_online(*network);
-            prot->evaluate(g, parallel);
+            // prot->evaluate(g, parallel);
+            prot->evaluate();
             StatsPoint end_online(*network);
 
             auto rbench = end_online - start_online;
             output_data["benchmarks"].push_back(rbench);
 
-            prot->reset();
+            // prot->reset();
             network->sync();
 
             for (const auto &val : rbench["communication"]) {

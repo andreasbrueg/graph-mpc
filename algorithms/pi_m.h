@@ -14,7 +14,7 @@ class PiMProtocol : public MPProtocol {
 
     virtual void pre_mp_evaluation(MPPreprocessing &preproc, Graph &g) {}
 
-    virtual void apply_evaluation(MPPreprocessing &preproc, Graph &g, std::vector<Ring> &new_data) { g._data = new_data; }
+    virtual void apply_evaluation(MPPreprocessing &preproc, Graph &g, std::vector<Ring> &new_data) { g.data = new_data; }
 
     virtual void post_mp_evaluation(MPPreprocessing &preproc, Graph &g) {}
 };

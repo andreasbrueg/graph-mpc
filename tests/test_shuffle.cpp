@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include "../src/graphmpc/merged_shuffle.h"
 #include "../src/graphmpc/shuffle.h"
 #include "../src/graphmpc/shuffle_repeat.h"
 #include "../src/graphmpc/unshuffle.h"
@@ -23,15 +24,21 @@ void test_shuffle(bpo::variables_map &opts) {
 
     std::vector<Ring> test_vector = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto test_vector_shared = share::random_share_secret_vec_2P(id, conf.rngs, test_vector);
-    std::vector<Ring> shuffled_vector(10);
+    std::vector<Ring> pi_shuffled_vector(10);
+    std::vector<Ring> omega_shuffled_vector(10);
     std::vector<Ring> repeat_vector(10);
     std::vector<Ring> unshuffle_vector(10);
+    std::vector<Ring> merged_shuffled_vector(10);
 
-    ShufflePre current_shuffle;
-    Shuffle shuffle(&conf, &preproc, &online_vals, &test_vector_shared, &shuffled_vector, recv, &current_shuffle);
+    ShufflePre pi;
+    ShufflePre omega;
+    ShufflePre pi_omega;
 
-    ShuffleRepeat repeat(&conf, &preproc, &online_vals, &test_vector_shared, &repeat_vector, &current_shuffle, recv);
-    Unshuffle unshuffle(&conf, &preproc, &online_vals, &shuffled_vector, &unshuffle_vector, &current_shuffle, recv);
+    Shuffle shuffle(&conf, &preproc, &online_vals, &test_vector_shared, &pi_shuffled_vector, recv, &pi);
+    ShuffleRepeat repeat(&conf, &preproc, &online_vals, &test_vector_shared, &repeat_vector, &pi, recv);
+    Unshuffle unshuffle(&conf, &preproc, &online_vals, &pi_shuffled_vector, &unshuffle_vector, &pi, recv);
+    Shuffle shuffle2(&conf, &preproc, &online_vals, &test_vector_shared, &omega_shuffled_vector, recv, &omega);
+    MergedShuffle merged(&conf, &preproc, &online_vals, &test_vector_shared, &merged_shuffled_vector, recv, &pi_omega, &pi, &omega);
 
     if (id != D) {
         size_t n_recv;
@@ -42,6 +49,8 @@ void test_shuffle(bpo::variables_map &opts) {
     shuffle.preprocess();
     repeat.preprocess();
     unshuffle.preprocess();
+    shuffle2.preprocess();
+    merged.preprocess();
     if (id == D) {
         for (auto &party : {P0, P1}) {
             auto &data_send = preproc.at(party);
@@ -69,6 +78,20 @@ void test_shuffle(bpo::variables_map &opts) {
     shuffle.evaluate_recv();
     repeat.evaluate_recv();
 
+    shuffle2.evaluate_send();
+    n_send = 10;
+    n_recv = 10;
+    if (id == P0) {
+        network->send_vec(P1, n_send, online_vals);
+        network->recv_vec(P1, n_recv, online_vals);
+    } else {
+        std::vector<Ring> data_recv(n_recv);
+        network->recv_vec(P0, n_recv, data_recv);
+        network->send_vec(P0, n_send, online_vals);
+        online_vals = data_recv;
+    }
+    shuffle2.evaluate_recv();
+
     unshuffle.evaluate_send();
     n_send = 10;
     n_recv = 10;
@@ -83,12 +106,31 @@ void test_shuffle(bpo::variables_map &opts) {
     }
     unshuffle.evaluate_recv();
 
-    auto result = share::reveal_vec(id, network, shuffled_vector);
-    auto result1 = share::reveal_vec(id, network, repeat_vector);
-    auto result2 = share::reveal_vec(id, network, unshuffle_vector);
+    merged.evaluate_send();
+    n_send = 10;
+    n_recv = 10;
+    if (id == P0) {
+        network->send_vec(P1, n_send, online_vals);
+        network->recv_vec(P1, n_recv, online_vals);
+    } else {
+        std::vector<Ring> data_recv(n_recv);
+        network->recv_vec(P0, n_recv, data_recv);
+        network->send_vec(P0, n_send, online_vals);
+        online_vals = data_recv;
+    }
+    merged.evaluate_recv();
+
+    auto result = share::reveal_vec(id, network, pi_shuffled_vector);
+    auto result1 = share::reveal_vec(id, network, omega_shuffled_vector);
+    auto result2 = share::reveal_vec(id, network, repeat_vector);
+    auto result3 = share::reveal_vec(id, network, unshuffle_vector);
+    auto result4 = share::reveal_vec(id, network, merged_shuffled_vector);
+
     setup::print_vec(result);
     setup::print_vec(result1);
     setup::print_vec(result2);
+    setup::print_vec(result3);
+    setup::print_vec(result4);
 }
 
 int main(int argc, char **argv) {

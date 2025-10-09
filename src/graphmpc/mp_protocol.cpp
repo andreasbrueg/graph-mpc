@@ -44,12 +44,94 @@ void MPProtocol::evaluate() {
         for (size_t f_idx = 0; f_idx < level.size(); ++f_idx) {
             auto &f = level[f_idx];
             if (f) f->evaluate_recv();
+            if (level_idx == 61 && f_idx == 5) {  // propagate-1
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 63 && f_idx == 2) {  // propagate-2
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 64 && f_idx == 2) {  // gather-1
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 65 && f_idx == 2) {  // gather-2
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 65 && f_idx == 3) {  // update mp_data -> mp_data_corr
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                auto data_corr_rev = share::reveal_vec(id, network, w.mp_data_corr);
+                std::cout << "";
+            }
+            if (level_idx == 65 && f_idx == 4) {  // AddWeights
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 65 && f_idx == 5) {  // propagate-1
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 67 && f_idx == 2) {  // propagate-2
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 68 && f_idx == 2) {  // gather-1
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 69 && f_idx == 2) {  // gather-2
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 69 && f_idx == 4) {  // AddWeights
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 69 && f_idx == 5) {  // propagate-1
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 71 && f_idx == 2) {  // propagate-2
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 72 && f_idx == 2) {  // gather-1
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 73 && f_idx == 2) {  // gather-2
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 73 && f_idx == 4) {  // AddWeights
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 73 && f_idx == 5) {  // propagate-1
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 75 && f_idx == 2) {  // propagate-2
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 76 && f_idx == 2) {  // gather-1
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
+            if (level_idx == 77 && f_idx == 2) {  // gather-2
+                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+                std::cout << "";
+            }
         }
 
-        // if (level_idx == 65 || level_idx == 69 || level_idx == 73 || level_idx == 77) {
-        // auto data_rev = share::reveal_vec(id, network, g.data);
-        // std::cout << "";
-        //}
+        if (level_idx == 61 || level_idx == 62 || level_idx == 63 || level_idx == 64 || level_idx == 65) {
+            auto data_rev = share::reveal_vec(id, network, g.data);
+            auto data_vtx = share::reveal_vec(id, network, w.mp_data);
+            std::cout << "";
+        }
     }
 
     f_queue.clear();

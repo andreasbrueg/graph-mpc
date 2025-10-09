@@ -162,7 +162,7 @@ class MPProtocol {
     Graph g;
 
     std::vector<std::vector<std::unique_ptr<Function>>> f_queue;
-    std::shared_ptr<ShufflePre> current_shuffle;
+    ShufflePre *current_shuffle;
     size_t current_layer = 0;
 
     MPContext ctx;
@@ -211,7 +211,7 @@ class MPProtocol {
         add_function(std::move(shuffle_ptr));
     }
 
-    void add_shuffle(std::vector<Ring> &input, std::vector<Ring> &output, std::shared_ptr<ShufflePre> perm_share) {
+    void add_shuffle(std::vector<Ring> &input, std::vector<Ring> &output, ShufflePre *perm_share) {
         add_function(std::make_unique<Shuffle>(&conf, &ctx.preproc, &ctx.shuffle_vals, &input, &output, recv_shuffle, perm_share));
     }
 
@@ -228,7 +228,8 @@ class MPProtocol {
     }
 
     void add_merged_shuffle(std::vector<Ring> &input, std::vector<Ring> &output, ShufflePre &perm_share, ShufflePre &pi_share, ShufflePre &omega_share) {
-        add_function(std::make_unique<MergedShuffle>(&conf, &ctx.preproc, &ctx.shuffle_vals, &input, &output, recv_shuffle, perm_share, pi_share, omega_share));
+        add_function(
+            std::make_unique<MergedShuffle>(&conf, &ctx.preproc, &ctx.shuffle_vals, &input, &output, recv_shuffle, &perm_share, &pi_share, &omega_share));
     }
 
     void add_compaction(std::vector<Ring> &input, std::vector<Ring> &output) {

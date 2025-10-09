@@ -8,7 +8,7 @@ class PiKProtocol : public MPProtocol {
 
     void pre_mp() override { add_deduplication(); }
 
-    void apply() override { add_update(w.mp_data, g.data); }
+    void apply() override {}
 
     void post_mp() override {}
 };

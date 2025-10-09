@@ -6,13 +6,13 @@ class Shuffle : public Function {
    public:
     Shuffle(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
             std::vector<Ring> *output, Party &recv)
-        : Function(conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(std::make_shared<ShufflePre>()) {}
+        : Function(conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(new ShufflePre()) {}
 
     Shuffle(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-            std::vector<Ring> *output, Party &recv, std::shared_ptr<ShufflePre> perm_share)
+            std::vector<Ring> *output, Party &recv, ShufflePre *perm_share)
         : Function(conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(perm_share) {}
 
-    std::shared_ptr<ShufflePre> perm_share;
+    ShufflePre *perm_share;
 
     void preprocess() override {
         if (perm_share->preprocessed) return;

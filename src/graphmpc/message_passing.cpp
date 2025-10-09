@@ -37,12 +37,14 @@ void MPProtocol::build_message_passing() {
         /* Propagate-1 */
         f_queue[f_queue.size() - 1].emplace_back(std::make_unique<Propagate_1>(&conf, &w.mp_data, &w.mp_data));
 
+        add_update(w.mp_data, w.mp_data_corr);
+
         /* Switch Perm from vtx to src order */
         add_permute(w.mp_data, w.mp_data, ctx.clear_shuffled_vtx_order, true);
         add_merged_shuffle(w.mp_data, w.mp_data, ctx.vtx_src_merge, ctx.vtx_order_shuffle, ctx.src_order_shuffle);
         add_permute(w.mp_data, w.mp_data, ctx.clear_shuffled_src_order);
 
-        add_permute(w.mp_data, w.mp_data_corr, ctx.clear_shuffled_vtx_order, true);
+        add_permute(w.mp_data_corr, w.mp_data_corr, ctx.clear_shuffled_vtx_order, true);
         add_merged_shuffle(w.mp_data_corr, w.mp_data_corr, ctx.vtx_src_merge, ctx.vtx_order_shuffle, ctx.src_order_shuffle);
         add_permute(w.mp_data_corr, w.mp_data_corr, ctx.clear_shuffled_src_order);
 
@@ -69,4 +71,5 @@ void MPProtocol::build_message_passing() {
         /* ApplyV */
         // apply_evaluation(preproc, g, update);
     }
+    add_update(w.mp_data, g.data);
 }

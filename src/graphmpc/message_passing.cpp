@@ -34,10 +34,10 @@ void MPProtocol::build_message_passing() {
     for (size_t i = 0; i < depth; ++i) {
         f_queue[f_queue.size() - 1].emplace_back(std::make_unique<AddWeights>(&conf, &w.mp_data, &weights, i));
 
+        add_update(w.mp_data, w.mp_data_corr);
+
         /* Propagate-1 */
         f_queue[f_queue.size() - 1].emplace_back(std::make_unique<Propagate_1>(&conf, &w.mp_data, &w.mp_data));
-
-        add_update(w.mp_data, w.mp_data_corr);
 
         /* Switch Perm from vtx to src order */
         add_permute(w.mp_data, w.mp_data, ctx.clear_shuffled_vtx_order, true);

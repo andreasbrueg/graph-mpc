@@ -116,6 +116,7 @@ class MPProtocol {
         build_initialization();
         if (w.mp_data_parallel.size() > 0) {
             for (size_t i = 0; i < w.mp_data_parallel.size(); ++i) {
+                add_update(w.mp_data_parallel[i], w.mp_buf);
                 add_update(w.mp_data_parallel[i], w.mp_data);
                 build_message_passing();
                 add_update(w.mp_data, w.mp_data_parallel[i]);

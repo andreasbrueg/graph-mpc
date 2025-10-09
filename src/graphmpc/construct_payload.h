@@ -5,7 +5,7 @@
 class ConstructPayload : public Function {
    public:
     ConstructPayload(ProtocolConfig *conf, std::vector<std::vector<Ring>> *payloads, std::vector<Ring> *output)
-        : Function(conf, {}, {}, {}, {}, output), payloads(payloads) {}
+        : Function(conf, {}, {}, {}, {}, output), payloads(payloads), nodes(conf->nodes) {}
 
     void preprocess() override {}
 
@@ -15,7 +15,7 @@ class ConstructPayload : public Function {
         std::vector<Ring> result(size);
         for (size_t i = 0; i < payloads->size(); ++i) {
             auto sum = payloads->at(i)[0];
-            for (size_t j = 0; j < size; ++j) {
+            for (size_t j = 1; j < nodes; ++j) {
                 sum += payloads->at(i)[j];
             }
             result[i] = sum;
@@ -25,4 +25,5 @@ class ConstructPayload : public Function {
 
    private:
     std::vector<std::vector<Ring>> *payloads;
+    size_t nodes;
 };

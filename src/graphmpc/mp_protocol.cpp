@@ -44,28 +44,15 @@ void MPProtocol::evaluate() {
         for (size_t f_idx = 0; f_idx < level.size(); ++f_idx) {
             auto &f = level[f_idx];
             if (f) f->evaluate_recv();
-            if (level_idx == 31 && f_idx == 3) {  // mp_data = mp_data_parallel[0]
-                auto data_rev = share::reveal_vec(id, network, w.mp_data);
+            if (level_idx == 96 && f_idx == 3) {  // mp_buf = mp_data_vtx]
+                auto data0_rev = share::reveal_vec(id, network, w.mp_data_parallel[0]);
+                auto data1_rev = share::reveal_vec(id, network, w.mp_data_parallel[1]);
+                auto data2_rev = share::reveal_vec(id, network, w.mp_data_parallel[2]);
+                auto data3_rev = share::reveal_vec(id, network, w.mp_data_parallel[3]);
+                auto data4_rev = share::reveal_vec(id, network, w.mp_data_parallel[4]);
+                auto result = share::reveal_vec(id, network, w.mp_data);
                 std::cout << "";
             }
-            if (level_idx == 35 && f_idx == 2) {  // gather-2 first iteration
-                auto data_rev = share::reveal_vec(id, network, w.mp_data);
-                std::cout << "";
-            }
-            if (level_idx == 35 && f_idx == 5) {  // mp_data += mp_data
-                auto data_rev = share::reveal_vec(id, network, w.mp_data);
-                std::cout << "";
-            }
-            if (level_idx == 39 && f_idx == 2) {  // gather-2 second iteration
-                auto data_rev = share::reveal_vec(id, network, w.mp_data);
-                std::cout << "";
-            }
-        }
-
-        if (level_idx == 61 || level_idx == 62 || level_idx == 63 || level_idx == 64 || level_idx == 65) {
-            auto data_rev = share::reveal_vec(id, network, g.data);
-            auto data_vtx = share::reveal_vec(id, network, w.mp_data);
-            std::cout << "";
         }
     }
 

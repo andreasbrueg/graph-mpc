@@ -90,6 +90,7 @@ class MPProtocol {
         ctx.clear_shuffled_dst_order.resize(size);
         w.mp_data_vtx.resize(size);
         w.mp_data.resize(size);
+        w.mp_buf.resize(size);
         w.mp_data_corr.resize(size);
         w.sort_next_perm.resize(size);
         w.sort_perm.resize(size);

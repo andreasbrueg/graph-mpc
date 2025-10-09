@@ -16,7 +16,6 @@ class PiRProtocol : public MPProtocol {
     void pre_mp() override {}
 
     void apply() override {
-        add_update(w.mp_data, w.mp_buf);
         add_add(w.mp_data, w.mp_buf, w.mp_buf);
         add_update(w.mp_buf, w.mp_data);
     }

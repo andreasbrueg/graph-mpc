@@ -163,12 +163,6 @@ class MPProtocol {
         return g_shared;
     }
 
-    void reset() {
-        rngs.reseed();
-        recv_shuffle = P0;
-        recv_mul = P0;
-    }
-
     void print() {
         std::cout << "----- Protocol Configuration -----" << std::endl;
         std::cout << "Party: " << id << std::endl;
@@ -178,6 +172,39 @@ class MPProtocol {
         std::cout << "Bits: " << bits << std::endl;
         std::cout << "SSD utilization: " << ssd << std::endl;
         std::cout << std::endl;
+    }
+
+    void reset() {
+        rngs.reseed();
+        recv_shuffle = P0;
+        recv_mul = P0;
+
+        f_queue.clear();
+        f_queue.resize(1);
+        current_layer = 0;
+
+        ctx.preproc[P0] = {};
+        ctx.preproc[P1] = {};
+        ctx.vtx_order = std::vector<Ring>(size);
+        ctx.src_order = std::vector<Ring>(size);
+        ctx.dst_order = std::vector<Ring>(size);
+        ctx.clear_shuffled_vtx_order = std::vector<Ring>(size);
+        ctx.clear_shuffled_src_order = std::vector<Ring>(size);
+        ctx.clear_shuffled_dst_order = std::vector<Ring>(size);
+        w.mp_data_vtx = std::vector<Ring>(size);
+        w.mp_data = std::vector<Ring>(size);
+        w.mp_buf = std::vector<Ring>(size);
+        w.mp_data_corr = std::vector<Ring>(size);
+        w.sort_next_perm = std::vector<Ring>(size);
+        w.sort_perm = std::vector<Ring>(size);
+        w.sort_bits = std::vector<Ring>(size);
+
+        initialize_shuffle(ctx.vtx_order_shuffle);
+        initialize_shuffle(ctx.src_order_shuffle);
+        initialize_shuffle(ctx.dst_order_shuffle);
+        initialize_shuffle(ctx.vtx_src_merge);
+        initialize_shuffle(ctx.src_dst_merge);
+        initialize_shuffle(ctx.dst_vtx_merge);
     }
 
    protected:
@@ -317,9 +344,9 @@ class MPProtocol {
     }
 
     void add_deduplication() {
-        w.deduplication_perm.resize(size);
-        w.deduplication_src.resize(size);
-        w.deduplication_dst.resize(size);
+        w.deduplication_perm = std::vector<Ring>(size);
+        w.deduplication_src = std::vector<Ring>(size);
+        w.deduplication_dst = std::vector<Ring>(size);
 
         add_sort(g.dst_order_bits, ctx.dst_order, bits + 1);
         add_update(ctx.dst_order, w.deduplication_perm);
@@ -335,9 +362,9 @@ class MPProtocol {
         add_permute(w.deduplication_src, w.deduplication_src, w.deduplication_perm);
         add_permute(w.deduplication_dst, w.deduplication_dst, w.deduplication_perm);
 
-        w.deduplication_src_dupl.resize(size - 1);
-        w.deduplication_dst_dupl.resize(size - 1);
-        w.deduplication_duplicates.resize(size - 1);
+        w.deduplication_src_dupl = std::vector<Ring>(size - 1);
+        w.deduplication_dst_dupl = std::vector<Ring>(size - 1);
+        w.deduplication_duplicates = std::vector<Ring>(size - 1);
 
         add_deduplication_sub(w.deduplication_src, w.deduplication_src_dupl);
         add_deduplication_sub(w.deduplication_dst, w.deduplication_dst_dupl);
@@ -388,20 +415,23 @@ class MPProtocol {
 
     void initialize_shuffle(ShufflePre &perm_share) {
         if (id == P0) {
-            perm_share.pi_0.perm_vec.resize(size);
-            perm_share.pi_0_p.perm_vec.resize(size);
-            perm_share.B.resize(size);
-            perm_share.R.resize(size);
+            perm_share.pi_0.perm_vec = std::vector<Ring>(size);
+            perm_share.pi_0_p.perm_vec = std::vector<Ring>(size);
+            perm_share.B = std::vector<Ring>(size);
+            perm_share.R = std::vector<Ring>(size);
+            perm_share.preprocessed = false;
         }
         if (id == P1) {
-            perm_share.pi_1.perm_vec.resize(size);
-            perm_share.pi_1_p.perm_vec.resize(size);
-            perm_share.B.resize(size);
-            perm_share.R.resize(size);
+            perm_share.pi_1.perm_vec = std::vector<Ring>(size);
+            perm_share.pi_1_p.perm_vec = std::vector<Ring>(size);
+            perm_share.B = std::vector<Ring>(size);
+            perm_share.R = std::vector<Ring>(size);
+            perm_share.preprocessed = false;
         }
         if (id == D) {
-            perm_share.pi_0.perm_vec.resize(size);
-            perm_share.pi_1.perm_vec.resize(size);
+            perm_share.pi_0.perm_vec = std::vector<Ring>(size);
+            perm_share.pi_1.perm_vec = std::vector<Ring>(size);
+            perm_share.preprocessed = false;
         }
     }
 };

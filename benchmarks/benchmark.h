@@ -81,6 +81,8 @@ class Benchmark {
             }
             std::cout << "online time: " << rbench["time"] << " ms" << std::endl;
             std::cout << "online sent: " << bytes_sent_eval << " bytes" << std::endl << std::endl;
+
+            prot->reset();
         }
         output_data["stats"] = {{"peak_virtual_memory", peakVirtualMemory()}, {"peak_resident_set_size", peakResidentSetSize()}};
 

@@ -46,8 +46,7 @@ void MPProtocol::evaluate() {
             if (f) f->evaluate_recv();
         }
     }
-
-    f_queue.clear();
+    std::cout << "";
 }
 
 void MPProtocol::online_communication() {

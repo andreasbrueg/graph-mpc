@@ -15,7 +15,8 @@ class MergedShuffle : public Shuffle {
 
         std::vector<Ring> B_0(size);
         std::vector<Ring> B_1(size);
-        std::vector<Ring> R_0, R_1;
+        std::vector<Ring> R_0(size);
+        std::vector<Ring> R_1(size);
 
         switch (id) {
             case D: {
@@ -23,13 +24,11 @@ class MergedShuffle : public Shuffle {
 
                 /* Sampling 1: R_0 / R_1 */
                 for (int i = 0; i < size; ++i) {
-                    rngs->rng_D0().random_data(&rand, sizeof(Ring));
-                    R_0.push_back(rand);
+                    rngs->rng_D0().random_data(&R_0[i], sizeof(Ring));
                 }
 
                 for (int i = 0; i < size; ++i) {
-                    rngs->rng_D1().random_data(&rand, sizeof(Ring));
-                    R_1.push_back(rand);
+                    rngs->rng_D1().random_data(&R_1[i], sizeof(Ring));
                 }
 
                 /* Computing / Sampling merged permutation */
@@ -76,6 +75,7 @@ class MergedShuffle : public Shuffle {
                 B_0 = read_preproc(size);
                 perm_share->pi_0_p = Permutation(sigma_0_p_vec);
                 perm_share->B = B_0;
+                perm_share->has_pi_0_p = true;
                 break;
             }
             case P1: {
@@ -83,7 +83,7 @@ class MergedShuffle : public Shuffle {
                 B_1 = read_preproc(size);
                 perm_share->pi_1 = Permutation(sigma_1_vec);
                 perm_share->B = B_1;
-
+                perm_share->has_pi_1 = true;
                 break;
             }
         }

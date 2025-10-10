@@ -13,30 +13,31 @@ class Mul : public Function {
         : Function(conf, preproc_vals, online_vals, input1, input2, output, size), recv(recv), binary(binary) {}
 
     void preprocess() override {
-        std::vector<Ring> a = share::random_share_vec_3P(id, *rngs, size, binary);
-        std::vector<Ring> b = share::random_share_vec_3P(id, *rngs, size, binary);
+        triples_a.resize(size);
+        triples_b.resize(size);
+        triples_c.resize(size);
+
+        triples_a = share::random_share_vec_3P(id, *rngs, size, binary);
+        triples_b = share::random_share_vec_3P(id, *rngs, size, binary);
         std::vector<Ring> mul(size);
 
         if (binary) {
-            for (size_t i = 0; i < size; ++i) mul[i] = (a[i] & b[i]);
+            for (size_t i = 0; i < size; ++i) mul[i] = (triples_a[i] & triples_b[i]);
         } else {
-            for (size_t i = 0; i < size; ++i) mul[i] = (a[i] * b[i]);
+            for (size_t i = 0; i < size; ++i) mul[i] = (triples_a[i] * triples_b[i]);
         }
 
-        std::vector<Ring> c = random_share_secret_vec_3P(mul);
+        triples_c = random_share_secret_vec_3P(mul);
 
-        // TODO: write to disk
         if (id != D) {
             if (ssd) {
                 std::vector<Ring> triples;
                 for (size_t i = 0; i < size; ++i) {
-                    triples.push_back(a[i]);
-                    triples.push_back(b[i]);
-                    triples.push_back(c[i]);
+                    triples.push_back(triples_a[i]);
+                    triples.push_back(triples_b[i]);
+                    triples.push_back(triples_c[i]);
                 }
                 triples_disk->write_vec(triples);
-            } else {
-                for (size_t i = 0; i < size; ++i) triples.push_back({a[i], b[i], c[i]});
             }
         }
         /* Alternate receiver */
@@ -47,7 +48,8 @@ class Mul : public Function {
         std::vector<Ring> data_send(2 * size);
 #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
-            auto [a, b, _] = triples[i];
+            Ring a = triples_a[i];
+            Ring b = triples_b[i];
             Ring xa, yb;
             if (binary) {
                 xa = input->at(i) ^ a;
@@ -64,26 +66,29 @@ class Mul : public Function {
 
     void evaluate_recv() override {
         auto data_recv = read_online(2 * size);
-        std::vector<Ring> result(size);
+        auto outptr = output->data();
 #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
-            auto [a, b, mul] = triples[i];
+            Ring a = triples_a[i];
+            Ring b = triples_b[i];
+            Ring c = triples_c[i];
 
             auto xa = data_recv[2 * i];
             auto yb = data_recv[2 * i + 1];
 
             if (binary)
-                result[i] = (xa & yb) * (id) ^ xa & b ^ yb & a ^ mul;
+                outptr[i] = (xa & yb) * (id) ^ xa & b ^ yb & a ^ c;
             else
-                result[i] = (xa * yb * (id)) - (xa * b) - (yb * a) + mul;
+                outptr[i] = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
         }
-        *output = result;
     }
 
    protected:
     Party &recv;
 
-    std::vector<std::tuple<Ring, Ring, Ring>> triples;
+    std::vector<Ring> triples_a;
+    std::vector<Ring> triples_b;
+    std::vector<Ring> triples_c;
     FileWriter *triples_disk;
     bool binary;
 

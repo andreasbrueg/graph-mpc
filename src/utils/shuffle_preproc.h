@@ -17,4 +17,36 @@ class ShufflePre {
     std::vector<Ring> B;
     std::vector<Ring> R;
     bool preprocessed = false;
+    bool has_pi_0 = false;
+    bool has_pi_1 = false;
+    bool has_pi_0_p = false;
+    bool has_pi_1_p = false;
+    bool has_B = false;
+    bool has_R = false;
+
+    void initialize(Party id, size_t size) {
+        if (id == P0) {
+            pi_0.perm_vec = std::vector<Ring>(size);
+            pi_0_p.perm_vec = std::vector<Ring>(size);
+            B = std::vector<Ring>(size);
+            R = std::vector<Ring>(size);
+        }
+        if (id == P1) {
+            pi_1.perm_vec = std::vector<Ring>(size);
+            pi_1_p.perm_vec = std::vector<Ring>(size);
+            B = std::vector<Ring>(size);
+            R = std::vector<Ring>(size);
+        }
+        if (id == D) {
+            pi_0.perm_vec = std::vector<Ring>(size);
+            pi_1.perm_vec = std::vector<Ring>(size);
+        }
+        preprocessed = false;
+        has_pi_0 = false;
+        has_pi_1 = false;
+        has_pi_0_p = false;
+        has_pi_1_p = false;
+        has_B = false;
+        has_R = false;
+    }
 };

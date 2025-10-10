@@ -36,17 +36,15 @@ class Shuffle : public Function {
         switch (id) {
             case D: {
                 /* Sampling 1: R_0, R_1*/
-                std::vector<Ring> R_0, R_1;
-                Ring rand;
+                std::vector<Ring> R_0(size);
+                std::vector<Ring> R_1(size);
 
                 for (size_t i = 0; i < size; ++i) {
-                    rngs->rng_D0().random_data(&rand, sizeof(Ring));
-                    R_0.push_back(rand);
+                    rngs->rng_D0().random_data(&R_0[i], sizeof(Ring));
                 }
 
                 for (size_t i = 0; i < size; ++i) {
-                    rngs->rng_D1().random_data(&rand, sizeof(Ring));
-                    R_1.push_back(rand);
+                    rngs->rng_D1().random_data(&R_1[i], sizeof(Ring));
                 }
 
                 Permutation pi_0;
@@ -129,6 +127,7 @@ class Shuffle : public Function {
                         D0_idx++;
                     }
                     perm_share->pi_0_p = Permutation(perm_vec);
+                    perm_share->has_pi_0_p = true;
                 }
 
                 std::vector<Ring> B(size);
@@ -153,6 +152,7 @@ class Shuffle : public Function {
                         D1_idx++;
                     }
                     perm_share->pi_1_p = Permutation(perm_vec);
+                    perm_share->has_pi_1_p = true;
                 }
 
                 std::vector<Ring> B(size);
@@ -172,20 +172,19 @@ class Shuffle : public Function {
 
     void evaluate_send() override {
         std::vector<Ring> t(size);
-        std::vector<Ring> R;
+        std::vector<Ring> R(size);
         Permutation perm;
 
-        if (is_null(perm_share->R)) {
-            Ring rand;
+        if (!perm_share->has_R) {
             /* Sampling 1: R_0 / R_1 */
             for (size_t i = 0; i < size; ++i) {
                 if (id == P0)
-                    rngs->rng_D0().random_data(&rand, sizeof(Ring));
+                    rngs->rng_D0().random_data(&R[i], sizeof(Ring));
                 else if (id == P1)
-                    rngs->rng_D1().random_data(&rand, sizeof(Ring));
-                R.push_back(rand);
+                    rngs->rng_D1().random_data(&R[i], sizeof(Ring));
             }
             perm_share->R = R;
+            perm_share->has_R = true;
         } else {
             R = perm_share->R;
         }
@@ -193,19 +192,22 @@ class Shuffle : public Function {
         /* Sampling 2: pi_0_p / pi_1 */
         if (id == P0) {
             /* Reuse pi_0_p if saved earlier */
-            if (perm_share->pi_0_p.not_null()) {
+            if (perm_share->has_pi_0_p) {
                 perm = perm_share->pi_0_p;
             } else {
                 perm = Permutation::random(size, rngs->rng_D0());
                 perm_share->pi_0_p = perm;
+                perm_share->has_pi_0_p = true;
             }
         } else {
             /* Reuse pi_1 if saved earlier */
-            if (perm_share->pi_1.not_null()) {
+            if (perm_share->has_pi_1) {
                 perm = perm_share->pi_1;
             } else {
                 perm = Permutation::random(size, rngs->rng_D1());
                 perm_share->pi_1 = perm;
+                perm_share->has_pi_1 = true;
+                ;
             }
         }
 
@@ -216,7 +218,9 @@ class Shuffle : public Function {
         }
 
         /* Compute perm(input + R) */
-        t = perm(t);
+        std::vector<Ring> t_permuted(size);
+        t_permuted = perm(t);
+        t.swap(t_permuted);
 
         online_vals->insert(online_vals->end(), t.begin(), t.end());
     }
@@ -224,18 +228,20 @@ class Shuffle : public Function {
     void evaluate_recv() override {
         Permutation perm;
         if (id == P0) {
-            if (perm_share->pi_0.not_null()) {
+            if (perm_share->has_pi_0) {
                 perm = perm_share->pi_0;
             } else {
                 perm = Permutation::random(size, rngs->rng_D0());
                 perm_share->pi_0 = perm;
+                perm_share->has_pi_0 = true;
             }
         } else {
-            if (perm_share->pi_1_p.not_null()) {
+            if (perm_share->has_pi_1_p) {
                 perm = perm_share->pi_1_p;
             } else {
                 perm = Permutation::random(size, rngs->rng_D1());
                 perm_share->pi_1_p = perm;
+                perm_share->has_pi_1_p = true;
             }
         }
         std::vector<Ring> t = read_online(size);  // t1
@@ -253,11 +259,4 @@ class Shuffle : public Function {
     bool ssd;
 
     FileWriter *shuffles_disk;
-
-    bool is_null(std::vector<Ring> &vec) {
-        for (auto &elem : vec) {
-            if (elem != 0) return false;
-        }
-        return true;
-    }
 };

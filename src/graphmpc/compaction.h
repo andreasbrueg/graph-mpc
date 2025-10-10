@@ -11,76 +11,84 @@ class Compaction : public Mul {
     void evaluate_send() override {
         if (id == D) return;
 
-        std::vector<Ring> f_0;
+        std::vector<Ring> f_0(size);
 
         // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
         for (size_t i = 0; i < size; ++i) {
-            f_0.push_back(-input->at(i));
+            f_0[i] = -input->at(i);
             if (id == P0) {
                 f_0[i] += 1;  // 1 as constant only to one share
             }
         }
 
-        std::vector<Ring> s_0, s_1;
+        std::vector<Ring> s_0(size);
+        std::vector<Ring> s_1(size);
         Ring s = 0;
         // Set s_0 to prefix sum of f_0 and s_1 to prefix sum of f_1/input continuing from the prior final value
         for (size_t i = 0; i < size; ++i) {
             s += f_0[i];
-            s_0.push_back(s);
+            s_0[i] = s;
         }
 
         for (size_t i = 0; i < size; ++i) {
             s += input->at(i);
-            s_1.push_back(s - s_0[i]);
+            s_1[i] = s - s_0[i];
         }
 
-        // #pragma omp parallel for if (size > 10000)
+        size_t old = online_vals->size();
+        online_vals->resize(old + 2 * size);
+        auto send_ptr = online_vals->data() + old;
+
+#pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
-            auto [a, b, _] = triples[i];
+            Ring a = triples_a[i];
+            Ring b = triples_b[i];
+
             auto xa = input->at(i) + a;
             auto yb = s_1[i] + b;
-            online_vals->push_back(xa);
-            online_vals->push_back(yb);
+            send_ptr[2 * i] = xa;
+            send_ptr[2 * i + 1] = yb;
         }
         return;
     }
 
     void evaluate_recv() override {
-        std::vector<Ring> result(size);
-        std::vector<Ring> f_0;
+        std::vector<Ring> f_0(size);
         // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
         for (size_t i = 0; i < size; ++i) {
-            f_0.push_back(-input->at(i));
+            f_0[i] = -input->at(i);
             if (id == P0) {
                 f_0[i] += 1;  // 1 as constant only to one share
             }
         }
 
-        std::vector<Ring> s_0;
+        std::vector<Ring> s_0(size);
         Ring s = 0;
         // Set s_0 to prefix sum of f_0 and s_1 to prefix sum of f_1/input continuing from the prior final value
         for (size_t i = 0; i < size; ++i) {
             s += f_0[i];
-            s_0.push_back(s);
+            s_0[i] = s;
         }
 
         auto data_recv = read_online(2 * size);
 
+        auto outptr = output->data();
 #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
-            auto [a, b, mul] = triples[i];
+            Ring a = triples_a[i];
+            Ring b = triples_b[i];
+            Ring c = triples_c[i];
 
             auto xa = data_recv[2 * i];
             auto yb = data_recv[2 * i + 1];
 
-            result[i] = (xa * yb * (id)) - (xa * b) - (yb * a) + mul;
+            outptr[i] = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
         }
 
-        // #pragma omp parallel for if (size > 10000)
+#pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < output->size(); ++i) {
-            result[i] += s_0[i];
-            if (id == P0) result[i]--;
+            outptr[i] += s_0[i];
+            if (id == P0) outptr[i]--;
         }
-        *output = result;
     }
 };

@@ -83,29 +83,7 @@ class MPProtocol {
           weights(conf.weights),
           network(network),
           ssd(conf.ssd) {
-        ctx.preproc[P0] = {};
-        ctx.preproc[P1] = {};
-        ctx.vtx_order.resize(size);
-        ctx.src_order.resize(size);
-        ctx.dst_order.resize(size);
-        ctx.clear_shuffled_vtx_order.resize(size);
-        ctx.clear_shuffled_src_order.resize(size);
-        ctx.clear_shuffled_dst_order.resize(size);
-        w.mp_data_vtx.resize(size);
-        w.mp_data.resize(size);
-        w.mp_buf.resize(size);
-        w.mp_data_corr.resize(size);
-        w.sort_next_perm.resize(size);
-        w.sort_perm.resize(size);
-        w.sort_bits.resize(size);
-        f_queue.resize(1);
-
-        initialize_shuffle(ctx.vtx_order_shuffle);
-        initialize_shuffle(ctx.src_order_shuffle);
-        initialize_shuffle(ctx.dst_order_shuffle);
-        initialize_shuffle(ctx.vtx_src_merge);
-        initialize_shuffle(ctx.src_dst_merge);
-        initialize_shuffle(ctx.dst_vtx_merge);
+        reset();
     }
 
     virtual void pre_mp() = 0;
@@ -199,12 +177,12 @@ class MPProtocol {
         w.sort_perm = std::vector<Ring>(size);
         w.sort_bits = std::vector<Ring>(size);
 
-        initialize_shuffle(ctx.vtx_order_shuffle);
-        initialize_shuffle(ctx.src_order_shuffle);
-        initialize_shuffle(ctx.dst_order_shuffle);
-        initialize_shuffle(ctx.vtx_src_merge);
-        initialize_shuffle(ctx.src_dst_merge);
-        initialize_shuffle(ctx.dst_vtx_merge);
+        ctx.vtx_order_shuffle.initialize(id, size);
+        ctx.src_order_shuffle.initialize(id, size);
+        ctx.dst_order_shuffle.initialize(id, size);
+        ctx.vtx_src_merge.initialize(id, size);
+        ctx.src_dst_merge.initialize(id, size);
+        ctx.dst_vtx_merge.initialize(id, size);
     }
 
    protected:
@@ -410,28 +388,6 @@ class MPProtocol {
                 add_Bit2A(w.mp_data_parallel[i], w.mp_data_parallel[i], size);
                 add_flip(w.mp_data_parallel[i], w.mp_data_parallel[i]);
             }
-        }
-    }
-
-    void initialize_shuffle(ShufflePre &perm_share) {
-        if (id == P0) {
-            perm_share.pi_0.perm_vec = std::vector<Ring>(size);
-            perm_share.pi_0_p.perm_vec = std::vector<Ring>(size);
-            perm_share.B = std::vector<Ring>(size);
-            perm_share.R = std::vector<Ring>(size);
-            perm_share.preprocessed = false;
-        }
-        if (id == P1) {
-            perm_share.pi_1.perm_vec = std::vector<Ring>(size);
-            perm_share.pi_1_p.perm_vec = std::vector<Ring>(size);
-            perm_share.B = std::vector<Ring>(size);
-            perm_share.R = std::vector<Ring>(size);
-            perm_share.preprocessed = false;
-        }
-        if (id == D) {
-            perm_share.pi_0.perm_vec = std::vector<Ring>(size);
-            perm_share.pi_1.perm_vec = std::vector<Ring>(size);
-            perm_share.preprocessed = false;
         }
     }
 };

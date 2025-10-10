@@ -30,13 +30,18 @@ class EQZ : public Mul {
 #pragma omp parallel for if (size > 10000)
         for (auto &elem : shares_left) elem >>= width;
 
-        // #pragma omp parallel for if (size > 10000)
+        size_t old = online_vals->size();
+        online_vals->resize(old + 2 * size);
+        auto send_ptr = online_vals->data() + old;
+
+#pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
-            auto [a, b, _] = triples[i];
+            Ring a = triples_a[i];
+            Ring b = triples_b[i];
             auto xa = shares_left[i] ^ a;
             auto yb = shares_right[i] ^ b;
-            online_vals->push_back(xa);
-            online_vals->push_back(yb);
+            send_ptr[2 * i] = xa;
+            send_ptr[2 * i + 1] = yb;
         }
     }
 
@@ -46,12 +51,14 @@ class EQZ : public Mul {
 
 #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
-            auto [a, b, mul] = triples[i];
+            Ring a = triples_a[i];
+            Ring b = triples_b[i];
+            Ring c = triples_c[i];
 
             auto xa = data_recv[2 * i];
             auto yb = data_recv[2 * i + 1];
 
-            result[i] = (xa & yb) * (id) ^ xa & b ^ yb & a ^ mul;
+            result[i] = (xa & yb) * (id) ^ xa & b ^ yb & a ^ c;
         }
         if (layer == 4) {
 #pragma omp parallel for if (size > 10000)

@@ -61,7 +61,6 @@ class Permutation {
         std::vector<T> result(input_vec.size());
 #pragma omp parallel for if (perm_vec.size() > 10000)
         for (size_t i = 0; i < perm_vec.size(); ++i) {
-            if (perm_vec[i] > input_vec.size()) throw std::logic_error("Cannot apply secret shared permutation.");
             result[perm_vec[i]] = input_vec[i];
         }
         return result;

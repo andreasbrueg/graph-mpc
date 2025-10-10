@@ -16,8 +16,11 @@ class Benchmark {
         save_file = conf.save_file;
         repeat = conf.repeat;
         save_output = conf.save_output;
-
-        output_data["details"] = {{"input file", input_file}, {"save file", save_file}, {"repeat", repeat}, {"save output", save_output}};
+        output_data = prot->details();
+        output_data["details"].push_back({"input file", input_file});
+        output_data["details"].push_back({"save file", save_file});
+        output_data["details"].push_back({"repeat", repeat});
+        output_data["details"].push_back({"save output", save_output});
         output_data["benchmarks_pre"] = json::array();
         output_data["benchmarks"] = json::array();
     }
@@ -93,7 +96,6 @@ class Benchmark {
     }
 
     virtual void print() {
-        prot->print();
         std::cout << "--- Benchmark Details ---\n";
         for (const auto &[key, value] : output_data["details"].items()) {
             std::cout << key << ": " << value << "\n";

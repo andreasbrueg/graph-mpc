@@ -13,6 +13,7 @@ class Add : public Function {
 
     void evaluate_recv() override {
         std::vector<Ring> result(size);
+#pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
             result[i] = input->at(i) + input2->at(i);
         }

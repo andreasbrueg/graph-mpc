@@ -2,6 +2,7 @@
 
 #include <cmath>   // std::log2, std::ceil
 #include <memory>  // std::unique_ptr, std::make_unique
+#include <nlohmann/json.hpp>
 #include <unordered_map>
 #include <vector>
 
@@ -26,6 +27,8 @@
 #include "shuffle_repeat.h"
 #include "unshuffle.h"
 #include "update.h"
+
+using json = nlohmann::json;
 
 struct MPContext {
     std::unordered_map<Party, std::vector<Ring>> preproc;
@@ -110,6 +113,12 @@ class MPProtocol {
     virtual void post_mp() = 0;
 
     virtual void add_compute_sorts();  // Can be overwritten
+
+    json details() {
+        json output;
+        output["details"] = {{"party", id}, {"size", size}, {"nodes", nodes}, {"depth", depth}, {"bits", bits}, {"ssd", ssd}};
+        return output;
+    }
 
     void build() {
         pre_mp();

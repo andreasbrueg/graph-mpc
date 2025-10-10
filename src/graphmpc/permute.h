@@ -17,16 +17,16 @@ class Permute : public Function {
         std::vector<Ring> result(size);
         if (inverse) {
             std::vector<Ring> inverse_vec(perm->size());
-            // #pragma omp parallel for if (size > 10000)
+#pragma omp parallel for if (size > 10000)
             for (size_t i = 0; i < perm->size(); ++i) {
                 inverse_vec[perm->at(i)] = i;
             }
-            // #pragma omp parallel for if (inverse_vec.size() > 10000)
+#pragma omp parallel for if (size > 10000)
             for (size_t i = 0; i < inverse_vec.size(); ++i) {
                 result[inverse_vec[i]] = input->at(i);
             }
         } else {
-            // #pragma omp parallel for if (size > 10000)
+#pragma omp parallel for if (size > 10000)
             for (size_t i = 0; i < perm->size(); ++i) {
                 result[perm->at(i)] = input->at(i);
             }

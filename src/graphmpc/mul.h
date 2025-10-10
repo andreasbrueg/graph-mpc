@@ -44,7 +44,8 @@ class Mul : public Function {
     }
 
     void evaluate_send() override {
-        // #pragma omp parallel for if (size > 10000)
+        std::vector<Ring> data_send(2 * size);
+#pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
             auto [a, b, _] = triples[i];
             Ring xa, yb;
@@ -55,15 +56,16 @@ class Mul : public Function {
                 xa = input->at(i) + a;
                 yb = input2->at(i) + b;
             }
-            online_vals->push_back(xa);
-            online_vals->push_back(yb);
+            data_send[2 * i] = xa;
+            data_send[2 * i + 1] = yb;
         }
+        online_vals->insert(online_vals->end(), data_send.begin(), data_send.end());
     }
 
     void evaluate_recv() override {
         auto data_recv = read_online(2 * size);
         std::vector<Ring> result(size);
-        // #pragma omp parallel for if (size > 10000)
+#pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
             auto [a, b, mul] = triples[i];
 

@@ -66,7 +66,7 @@ class Compaction : public Mul {
 
         auto data_recv = read_online(2 * size);
 
-        // #pragma omp parallel for if (size > 10000)
+#pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
             auto [a, b, mul] = triples[i];
 

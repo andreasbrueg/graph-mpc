@@ -17,7 +17,7 @@ class AddWeights : public Function {
 
     void evaluate_recv() override {
         if (id == P0 && weights->size() > 0) {
-            // #pragma omp parallel for if (nodes > 10000)
+#pragma omp parallel for if (nodes > 10000)
             for (size_t j = 0; j < nodes; ++j) data_v->at(j) += weights->at(weights->size() - 1 - iteration);
         }
     }

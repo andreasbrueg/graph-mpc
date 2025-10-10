@@ -13,8 +13,8 @@ class Flip : public Function {
     void evaluate_recv() override {
         assert(output->size() >= input->size());
 
-        // #pragma omp parallel for if (input->size() > 10000)
         std::vector<Ring> result(input->size());
+#pragma omp parallel for if (input->size() > 10000)
         for (size_t i = 0; i < input->size(); ++i) {
             if (id == P0) {
                 result[i] = 1 - input->at(i);

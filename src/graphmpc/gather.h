@@ -37,7 +37,7 @@ class Gather_2 : public Function {
             data[i] = input->at(i) - sum;
             sum += data[i];
         }
-#pragma omp_parallel for if (data.size() - nodes > 1000)
+#pragma omp_parallel for if (data.size() - nodes > 10000)
         for (size_t i = nodes; i < data.size(); ++i) {
             data[i] = 0;
         }

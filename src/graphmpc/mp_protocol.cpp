@@ -44,15 +44,6 @@ void MPProtocol::evaluate() {
         for (size_t f_idx = 0; f_idx < level.size(); ++f_idx) {
             auto &f = level[f_idx];
             if (f) f->evaluate_recv();
-            if (level_idx == 96 && f_idx == 3) {  // mp_buf = mp_data_vtx]
-                auto data0_rev = share::reveal_vec(id, network, w.mp_data_parallel[0]);
-                auto data1_rev = share::reveal_vec(id, network, w.mp_data_parallel[1]);
-                auto data2_rev = share::reveal_vec(id, network, w.mp_data_parallel[2]);
-                auto data3_rev = share::reveal_vec(id, network, w.mp_data_parallel[3]);
-                auto data4_rev = share::reveal_vec(id, network, w.mp_data_parallel[4]);
-                auto result = share::reveal_vec(id, network, w.mp_data);
-                std::cout << "";
-            }
         }
     }
 

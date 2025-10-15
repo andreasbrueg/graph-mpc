@@ -4,13 +4,13 @@
 
 class Bit2A : public Mul {
    public:
-    Bit2A(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-          std::vector<Ring> *output, Party &recv, size_t size)
-        : Mul(conf, preproc_vals, online_vals, input, nullptr, output, recv, false, size) {}
+    Bit2A(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+          std::vector<Ring> input, std::vector<Ring> output, Party &recv, size_t size)
+        : Mul(f_id, conf, preproc_vals, online_vals, input, {}, output, recv, false, size) {}
 
-    Bit2A(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-          std::vector<Ring> *output, Party &recv, size_t size, FileWriter *preproc_disk, FileWriter *triples_disk)
-        : Mul(conf, preproc_vals, online_vals, input, nullptr, output, recv, false, size, preproc_disk, triples_disk) {}
+    Bit2A(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+          std::vector<Ring> input, std::vector<Ring> output, Party &recv, size_t size, FileWriter *preproc_disk, FileWriter *triples_disk)
+        : Mul(f_id, conf, preproc_vals, online_vals, input, {}, output, recv, false, size, preproc_disk, triples_disk) {}
 
     void evaluate_send() override {
         if (ssd) {
@@ -29,8 +29,8 @@ class Bit2A : public Mul {
         for (size_t i = 0; i < size; ++i) {
             Ring a = triples_a[i];
             Ring b = triples_b[i];
-            auto xa = (id == P0 ? 1 : 0) * (input->at(i) & 1) + a;
-            auto yb = (id == P0 ? 0 : 1) * (input->at(i) & 1) + b;
+            auto xa = (id == P0 ? 1 : 0) * (input[i] & 1) + a;
+            auto yb = (id == P0 ? 0 : 1) * (input[i] & 1) + b;
             send_ptr[2 * i] = xa;
             send_ptr[2 * i + 1] = yb;
         }
@@ -38,7 +38,6 @@ class Bit2A : public Mul {
 
     void evaluate_recv() override {
         std::vector<Ring> data_recv = read_online(2 * size);
-        auto outptr = output->data();
 #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
             Ring a = triples_a[i];
@@ -48,7 +47,7 @@ class Bit2A : public Mul {
             auto yb = data_recv[2 * i + 1];
 
             auto mul_result = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
-            outptr[i] = (input->at(i) & 1) - 2 * mul_result;
+            output[i] = (input[i] & 1) - 2 * mul_result;
         }
     }
 };

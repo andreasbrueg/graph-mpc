@@ -4,13 +4,14 @@
 
 class MergedShuffle : public Shuffle {
    public:
-    MergedShuffle(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-                  std::vector<Ring> *output, Party &recv, ShufflePre *perm_share, ShufflePre *pi_share, ShufflePre *omega_share)
-        : Shuffle(conf, preproc_vals, online_vals, input, output, recv, perm_share), pi_share(pi_share), omega_share(omega_share) {}
+    MergedShuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+                  std::vector<Ring> input, std::vector<Ring> output, Party &recv, ShufflePre *perm_share, ShufflePre *pi_share, ShufflePre *omega_share)
+        : Shuffle(f_id, conf, preproc_vals, online_vals, input, output, recv, perm_share), pi_share(pi_share), omega_share(omega_share) {}
 
-    MergedShuffle(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-                  std::vector<Ring> *output, Party &recv, ShufflePre *perm_share, ShufflePre *pi_share, ShufflePre *omega_share, FileWriter *disk)
-        : Shuffle(conf, preproc_vals, online_vals, input, output, recv, perm_share, disk), pi_share(pi_share), omega_share(omega_share) {}
+    MergedShuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+                  std::vector<Ring> input, std::vector<Ring> output, Party &recv, ShufflePre *perm_share, ShufflePre *pi_share, ShufflePre *omega_share,
+                  FileWriter *disk)
+        : Shuffle(f_id, conf, preproc_vals, online_vals, input, output, recv, perm_share, disk), pi_share(pi_share), omega_share(omega_share) {}
 
     void preprocess() override {
         if (perm_share->preprocessed) return;

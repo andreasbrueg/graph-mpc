@@ -4,13 +4,13 @@
 
 class EQZ : public Mul {
    public:
-    EQZ(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-        std::vector<Ring> *output, Party &recv, size_t size, size_t layer)
-        : Mul(conf, preproc_vals, online_vals, input, nullptr, output, recv, true, size), layer(layer) {}
+    EQZ(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input,
+        std::vector<Ring> output, Party &recv, size_t size, size_t layer)
+        : Mul(f_id, conf, preproc_vals, online_vals, input, {}, output, recv, true, size), layer(layer) {}
 
-    EQZ(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-        std::vector<Ring> *output, Party &recv, size_t size, size_t layer, FileWriter *preproc_disk, FileWriter *triples_disk)
-        : Mul(conf, preproc_vals, online_vals, input, nullptr, output, recv, true, size, preproc_disk, triples_disk), layer(layer) {}
+    EQZ(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input,
+        std::vector<Ring> output, Party &recv, size_t size, size_t layer, FileWriter *preproc_disk, FileWriter *triples_disk)
+        : Mul(f_id, conf, preproc_vals, online_vals, input, {}, output, recv, true, size, preproc_disk, triples_disk), layer(layer) {}
 
     void evaluate_send() override {
         if (ssd) {
@@ -21,21 +21,20 @@ class EQZ : public Mul {
             else
                 triples_c = triples_disk->read(size);
         }
-        std::vector<Ring> result(*input);
 
         /* x_0 == -x_1 <=> ~x_0 ^ -x_1 */
         if (id == P0 && layer == 0) {
 #pragma omp parallel for if (size > 10000)
-            for (auto &elem : result) elem = ~elem;
+            for (auto &elem : input) elem = ~elem;
         }
 
         if (id == P1 && layer == 0) {
 #pragma omp parallel for if (size > 10000)
-            for (auto &elem : result) elem = -elem;
+            for (auto &elem : input) elem = -elem;
         }
 
-        std::vector<Ring> shares_left(result);
-        std::vector<Ring> shares_right(result);
+        std::vector<Ring> shares_left(input);
+        std::vector<Ring> shares_right(input);
 
         size_t width = 1 << (4 - layer);
 
@@ -58,7 +57,6 @@ class EQZ : public Mul {
     }
 
     void evaluate_recv() override {
-        std::vector<Ring> result(size);
         std::vector<Ring> data_recv = read_online(2 * size);
 
 #pragma omp parallel for if (size > 10000)
@@ -70,16 +68,15 @@ class EQZ : public Mul {
             auto xa = data_recv[2 * i];
             auto yb = data_recv[2 * i + 1];
 
-            result[i] = (xa & yb) * (id) ^ xa & b ^ yb & a ^ c;
+            output[i] = (xa & yb) * (id) ^ xa & b ^ yb & a ^ c;
         }
         if (layer == 4) {
 #pragma omp parallel for if (size > 10000)
-            for (auto &elem : result) {
+            for (auto &elem : output) {
                 elem <<= 31;
                 elem >>= 31;
             }
         }
-        *output = result;
     }
 
    private:

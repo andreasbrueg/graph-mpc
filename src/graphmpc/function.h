@@ -7,46 +7,50 @@
 
 class Function {
    public:
-    Function(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-             std::vector<Ring> *output)
-        : id(conf->id),
+    Function(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+             std::vector<Ring> input, std::vector<Ring> output)
+        : f_id(f_id),
+          id(conf->id),
           rngs(&conf->rngs),
           size(conf->size),
           ssd(conf->ssd),
           preproc_vals(preproc_vals),
           online_vals(online_vals),
-          input(input),
+          input(std::move(input)),
           output(output) {}
 
-    Function(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-             std::vector<Ring> *input2, std::vector<Ring> *output)
-        : id(conf->id),
+    Function(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+             std::vector<Ring> input, std::vector<Ring> input2, std::vector<Ring> output)
+        : f_id(f_id),
+          id(conf->id),
           rngs(&conf->rngs),
           size(conf->size),
           ssd(conf->ssd),
           preproc_vals(preproc_vals),
           online_vals(online_vals),
-          input(input),
-          input2(input2),
+          input(std::move(input)),
+          input2(std::move(input2)),
           output(output) {}
 
-    Function(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-             std::vector<Ring> *input2, std::vector<Ring> *output, size_t &size)
-        : id(conf->id),
+    Function(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+             std::vector<Ring> input, std::vector<Ring> input2, std::vector<Ring> output, size_t &size)
+        : f_id(f_id),
+          id(conf->id),
           rngs(&conf->rngs),
           size(size),
           ssd(conf->ssd),
           preproc_vals(preproc_vals),
           online_vals(online_vals),
-          input(input),
-          input2(input2),
+          input(std::move(input)),
+          input2(std::move(input2)),
           output(output) {}
 
     virtual ~Function() = default;
 
-    std::vector<Ring> *input = nullptr;
-    std::vector<Ring> *input2 = nullptr;
-    std::vector<Ring> *output = nullptr;
+    size_t f_id;
+    std::vector<Ring> input;
+    std::vector<Ring> input2;
+    std::vector<Ring> output;
 
     virtual void preprocess() = 0;
     virtual void evaluate_send() = 0;

@@ -4,13 +4,13 @@
 
 class Unshuffle : public Shuffle {
    public:
-    Unshuffle(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-              std::vector<Ring> *output, ShufflePre *perm_share, Party &recv)
-        : Shuffle(conf, preproc_vals, online_vals, input, output, recv, perm_share) {}
+    Unshuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+              std::vector<Ring> input, std::vector<Ring> output, ShufflePre *perm_share, Party &recv)
+        : Shuffle(f_id, conf, preproc_vals, online_vals, input, output, recv, perm_share) {}
 
-    Unshuffle(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-              std::vector<Ring> *output, ShufflePre *perm_share, Party &recv, FileWriter *disk)
-        : Shuffle(conf, preproc_vals, online_vals, input, output, recv, perm_share, disk) {}
+    Unshuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+              std::vector<Ring> input, std::vector<Ring> output, ShufflePre *perm_share, Party &recv, FileWriter *disk)
+        : Shuffle(f_id, conf, preproc_vals, online_vals, input, output, recv, perm_share, disk) {}
 
     void preprocess() override {
         std::vector<Ring> B_0(size);
@@ -74,7 +74,7 @@ class Unshuffle : public Shuffle {
         }
 
 #pragma omp parallel for if (size > 10000)
-        for (size_t i = 0; i < size; ++i) vec_t[i] = input->at(i) + R[i];
+        for (size_t i = 0; i < size; ++i) vec_t[i] = input[i] + R[i];
 
         Permutation perm = id == P0 ? perm_share->pi_0 : perm_share->pi_1_p;
 
@@ -91,13 +91,11 @@ class Unshuffle : public Shuffle {
         std::vector<Ring> vec_t = read_online(size);
 
         /* Apply inverse */
-        std::vector<Ring> output_share = perm.inverse()(vec_t);
+        output = perm.inverse()(vec_t);
 
         /* Last step: subtract B_0 / B_1 */
 #pragma omp parallel for if (size > 10000)
-        for (size_t i = 0; i < size; ++i) output_share[i] -= unshuffle[i];
-
-        *output = output_share;
+        for (size_t i = 0; i < size; ++i) output[i] -= unshuffle[i];
     }
 
    protected:

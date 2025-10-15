@@ -4,21 +4,21 @@
 
 class Shuffle : public Function {
    public:
-    Shuffle(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-            std::vector<Ring> *output, Party &recv)
-        : Function(conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(new ShufflePre()) {}
+    Shuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+            std::vector<Ring> input, std::vector<Ring> output, Party &recv)
+        : Function(f_id, conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(new ShufflePre()) {}
 
-    Shuffle(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-            std::vector<Ring> *output, Party &recv, FileWriter *disk)
-        : Function(conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(new ShufflePre()), preproc_disk(disk) {}
+    Shuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+            std::vector<Ring> input, std::vector<Ring> output, Party &recv, FileWriter *disk)
+        : Function(f_id, conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(new ShufflePre()), preproc_disk(disk) {}
 
-    Shuffle(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-            std::vector<Ring> *output, Party &recv, ShufflePre *perm_share)
-        : Function(conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(perm_share) {}
+    Shuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+            std::vector<Ring> input, std::vector<Ring> output, Party &recv, ShufflePre *perm_share)
+        : Function(f_id, conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(perm_share) {}
 
-    Shuffle(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-            std::vector<Ring> *output, Party &recv, ShufflePre *perm_share, FileWriter *disk)
-        : Function(conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(perm_share), preproc_disk(disk) {}
+    Shuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+            std::vector<Ring> input, std::vector<Ring> output, Party &recv, ShufflePre *perm_share, FileWriter *disk)
+        : Function(f_id, conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(perm_share), preproc_disk(disk) {}
 
     ShufflePre *perm_share;
 
@@ -259,7 +259,7 @@ class Shuffle : public Function {
         /* Compute input + R */
 #pragma omp parallel for if (size > 10000)
         for (size_t j = 0; j < size; ++j) {
-            t[j] = input->at(j) + R[j];
+            t[j] = input[j] + R[j];
         }
 
         /* Compute perm(input + R) */
@@ -289,14 +289,13 @@ class Shuffle : public Function {
                 perm_share->has_pi_1_p = true;
             }
         }
-        std::vector<Ring> t = read_online(size);  // t1
-        t = perm(t);
+        output = read_online(size);  // t1
+        output = perm(output);
 
 #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
-            t[i] -= perm_share->B[i];
+            output[i] -= perm_share->B[i];
         }
-        *output = t;
     }
 
    protected:

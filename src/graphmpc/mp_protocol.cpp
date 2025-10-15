@@ -11,8 +11,8 @@ void MPProtocol::preprocess() {
         }
     }
 
-    for (size_t level_idx = 0; level_idx < f_queue.size(); ++level_idx) {
-        auto &level = f_queue[level_idx];
+    for (size_t level_idx = 0; level_idx < circ.size(); ++level_idx) {
+        auto &level = circ[level_idx];
 
         for (size_t f_idx = 0; f_idx < level.size(); ++f_idx) {
             auto &f = level[f_idx];
@@ -33,8 +33,8 @@ void MPProtocol::preprocess() {
 
 void MPProtocol::evaluate() {
     if (id != D) {
-        for (size_t level_idx = 0; level_idx < f_queue.size(); ++level_idx) {
-            auto &level = f_queue[level_idx];
+        for (size_t level_idx = 0; level_idx < circ.size(); ++level_idx) {
+            auto &level = circ[level_idx];
 
             for (size_t f_idx = 0; f_idx < level.size(); ++f_idx) {
                 auto &f = level[f_idx];

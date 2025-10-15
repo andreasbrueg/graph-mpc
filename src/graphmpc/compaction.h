@@ -4,13 +4,13 @@
 
 class Compaction : public Mul {
    public:
-    Compaction(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-               std::vector<Ring> *output, Party &recv)
-        : Mul(conf, preproc_vals, online_vals, input, {}, output, recv, false) {}
+    Compaction(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+               std::vector<Ring> input, std::vector<Ring> output, Party &recv)
+        : Mul(f_id, conf, preproc_vals, online_vals, input, {}, output, recv, false) {}
 
-    Compaction(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input,
-               std::vector<Ring> *output, Party &recv, FileWriter *preproc_disk, FileWriter *triples_disk)
-        : Mul(conf, preproc_vals, online_vals, input, {}, output, recv, false, preproc_disk, triples_disk) {}
+    Compaction(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
+               std::vector<Ring> input, std::vector<Ring> output, Party &recv, FileWriter *preproc_disk, FileWriter *triples_disk)
+        : Mul(f_id, conf, preproc_vals, online_vals, input, {}, output, recv, false, preproc_disk, triples_disk) {}
 
     void evaluate_send() override {
         if (id == D) return;
@@ -27,7 +27,7 @@ class Compaction : public Mul {
 
         // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
         for (size_t i = 0; i < size; ++i) {
-            f_0[i] = -input->at(i);
+            f_0[i] = -input[i];
             if (id == P0) {
                 f_0[i] += 1;  // 1 as constant only to one share
             }
@@ -43,7 +43,7 @@ class Compaction : public Mul {
         }
 
         for (size_t i = 0; i < size; ++i) {
-            s += input->at(i);
+            s += input[i];
             s_1[i] = s - s_0[i];
         }
 
@@ -56,7 +56,7 @@ class Compaction : public Mul {
             Ring a = triples_a[i];
             Ring b = triples_b[i];
 
-            auto xa = input->at(i) + a;
+            auto xa = input[i] + a;
             auto yb = s_1[i] + b;
             send_ptr[2 * i] = xa;
             send_ptr[2 * i + 1] = yb;
@@ -68,7 +68,7 @@ class Compaction : public Mul {
         std::vector<Ring> f_0(size);
         // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
         for (size_t i = 0; i < size; ++i) {
-            f_0[i] = -input->at(i);
+            f_0[i] = -input[i];
             if (id == P0) {
                 f_0[i] += 1;  // 1 as constant only to one share
             }
@@ -84,7 +84,6 @@ class Compaction : public Mul {
 
         auto data_recv = read_online(2 * size);
 
-        auto outptr = output->data();
 #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
             Ring a = triples_a[i];
@@ -94,13 +93,13 @@ class Compaction : public Mul {
             auto xa = data_recv[2 * i];
             auto yb = data_recv[2 * i + 1];
 
-            outptr[i] = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
+            output[i] = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
         }
 
 #pragma omp parallel for if (size > 10000)
-        for (size_t i = 0; i < output->size(); ++i) {
-            outptr[i] += s_0[i];
-            if (id == P0) outptr[i]--;
+        for (size_t i = 0; i < output.size(); ++i) {
+            output[i] += s_0[i];
+            if (id == P0) output[i]--;
         }
     }
 };

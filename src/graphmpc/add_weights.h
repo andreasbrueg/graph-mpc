@@ -6,8 +6,8 @@
 
 class AddWeights : public Function {
    public:
-    AddWeights(ProtocolConfig *conf, std::vector<Ring> *data_v, std::vector<Ring> *weights, size_t &iteration)
-        : Function(conf, {}, {}, {}, {}), data_v(data_v), weights(weights), nodes(conf->nodes), iteration(iteration) {
+    AddWeights(size_t f_id, ProtocolConfig *conf, std::vector<Ring> *data_v, std::vector<Ring> *weights, size_t &iteration)
+        : Function(f_id, conf, {}, {}, {}, {}), data_v(data_v), weights(weights), nodes(conf->nodes), iteration(iteration) {
         assert(weights->size() >= iteration);
     }
 

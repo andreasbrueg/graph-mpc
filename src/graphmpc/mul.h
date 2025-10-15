@@ -4,25 +4,25 @@
 
 class Mul : public Function {
    public:
-    Mul(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input1,
-        std::vector<Ring> *input2, std::vector<Ring> *output, Party &recv, bool binary)
-        : Function(conf, preproc_vals, online_vals, input1, input2, output), recv(recv), binary(binary) {}
+    Mul(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input1,
+        std::vector<Ring> input2, std::vector<Ring> output, Party &recv, bool binary)
+        : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output), recv(recv), binary(binary) {}
 
-    Mul(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input1,
-        std::vector<Ring> *input2, std::vector<Ring> *output, Party &recv, bool binary, FileWriter *preproc_disk, FileWriter *triples_disk)
-        : Function(conf, preproc_vals, online_vals, input1, input2, output),
+    Mul(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input1,
+        std::vector<Ring> input2, std::vector<Ring> output, Party &recv, bool binary, FileWriter *preproc_disk, FileWriter *triples_disk)
+        : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output),
           recv(recv),
           binary(binary),
           preproc_disk(preproc_disk),
           triples_disk(triples_disk) {}
 
-    Mul(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input1,
-        std::vector<Ring> *input2, std::vector<Ring> *output, Party &recv, bool binary, size_t size)
-        : Function(conf, preproc_vals, online_vals, input1, input2, output, size), recv(recv), binary(binary) {}
+    Mul(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input1,
+        std::vector<Ring> input2, std::vector<Ring> output, Party &recv, bool binary, size_t size)
+        : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output, size), recv(recv), binary(binary) {}
 
-    Mul(ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> *input1,
-        std::vector<Ring> *input2, std::vector<Ring> *output, Party &recv, bool binary, size_t size, FileWriter *preproc_disk, FileWriter *triples_disk)
-        : Function(conf, preproc_vals, online_vals, input1, input2, output, size),
+    Mul(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input1,
+        std::vector<Ring> input2, std::vector<Ring> output, Party &recv, bool binary, size_t size, FileWriter *preproc_disk, FileWriter *triples_disk)
+        : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output, size),
           recv(recv),
           binary(binary),
           preproc_disk(preproc_disk),
@@ -76,11 +76,11 @@ class Mul : public Function {
             Ring b = triples_b[i];
             Ring xa, yb;
             if (binary) {
-                xa = input->at(i) ^ a;
-                yb = input2->at(i) ^ b;
+                xa = input[i] ^ a;
+                yb = input2[i] ^ b;
             } else {
-                xa = input->at(i) + a;
-                yb = input2->at(i) + b;
+                xa = input[i] + a;
+                yb = input2[i] + b;
             }
             data_send[2 * i] = xa;
             data_send[2 * i + 1] = yb;
@@ -90,7 +90,6 @@ class Mul : public Function {
 
     void evaluate_recv() override {
         auto data_recv = read_online(2 * size);
-        auto outptr = output->data();
 #pragma omp parallel for if (size > 10000)
         for (size_t i = 0; i < size; ++i) {
             Ring a = triples_a[i];
@@ -101,9 +100,9 @@ class Mul : public Function {
             auto yb = data_recv[2 * i + 1];
 
             if (binary)
-                outptr[i] = (xa & yb) * (id) ^ xa & b ^ yb & a ^ c;
+                output[i] = (xa & yb) * (id) ^ xa & b ^ yb & a ^ c;
             else
-                outptr[i] = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
+                output[i] = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
         }
     }
 

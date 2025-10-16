@@ -4,7 +4,7 @@
 
 class Gather_1 : public Function {
    public:
-    Gather_1(size_t f_id, ProtocolConfig *conf, std::vector<Ring> input, std::vector<Ring> output) : Function(f_id, conf, {}, {}, input, output) {}
+    Gather_1(size_t f_id, ProtocolConfig *conf, std::vector<Ring> input, std::vector<Ring> output) : Function(f_id, conf, {}, {}, input, output, false) {}
 
     void preprocess() override {}
 
@@ -22,7 +22,7 @@ class Gather_1 : public Function {
 class Gather_2 : public Function {
    public:
     Gather_2(size_t f_id, ProtocolConfig *conf, std::vector<Ring> input, std::vector<Ring> output)
-        : Function(f_id, conf, {}, {}, input, output), nodes(conf->nodes) {}
+        : Function(f_id, conf, {}, {}, input, output, false), nodes(conf->nodes) {}
 
     void preprocess() override {}
 

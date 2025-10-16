@@ -1,22 +1,24 @@
 #include "mp_protocol.h"
 
 std::vector<Ring> MPProtocol::add_sort(std::vector<std::vector<Ring>> &bit_keys, size_t bits) {
-    w.sort_perm = add_compaction(bit_keys[0]);
+    auto perm = compaction(bit_keys[0]);
     for (size_t bit = 1; bit < bits; ++bit) {
-        w.sort_perm = add_sort_iteration(w.sort_perm, bit_keys[bit]);
+        perm = add_sort_iteration(perm, bit_keys[bit]);
     }
-    return w.sort_perm;
+    return perm;
 }
 
 std::vector<Ring> MPProtocol::add_sort_iteration(std::vector<Ring> &perm, std::vector<Ring> &keys) {
-    w.sort_perm = add_shuffle(perm);
-    w.sort_bits = repeat_shuffle(keys);
+    auto perm_shuffled = shuffle(perm, shuffle_idx);
+    auto keys_shuffled = shuffle(keys, shuffle_idx);
 
-    w.sort_perm = add_reveal(w.sort_perm);
-    w.sort_perm = add_permute(w.sort_bits, w.sort_bits);
+    auto clear_perm_shuffled = reveal(perm_shuffled);
+    auto keys_sorted = permute(keys_shuffled, clear_perm_shuffled);
 
-    w.sort_next_perm = add_compaction(w.sort_bits);
+    auto perm_next = compaction(keys_sorted);
 
-    w.sort_next_perm = add_permute(w.sort_next_perm, w.sort_perm, true);
-    return add_unshuffle(w.sort_next_perm);
+    perm_next = permute(perm_next, clear_perm_shuffled, true);
+    perm_next = unshuffle(perm_next, shuffle_idx);
+    shuffle_idx++;
+    return perm_next;
 }

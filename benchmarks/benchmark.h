@@ -13,8 +13,7 @@ class Benchmark {
     Benchmark(bpo::variables_map &opts, MPProtocol *prot, std::shared_ptr<io::NetIOMP> network) : prot(prot), network(network) {
         auto conf = setup::setupBenchmark(opts);
 
-        Graph g = prot->benchmark_graph();
-        prot->set_input(g);
+        prot->benchmark_graph();
         network->sync();
 
         input_file = conf.input_file;

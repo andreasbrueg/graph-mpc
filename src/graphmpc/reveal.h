@@ -5,7 +5,7 @@
 class Reveal : public Function {
    public:
     Reveal(size_t f_id, ProtocolConfig *conf, std::vector<Ring> *online_vals, std::vector<Ring> input, std::vector<Ring> output)
-        : Function(f_id, conf, {}, online_vals, input, output) {}
+        : Function(f_id, conf, {}, online_vals, input, output, true) {}
 
     void preprocess() override {}
 

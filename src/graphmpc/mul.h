@@ -6,11 +6,11 @@ class Mul : public Function {
    public:
     Mul(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input1,
         std::vector<Ring> input2, std::vector<Ring> output, Party &recv, bool binary)
-        : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output), recv(recv), binary(binary) {}
+        : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output, true), recv(recv), binary(binary) {}
 
     Mul(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input1,
         std::vector<Ring> input2, std::vector<Ring> output, Party &recv, bool binary, FileWriter *preproc_disk, FileWriter *triples_disk)
-        : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output),
+        : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output, true),
           recv(recv),
           binary(binary),
           preproc_disk(preproc_disk),
@@ -18,11 +18,11 @@ class Mul : public Function {
 
     Mul(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input1,
         std::vector<Ring> input2, std::vector<Ring> output, Party &recv, bool binary, size_t size)
-        : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output, size), recv(recv), binary(binary) {}
+        : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output, size, true), recv(recv), binary(binary) {}
 
     Mul(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input1,
         std::vector<Ring> input2, std::vector<Ring> output, Party &recv, bool binary, size_t size, FileWriter *preproc_disk, FileWriter *triples_disk)
-        : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output, size),
+        : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output, size, true),
           recv(recv),
           binary(binary),
           preproc_disk(preproc_disk),

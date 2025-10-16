@@ -11,7 +11,7 @@
 #include "../setup/configs.h"
 #include "../utils/graph.h"
 #include "add.h"
-#include "add_weights.h"
+#include "add_const.h"
 #include "bit2a.h"
 #include "compaction.h"
 #include "construct_payload.h"
@@ -25,9 +25,7 @@
 #include "propagate.h"
 #include "reveal.h"
 #include "shuffle.h"
-#include "shuffle_repeat.h"
 #include "unshuffle.h"
-#include "update.h"
 
 using json = nlohmann::json;
 
@@ -46,34 +44,21 @@ struct MPContext {
     std::vector<Ring> clear_shuffled_src_order;
     std::vector<Ring> clear_shuffled_dst_order;
 
-    ShufflePre vtx_order_shuffle;
-    ShufflePre src_order_shuffle;
-    ShufflePre dst_order_shuffle;
-    ShufflePre vtx_src_merge;
-    ShufflePre src_dst_merge;
-    ShufflePre dst_vtx_merge;
+    std::shared_ptr<ShufflePre> vtx_order_shuffle;
+    std::shared_ptr<ShufflePre> src_order_shuffle;
+    std::shared_ptr<ShufflePre> dst_order_shuffle;
+    std::shared_ptr<ShufflePre> vtx_src_merge;
+    std::shared_ptr<ShufflePre> src_dst_merge;
+    std::shared_ptr<ShufflePre> dst_vtx_merge;
 };
 
 struct Wires {
     std::vector<std::vector<Ring>> src_order_bits;
     std::vector<std::vector<Ring>> dst_order_bits;
-    std::vector<Ring> isV;
+    std::vector<Ring> isV_inv;
     std::vector<Ring> data;
-
     std::vector<std::vector<Ring>> mp_data_parallel;
-    std::vector<Ring> mp_data_vtx;
-    std::vector<Ring> mp_data;
-    std::vector<Ring> mp_data_corr;
-    std::vector<Ring> mp_buf;
-    std::vector<Ring> sort_perm;
-    std::vector<Ring> sort_bits;
-    std::vector<Ring> sort_next_perm;
-    std::vector<Ring> deduplication_perm;
-    std::vector<Ring> deduplication_src;
-    std::vector<Ring> deduplication_dst;
-    std::vector<Ring> deduplication_src_dupl;
-    std::vector<Ring> deduplication_dst_dupl;
-    std::vector<Ring> deduplication_duplicates;
+    std::vector<Ring> buf;
 };
 
 class MPProtocol {
@@ -89,8 +74,11 @@ class MPProtocol {
           weights(conf.weights),
           network(network),
           ssd(conf.ssd) {
-        w.src_order_bits.resize(bits);
-        w.dst_order_bits.resize(bits);
+        w.src_order_bits.resize(bits + 1);
+        w.dst_order_bits.resize(bits + 1);
+        w.isV_inv.resize(size);
+        w.data.resize(size);
+
         for (size_t i = 0; i < bits; ++i) {
             w.src_order_bits[i].resize(size);
             w.dst_order_bits[i].resize(size);
@@ -109,7 +97,7 @@ class MPProtocol {
             }
         }
         for (size_t i = 0; i < size; ++i) {
-            w.isV[i] = num_wires;
+            w.isV_inv[i] = num_wires;
             num_wires++;
         }
         for (size_t i = 0; i < size; ++i) {
@@ -124,10 +112,12 @@ class MPProtocol {
     virtual void apply() = 0;
     virtual void post_mp() = 0;
 
-    virtual void add_compute_sorts();  // Can be overwritten
+    virtual void compute_sorts();  // Can be overwritten
+
+    void prepare_shuffles();
 
     json details() {
-        size_t rounds = f_queue.size();
+        size_t rounds = circ.size();
         json output;
         output["details"] = {
             {"party", id}, {"size", size}, {"nodes", nodes}, {"depth", depth}, {"bits", bits}, {"ssd", ssd}, {"Communication rounds: ", rounds}};
@@ -136,20 +126,22 @@ class MPProtocol {
 
     void build() {
         pre_mp();
-        build_initialization();
+        compute_sorts();
+        prepare_shuffles();
         if (w.mp_data_parallel.size() > 0) {  // Only the case for pi_r
             for (size_t i = 0; i < w.mp_data_parallel.size(); ++i) {
-                w.mp_buf = add_update(w.mp_data_parallel[i]);
-                w.mp_data = add_update(w.mp_data_parallel[i]);
+                w.buf = w.mp_data_parallel[i];
+                w.data = w.mp_data_parallel[i];
                 build_message_passing();
-                w.mp_data_parallel[i] = add_update(w.mp_data);
+                w.mp_data_parallel[i] = w.data;
             }
         } else {
-            w.mp_data = add_update(w.mp_data_vtx);
             build_message_passing();
         }
         post_mp();
-        g.data = add_update(w.mp_data);
+        g.data = w.data;
+        build_circuit();
+        init_inputs();
     }
 
     void build_message_passing();
@@ -161,6 +153,13 @@ class MPProtocol {
     void set_input(Graph &graph) { g = graph; }
 
     Graph get_output() { return g; }
+
+    void init_inputs() {
+        w.src_order_bits = g.src_order_bits;
+        w.dst_order_bits = g.dst_order_bits;
+        w.isV_inv = g.isV_inv;
+        w.data = g.data;
+    }
 
     void benchmark_graph() {
         if (id == P0) {
@@ -183,7 +182,7 @@ class MPProtocol {
         std::cout << "Depth: " << depth << std::endl;
         std::cout << "Bits: " << bits << std::endl;
         std::cout << "SSD utilization: " << ssd << std::endl;
-        std::cout << "Communication rounds: " << f_queue.size() << std::endl;
+        std::cout << "Communication rounds: " << circ.size() << std::endl;
         std::cout << std::endl;
     }
 
@@ -210,12 +209,18 @@ class MPProtocol {
         ctx.reveal_vals.clear();
         ctx.data_recv.clear();
 
-        ctx.vtx_order_shuffle.initialize(id, size);
-        ctx.src_order_shuffle.initialize(id, size);
-        ctx.dst_order_shuffle.initialize(id, size);
-        ctx.vtx_src_merge.initialize(id, size);
-        ctx.src_dst_merge.initialize(id, size);
-        ctx.dst_vtx_merge.initialize(id, size);
+        ctx.vtx_order_shuffle = std::make_shared<ShufflePre>();
+        ctx.src_order_shuffle = std::make_shared<ShufflePre>();
+        ctx.dst_order_shuffle = std::make_shared<ShufflePre>();
+        ctx.vtx_src_merge = std::make_shared<ShufflePre>();
+        ctx.src_dst_merge = std::make_shared<ShufflePre>();
+        ctx.dst_vtx_merge = std::make_shared<ShufflePre>();
+        ctx.vtx_order_shuffle->initialize(id, size);
+        ctx.src_order_shuffle->initialize(id, size);
+        ctx.dst_order_shuffle->initialize(id, size);
+        ctx.vtx_src_merge->initialize(id, size);
+        ctx.src_dst_merge->initialize(id, size);
+        ctx.dst_vtx_merge->initialize(id, size);
     }
 
    protected:
@@ -228,10 +233,12 @@ class MPProtocol {
     bool ssd;
 
     Graph g;
+    std::vector<Ring> data;
 
-    std::vector<std::vector<std::unique_ptr<Function>>> circ;
-    std::vector<std::unique_ptr<Function>> f_queue;
-    ShufflePre *current_shuffle;
+    std::vector<std::vector<std::shared_ptr<Function>>> circ;
+    std::vector<std::shared_ptr<Function>> f_queue;
+    std::vector<std::shared_ptr<ShufflePre>> shuffles;
+    size_t shuffle_idx = 0;
     size_t current_layer = 0;
     size_t num_wires = 0;
 
@@ -253,8 +260,6 @@ class MPProtocol {
 
     std::vector<Ring> add_sort_iteration(std::vector<Ring> &perm, std::vector<Ring> &keys);
 
-    void build_initialization();
-
     void build_circuit() {
         std::vector<size_t> wire_level(num_wires, 0);
         std::vector<size_t> function_level(f_queue.size(), 0);
@@ -271,319 +276,312 @@ class MPProtocol {
                 max_depth = std::max(max_depth, wire_depth);
             }
 
-            max_depth++;
+            if (f->interactive) max_depth++;
 
             function_level[f->f_id] = max_depth;
             for (size_t i = 0; i < f->output.size(); ++i) {
                 wire_level[f->output[i]] = max_depth;
             }
+
             depth = std::max(depth, max_depth);
         }
 
-        circ.resize(depth);
+        circ.resize(depth + 1);
 
-        for (auto &f : f_queue) {
-            circ[function_level[f->f_id]].push_back(std::move(f));
+        for (size_t i = 0; i < f_queue.size(); ++i) {
+            auto &f = f_queue[i];
+            if (f == nullptr) {
+                std::cout << "nullptr function at index " << i << std::endl;
+                continue;
+            }
+            circ[function_level[f->f_id]].push_back(f);
         }
     }
 
-    void add_function(std::unique_ptr<Function> func) { f_queue.push_back(std::move(func)); }
+    void add_function(std::shared_ptr<Function> func) { f_queue.push_back(std::move(func)); }
 
-    std::vector<Ring> add_propagate_1(std::vector<Ring> &input) {
+    std::vector<Ring> propagate_1(std::vector<Ring> &input) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
-        f_queue.emplace_back(std::make_unique<Propagate_1>(f_queue.size(), &conf, input, output));
+        f_queue.emplace_back(std::make_shared<Propagate_1>(f_queue.size(), &conf, input, output));
         return output;
     }
 
-    std::vector<Ring> add_propagate_2(std::vector<Ring> &input1, std::vector<Ring> &input2) {
+    std::vector<Ring> propagate_2(std::vector<Ring> &input1, std::vector<Ring> &input2) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
-        f_queue.emplace_back(std::make_unique<Propagate_2>(f_queue.size(), &conf, input1, input2, output));
+        f_queue.emplace_back(std::make_shared<Propagate_2>(f_queue.size(), &conf, input1, input2, output));
         return output;
     }
 
-    std::vector<Ring> add_gather_1(std::vector<Ring> &input) {
+    std::vector<Ring> gather_1(std::vector<Ring> &input) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
-        f_queue.emplace_back(std::make_unique<Gather_1>(f_queue.size(), &conf, input, output));
+        f_queue.emplace_back(std::make_shared<Gather_1>(f_queue.size(), &conf, input, output));
         return output;
     }
 
-    std::vector<Ring> add_gather_2(std::vector<Ring> &input) {
+    std::vector<Ring> gather_2(std::vector<Ring> &input) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
-        f_queue.emplace_back(std::make_unique<Gather_2>(f_queue.size(), &conf, input, output));
+        f_queue.emplace_back(std::make_shared<Gather_2>(f_queue.size(), &conf, input, output));
         return output;
     }
 
-    std::vector<Ring> add_shuffle(std::vector<Ring> &input) {
+    std::vector<Ring> shuffle(std::vector<Ring> &input, size_t shuffle_idx) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
-        auto shuffle_ptr = std::make_unique<Shuffle>(f_queue.size(), &conf, &ctx.preproc, &ctx.shuffle_vals, input, output, recv_shuffle, &preproc_disk);
-        current_shuffle = shuffle_ptr->perm_share;
-        add_function(std::move(shuffle_ptr));
+        add_function(std::make_shared<Shuffle>(f_queue.size(), &conf, &ctx.preproc, &ctx.shuffle_vals, &shuffles, input, output, recv_shuffle, &preproc_disk,
+                                               shuffle_idx));
         return output;
     }
 
-    std::vector<Ring> add_shuffle(std::vector<Ring> &input, ShufflePre *perm_share) {
+    // std::vector<Ring> repeat_shuffle(std::vector<Ring> &input, ShufflePre &perm_share) {
+    // std::vector<Ring> output(size);
+    // std::iota(output.begin(), output.end(), num_wires);
+    // num_wires += size;
+
+    // auto f =
+    // std::make_unique<ShuffleRepeat>(f_queue.size(), &conf, &ctx.preproc, &ctx.shuffle_vals, input, output, &perm_share, recv_shuffle, &preproc_disk);
+    // f_queue.push_back(std::move(f));
+
+    // return output;
+    //}
+
+    std::vector<Ring> unshuffle(std::vector<Ring> &input, size_t shuffle_idx) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
-        add_function(std::make_unique<Shuffle>(f_queue.size(), &conf, &ctx.preproc, &ctx.shuffle_vals, input, output, recv_shuffle, perm_share, &preproc_disk));
+        auto perm_share = shuffles[shuffles.size() - 1];  // last shuffle
+        add_function(std::make_shared<Unshuffle>(f_queue.size(), &conf, &ctx.preproc, &ctx.shuffle_vals, &shuffles, input, output, recv_shuffle, &preproc_disk,
+                                                 shuffle_idx));
         return output;
     }
 
-    std::vector<Ring> repeat_shuffle(std::vector<Ring> &input) {
+    std::vector<Ring> merged_shuffle(std::vector<Ring> &input, std::shared_ptr<ShufflePre> pi_share, std::shared_ptr<ShufflePre> omega_share,
+                                     size_t shuffle_idx) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
-        add_function(std::make_unique<ShuffleRepeat>(f_queue.size(), &conf, &ctx.preproc, &ctx.shuffle_vals, input, output, current_shuffle, recv_shuffle,
-                                                     &preproc_disk));
+        add_function(std::make_shared<MergedShuffle>(f_queue.size(), &conf, &ctx.preproc, &ctx.shuffle_vals, &shuffles, input, output, recv_shuffle, pi_share,
+                                                     omega_share, &preproc_disk, shuffle_idx));
         return output;
     }
 
-    std::vector<Ring> repeat_shuffle(std::vector<Ring> &input, ShufflePre &perm_share) {
+    std::vector<Ring> compaction(std::vector<Ring> &input) {
+        std::vector<Ring> output(size);
+        std::iota(output.begin(), output.end(), num_wires);
+        num_wires += size;
+
+        add_function(std::make_shared<Compaction>(f_queue.size(), &conf, &ctx.preproc, &ctx.mult_vals, input, output, recv_mul, &preproc_disk, &triples_disk));
+        return output;
+    }
+
+    std::vector<Ring> reveal(std::vector<Ring> &input) {
+        std::vector<Ring> output(size);
+        std::iota(output.begin(), output.end(), num_wires);
+        num_wires += size;
+
+        add_function(std::make_shared<Reveal>(f_queue.size(), &conf, &ctx.reveal_vals, input, output));
+        return output;
+    }
+
+    std::vector<Ring> permute(std::vector<Ring> &input, std::vector<Ring> &perm, bool inverse = false) {
+        std::vector<Ring> output(size);
+        std::iota(output.begin(), output.end(), num_wires);
+        num_wires += size;
+
+        f_queue.emplace_back(std::make_shared<Permute>(f_queue.size(), &conf, input, perm, output, inverse));
+        return output;
+    }
+
+    std::vector<Ring> equals_zero(std::vector<Ring> &input, size_t size, size_t layer) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
         add_function(
-            std::make_unique<ShuffleRepeat>(f_queue.size(), &conf, &ctx.preproc, &ctx.shuffle_vals, input, output, &perm_share, recv_shuffle, &preproc_disk));
+            std::make_shared<EQZ>(f_queue.size(), &conf, &ctx.preproc, &ctx.and_vals, input, output, recv_mul, size, layer, &preproc_disk, &triples_disk));
         return output;
     }
 
-    std::vector<Ring> add_unshuffle(std::vector<Ring> &input) {
+    std::vector<Ring> bit2A(std::vector<Ring> &input, size_t size) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
-        add_function(
-            std::make_unique<Unshuffle>(f_queue.size(), &conf, &ctx.preproc, &ctx.shuffle_vals, input, output, current_shuffle, recv_shuffle, &preproc_disk));
-        return output;
-    }
-
-    std::vector<Ring> add_merged_shuffle(std::vector<Ring> &input, ShufflePre &perm_share, ShufflePre &pi_share, ShufflePre &omega_share) {
-        std::vector<Ring> output(size);
-        std::iota(output.begin(), output.end(), num_wires);
-        num_wires += size;
-
-        add_function(std::make_unique<MergedShuffle>(f_queue.size(), &conf, &ctx.preproc, &ctx.shuffle_vals, input, output, recv_shuffle, &perm_share,
-                                                     &pi_share, &omega_share, &preproc_disk));
-        return output;
-    }
-
-    std::vector<Ring> add_compaction(std::vector<Ring> &input) {
-        std::vector<Ring> output(size);
-        std::iota(output.begin(), output.end(), num_wires);
-        num_wires += size;
-
-        add_function(std::make_unique<Compaction>(f_queue.size(), &conf, &ctx.preproc, &ctx.mult_vals, input, output, recv_mul, &preproc_disk, &triples_disk));
-        return output;
-    }
-
-    std::vector<Ring> add_reveal(std::vector<Ring> &input) {
-        std::vector<Ring> output(size);
-        std::iota(output.begin(), output.end(), num_wires);
-        num_wires += size;
-
-        add_function(std::make_unique<Reveal>(f_queue.size(), &conf, &ctx.reveal_vals, input, output));
-        return output;
-    }
-
-    std::vector<Ring> add_permute(std::vector<Ring> &input, std::vector<Ring> &perm, bool inverse = false) {
-        std::vector<Ring> output(size);
-        std::iota(output.begin(), output.end(), num_wires);
-        num_wires += size;
-
-        f_queue.emplace_back(std::make_unique<Permute>(f_queue.size(), &conf, input, output, &perm, inverse));
-        return output;
-    }
-
-    std::vector<Ring> add_update(std::vector<Ring> &input) {
-        std::vector<Ring> output(size);
-        std::iota(output.begin(), output.end(), num_wires);
-        num_wires += size;
-
-        f_queue.emplace_back(std::make_unique<Update>(f_queue.size(), &conf, input, output));
-        return output;
-    }
-
-    std::vector<Ring> add_equals_zero(std::vector<Ring> &input, size_t size, size_t layer) {
-        std::vector<Ring> output(size);
-        std::iota(output.begin(), output.end(), num_wires);
-        num_wires += size;
-
-        add_function(
-            std::make_unique<EQZ>(f_queue.size(), &conf, &ctx.preproc, &ctx.and_vals, input, output, recv_mul, size, layer, &preproc_disk, &triples_disk));
-        return output;
-    }
-
-    std::vector<Ring> add_Bit2A(std::vector<Ring> &input, size_t size) {
-        std::vector<Ring> output(size);
-        std::iota(output.begin(), output.end(), num_wires);
-        num_wires += size;
-
-        add_function(std::make_unique<Bit2A>(f_queue.size(), &conf, &ctx.preproc, &ctx.mult_vals, input, output, recv_mul, size, &preproc_disk, &triples_disk));
+        add_function(std::make_shared<Bit2A>(f_queue.size(), &conf, &ctx.preproc, &ctx.mult_vals, input, output, recv_mul, size, &preproc_disk, &triples_disk));
         return output;
     }
 
     /* TODO: Connect output in Insert */
-    std::vector<Ring> add_insert(std::vector<Ring> input) {
+    std::vector<Ring> insert(std::vector<Ring> input) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
-        f_queue.emplace_back(std::make_unique<Insert>(f_queue.size(), &conf, &input));
+        f_queue.emplace_back(std::make_shared<Insert>(f_queue.size(), &conf, input, output));
         return output;
     }
 
-    std::vector<Ring> add_deduplication_sub(std::vector<Ring> &vec_p) {
+    std::vector<Ring> deduplication_sub(std::vector<Ring> &vec_p) {
         std::vector<Ring> vec_dupl(size - 1);
         std::iota(vec_dupl.begin(), vec_dupl.end(), num_wires);
         num_wires += (size - 1);
 
-        f_queue.emplace_back(std::make_unique<DeduplicationSub>(f_queue.size(), &conf, vec_p, vec_dupl));
+        f_queue.emplace_back(std::make_shared<DeduplicationSub>(f_queue.size(), &conf, vec_p, vec_dupl));
         return vec_dupl;
     }
 
-    std::vector<Ring> add_mul(std::vector<Ring> &x, std::vector<Ring> &y, bool binary = false) {
+    std::vector<Ring> mul(std::vector<Ring> &x, std::vector<Ring> &y, bool binary = false) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
         if (binary) {
             add_function(
-                std::make_unique<Mul>(f_queue.size(), &conf, &ctx.preproc, &ctx.and_vals, x, y, output, recv_mul, binary, &preproc_disk, &triples_disk));
+                std::make_shared<Mul>(f_queue.size(), &conf, &ctx.preproc, &ctx.and_vals, x, y, output, recv_mul, binary, &preproc_disk, &triples_disk));
         } else {
             add_function(
-                std::make_unique<Mul>(f_queue.size(), &conf, &ctx.preproc, &ctx.mult_vals, x, y, output, recv_mul, binary, &preproc_disk, &triples_disk));
+                std::make_shared<Mul>(f_queue.size(), &conf, &ctx.preproc, &ctx.mult_vals, x, y, output, recv_mul, binary, &preproc_disk, &triples_disk));
         }
         return output;
     }
 
-    std::vector<Ring> add_mul(std::vector<Ring> &x, std::vector<Ring> &y, size_t size, bool binary = false) {
+    std::vector<Ring> mul(std::vector<Ring> &x, std::vector<Ring> &y, size_t size, bool binary = false) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
         if (binary) {
             add_function(
-                std::make_unique<Mul>(f_queue.size(), &conf, &ctx.preproc, &ctx.and_vals, x, y, output, recv_mul, binary, size, &preproc_disk, &triples_disk));
+                std::make_shared<Mul>(f_queue.size(), &conf, &ctx.preproc, &ctx.and_vals, x, y, output, recv_mul, binary, size, &preproc_disk, &triples_disk));
         } else {
             add_function(
-                std::make_unique<Mul>(f_queue.size(), &conf, &ctx.preproc, &ctx.mult_vals, x, y, output, recv_mul, binary, size, &preproc_disk, &triples_disk));
+                std::make_shared<Mul>(f_queue.size(), &conf, &ctx.preproc, &ctx.mult_vals, x, y, output, recv_mul, binary, size, &preproc_disk, &triples_disk));
         }
         return output;
     }
 
     /* TODO: Connect output in PushBack */
-    std::vector<Ring> add_push_back(std::vector<std::vector<Ring>> &keys, std::vector<Ring> &vec) {
+    std::vector<Ring> push_back(std::vector<std::vector<Ring>> &keys, std::vector<Ring> &vec) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
-        f_queue.emplace_back(std::make_unique<PushBack>(f_queue.size(), &conf, &keys, vec));
+        f_queue.emplace_back(std::make_shared<PushBack>(f_queue.size(), &conf, &keys, vec));
         return output;
     }
 
-    std::vector<Ring> add_flip(std::vector<Ring> &input) {
+    std::vector<Ring> flip(std::vector<Ring> &input) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
-        f_queue.emplace_back(std::make_unique<Flip>(f_queue.size(), &conf, input, output));
+        f_queue.emplace_back(std::make_shared<Flip>(f_queue.size(), &conf, input, output));
         return output;
     }
 
-    std::vector<Ring> add_add(std::vector<Ring> &input1, std::vector<Ring> &input2) {
+    std::vector<Ring> add(std::vector<Ring> &input1, std::vector<Ring> &input2) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
-        f_queue.emplace_back(std::make_unique<Add>(f_queue.size(), &conf, input1, input2, output));
+        f_queue.emplace_back(std::make_shared<Add>(f_queue.size(), &conf, input1, input2, output));
         return output;
     }
 
-    std::vector<Ring> add_construct_payload(std::vector<std::vector<Ring>> &payloads) {
+    std::vector<Ring> add_const(std::vector<Ring> &data, Ring val) {
         std::vector<Ring> output(size);
         std::iota(output.begin(), output.end(), num_wires);
         num_wires += size;
 
-        f_queue.emplace_back(std::make_unique<ConstructPayload>(f_queue.size(), &conf, &payloads, output));
+        f_queue.emplace_back(std::make_shared<AddConst>(f_queue.size(), &conf, data, val, output));
+        return output;
+    }
+
+    std::vector<Ring> construct_payload(std::vector<std::vector<Ring>> &payloads) {
+        std::vector<Ring> output(size);
+        std::iota(output.begin(), output.end(), num_wires);
+        num_wires += size;
+
+        f_queue.emplace_back(std::make_shared<ConstructPayload>(f_queue.size(), &conf, &payloads, output));
         return output;
     }
 
     void add_deduplication() {
         ctx.dst_order = add_sort(g.dst_order_bits, bits + 1);
-        w.deduplication_perm = ctx.dst_order;
+        auto deduplication_perm = ctx.dst_order;
 
         for (size_t i = 0; i < bits; ++i) {  // Was g.src_bits().size()
-            w.deduplication_perm = add_sort_iteration(w.deduplication_perm, g.src_bits[i]);
+            deduplication_perm = add_sort_iteration(deduplication_perm, g.src_bits[i]);
         }
 
-        w.deduplication_perm = add_shuffle(w.deduplication_perm);
-        w.deduplication_perm = add_reveal(w.deduplication_perm);
-        w.deduplication_src = repeat_shuffle(g.src);
-        w.deduplication_dst = repeat_shuffle(g.dst);
-        w.deduplication_perm = add_permute(w.deduplication_src, w.deduplication_src);
-        w.deduplication_perm = add_permute(w.deduplication_dst, w.deduplication_dst);
+        deduplication_perm = shuffle(deduplication_perm, shuffle_idx);
+        deduplication_perm = reveal(deduplication_perm);
 
-        w.deduplication_src_dupl = add_deduplication_sub(w.deduplication_src);
-        w.deduplication_dst_dupl = add_deduplication_sub(w.deduplication_dst);
+        auto deduplication_src = shuffle(g.src, shuffle_idx);
+        auto deduplication_dst = shuffle(g.dst, shuffle_idx);
 
-        w.deduplication_src_dupl = add_equals_zero(w.deduplication_src_dupl, size - 1, 0);
-        w.deduplication_dst_dupl = add_equals_zero(w.deduplication_dst_dupl, size - 1, 0);
-        w.deduplication_src_dupl = add_equals_zero(w.deduplication_src_dupl, size - 1, 1);
-        w.deduplication_dst_dupl = add_equals_zero(w.deduplication_dst_dupl, size - 1, 1);
-        w.deduplication_src_dupl = add_equals_zero(w.deduplication_src_dupl, size - 1, 2);
-        w.deduplication_dst_dupl = add_equals_zero(w.deduplication_dst_dupl, size - 1, 2);
-        w.deduplication_src_dupl = add_equals_zero(w.deduplication_src_dupl, size - 1, 3);
-        w.deduplication_dst_dupl = add_equals_zero(w.deduplication_dst_dupl, size - 1, 3);
-        w.deduplication_src_dupl = add_equals_zero(w.deduplication_src_dupl, size - 1, 4);
-        w.deduplication_dst_dupl = add_equals_zero(w.deduplication_dst_dupl, size - 1, 4);
+        deduplication_perm = permute(deduplication_src, deduplication_src);
+        deduplication_perm = permute(deduplication_dst, deduplication_dst);
 
-        w.deduplication_duplicates = add_mul(w.deduplication_src_dupl, w.deduplication_dst_dupl, size - 1, true);
-        w.deduplication_duplicates = add_Bit2A(w.deduplication_duplicates, size - 1);
-        w.deduplication_duplicates = add_insert(w.deduplication_duplicates);
+        auto deduplication_src_dupl = deduplication_sub(deduplication_src);
+        auto deduplication_dst_dupl = deduplication_sub(deduplication_dst);
 
-        w.deduplication_duplicates = add_permute(w.deduplication_duplicates, w.deduplication_perm, true);
-        w.deduplication_duplicates = add_unshuffle(w.deduplication_duplicates);
-        add_push_back(g.src_order_bits, w.deduplication_duplicates);
-        add_push_back(g.dst_order_bits, w.deduplication_duplicates);
+        deduplication_src_dupl = equals_zero(deduplication_src_dupl, size - 1, 0);
+        deduplication_dst_dupl = equals_zero(deduplication_dst_dupl, size - 1, 0);
+        deduplication_src_dupl = equals_zero(deduplication_src_dupl, size - 1, 1);
+        deduplication_dst_dupl = equals_zero(deduplication_dst_dupl, size - 1, 1);
+        deduplication_src_dupl = equals_zero(deduplication_src_dupl, size - 1, 2);
+        deduplication_dst_dupl = equals_zero(deduplication_dst_dupl, size - 1, 2);
+        deduplication_src_dupl = equals_zero(deduplication_src_dupl, size - 1, 3);
+        deduplication_dst_dupl = equals_zero(deduplication_dst_dupl, size - 1, 3);
+        deduplication_src_dupl = equals_zero(deduplication_src_dupl, size - 1, 4);
+        deduplication_dst_dupl = equals_zero(deduplication_dst_dupl, size - 1, 4);
+
+        auto deduplication_duplicates = mul(deduplication_src_dupl, deduplication_dst_dupl, size - 1, true);
+        deduplication_duplicates = bit2A(deduplication_duplicates, size - 1);
+        deduplication_duplicates = insert(deduplication_duplicates);
+
+        deduplication_duplicates = permute(deduplication_duplicates, deduplication_perm, true);
+        deduplication_duplicates = unshuffle(deduplication_duplicates, shuffle_idx);
+        push_back(g.src_order_bits, deduplication_duplicates);
+        push_back(g.dst_order_bits, deduplication_duplicates);
+        shuffle_idx++;
     }
 
     void add_clip() {
         for (size_t i = 0; i < w.mp_data_parallel.size(); ++i) {
-            std::vector<Ring> &wire = w.mp_data;
+            std::vector<Ring> &wire = w.data;
             if (w.mp_data_parallel.size() == 0) {
-                wire = add_equals_zero(wire, size, 0);
-                wire = add_equals_zero(wire, size, 1);
-                wire = add_equals_zero(wire, size, 2);
-                wire = add_equals_zero(wire, size, 3);
-                wire = add_equals_zero(wire, size, 4);
-                wire = add_Bit2A(wire, size);
-                wire = add_flip(wire);
+                wire = equals_zero(wire, size, 0);
+                wire = equals_zero(wire, size, 1);
+                wire = equals_zero(wire, size, 2);
+                wire = equals_zero(wire, size, 3);
+                wire = equals_zero(wire, size, 4);
+                wire = bit2A(wire, size);
+                wire = flip(wire);
             } else {
-                w.mp_data_parallel[i] = add_equals_zero(w.mp_data_parallel[i], size, 0);
-                w.mp_data_parallel[i] = add_equals_zero(w.mp_data_parallel[i], size, 1);
-                w.mp_data_parallel[i] = add_equals_zero(w.mp_data_parallel[i], size, 2);
-                w.mp_data_parallel[i] = add_equals_zero(w.mp_data_parallel[i], size, 3);
-                w.mp_data_parallel[i] = add_equals_zero(w.mp_data_parallel[i], size, 4);
-                w.mp_data_parallel[i] = add_Bit2A(w.mp_data_parallel[i], size);
-                w.mp_data_parallel[i] = add_flip(w.mp_data_parallel[i]);
+                w.mp_data_parallel[i] = equals_zero(w.mp_data_parallel[i], size, 0);
+                w.mp_data_parallel[i] = equals_zero(w.mp_data_parallel[i], size, 1);
+                w.mp_data_parallel[i] = equals_zero(w.mp_data_parallel[i], size, 2);
+                w.mp_data_parallel[i] = equals_zero(w.mp_data_parallel[i], size, 3);
+                w.mp_data_parallel[i] = equals_zero(w.mp_data_parallel[i], size, 4);
+                w.mp_data_parallel[i] = bit2A(w.mp_data_parallel[i], size);
+                w.mp_data_parallel[i] = flip(w.mp_data_parallel[i]);
             }
         }
     }

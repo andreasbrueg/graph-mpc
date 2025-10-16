@@ -16,12 +16,12 @@ class PiRProtocol : public MPProtocol {
     void pre_mp() override {}
 
     void apply() override {
-        add_add(w.mp_data, w.mp_buf, w.mp_buf);
-        add_update(w.mp_buf, w.mp_data);
+        w.buf = add(w.data, w.buf);
+        w.buf = w.data;
     }
 
     void post_mp() override {
         add_clip();
-        add_construct_payload(w.mp_data_parallel, w.mp_data);
+        w.data = construct_payload(w.mp_data_parallel);
     }
 };

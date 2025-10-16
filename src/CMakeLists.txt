@@ -12,7 +12,7 @@ target_sources(GraphMPC_lib
     utils/types.h
     io/disk.h
     io/netmp.h
-    graphmpc/add_weights.h
+    graphmpc/add_const.h
     graphmpc/add.h
     graphmpc/bit2a.h
     graphmpc/compaction.h
@@ -30,10 +30,8 @@ target_sources(GraphMPC_lib
     graphmpc/propagate.h
     graphmpc/reveal.h
     graphmpc/shuffle.h
-    graphmpc/shuffle_repeat.h
     graphmpc/sort.cpp
     graphmpc/unshuffle.h
-    graphmpc/update.h
     setup/cmdline.cpp
     setup/configs.h
     setup/input-sharing/input_client.h

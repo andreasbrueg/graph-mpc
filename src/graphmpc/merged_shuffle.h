@@ -5,16 +5,20 @@
 class MergedShuffle : public Shuffle {
    public:
     MergedShuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
-                  std::vector<Ring> input, std::vector<Ring> output, Party &recv, ShufflePre *perm_share, ShufflePre *pi_share, ShufflePre *omega_share)
-        : Shuffle(f_id, conf, preproc_vals, online_vals, input, output, recv, perm_share), pi_share(pi_share), omega_share(omega_share) {}
+                  std::vector<std::shared_ptr<ShufflePre>> *shuffles, std::vector<Ring> input, std::vector<Ring> output, Party &recv,
+                  std::shared_ptr<ShufflePre> pi_share, std::shared_ptr<ShufflePre> omega_share, size_t shuffle_idx)
+        : Shuffle(f_id, conf, preproc_vals, online_vals, shuffles, input, output, recv, shuffle_idx), pi_share(pi_share), omega_share(omega_share) {}
 
     MergedShuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
-                  std::vector<Ring> input, std::vector<Ring> output, Party &recv, ShufflePre *perm_share, ShufflePre *pi_share, ShufflePre *omega_share,
-                  FileWriter *disk)
-        : Shuffle(f_id, conf, preproc_vals, online_vals, input, output, recv, perm_share, disk), pi_share(pi_share), omega_share(omega_share) {}
+                  std::vector<std::shared_ptr<ShufflePre>> *shuffles, std::vector<Ring> input, std::vector<Ring> output, Party &recv,
+                  std::shared_ptr<ShufflePre> pi_share, std::shared_ptr<ShufflePre> omega_share, FileWriter *disk, size_t shuffle_idx)
+        : Shuffle(f_id, conf, preproc_vals, online_vals, shuffles, input, output, recv, disk, shuffle_idx), pi_share(pi_share), omega_share(omega_share) {}
 
     void preprocess() override {
-        if (perm_share->preprocessed) return;
+        if (shuffles->size() > shuffle_idx) return;  // Already preprocessed
+
+        shuffles->push_back(std::make_shared<ShufflePre>());
+        auto perm_share = shuffles->at(shuffle_idx);
 
         std::vector<Ring> sigma_0_p_vec(size);
         std::vector<Ring> sigma_1_vec(size);
@@ -102,10 +106,9 @@ class MergedShuffle : public Shuffle {
             }
         }
         perm_share->merged = true;
-        perm_share->preprocessed = true;
     }
 
    private:
-    ShufflePre *pi_share;
-    ShufflePre *omega_share;
+    std::shared_ptr<ShufflePre> pi_share;
+    std::shared_ptr<ShufflePre> omega_share;
 };

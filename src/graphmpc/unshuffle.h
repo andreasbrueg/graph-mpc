@@ -5,14 +5,16 @@
 class Unshuffle : public Shuffle {
    public:
     Unshuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
-              std::vector<Ring> input, std::vector<Ring> output, ShufflePre *perm_share, Party &recv)
-        : Shuffle(f_id, conf, preproc_vals, online_vals, input, output, recv, perm_share) {}
+              std::vector<std::shared_ptr<ShufflePre>> *shuffles, std::vector<Ring> input, std::vector<Ring> output, Party &recv, size_t shuffle_idx)
+        : Shuffle(f_id, conf, preproc_vals, online_vals, shuffles, input, output, recv, shuffle_idx) {}
 
     Unshuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
-              std::vector<Ring> input, std::vector<Ring> output, ShufflePre *perm_share, Party &recv, FileWriter *disk)
-        : Shuffle(f_id, conf, preproc_vals, online_vals, input, output, recv, perm_share, disk) {}
+              std::vector<std::shared_ptr<ShufflePre>> *shuffles, std::vector<Ring> input, std::vector<Ring> output, Party &recv, FileWriter *disk,
+              size_t shuffle_idx)
+        : Shuffle(f_id, conf, preproc_vals, online_vals, shuffles, input, output, recv, disk, shuffle_idx) {}
 
     void preprocess() override {
+        auto perm_share = shuffles->at(shuffle_idx);
         std::vector<Ring> B_0(size);
         std::vector<Ring> B_1(size);
 
@@ -57,6 +59,7 @@ class Unshuffle : public Shuffle {
     }
 
     void evaluate_send() override {
+        auto perm_share = shuffles->at(shuffle_idx);
         /* Read preprocessing from SSD */
         if (ssd) unshuffle = preproc_disk->read(size);
 
@@ -86,6 +89,7 @@ class Unshuffle : public Shuffle {
     }
 
     void evaluate_recv() override {
+        auto perm_share = shuffles->at(shuffle_idx);
         Permutation perm;
         perm = id == P0 ? perm_share->pi_0_p : perm_share->pi_1;
         std::vector<Ring> vec_t = read_online(size);

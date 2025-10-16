@@ -5,7 +5,7 @@
 class Permute : public Function {
    public:
     Permute(size_t f_id, ProtocolConfig *conf, std::vector<Ring> input, std::vector<Ring> perm, std::vector<Ring> output, bool inverse)
-        : Function(f_id, conf, {}, {}, input, perm, output), inverse(inverse) {}
+        : Function(f_id, conf, {}, {}, input, perm, output, false), inverse(inverse) {}
 
     void preprocess() override {}
 

@@ -5,7 +5,7 @@
 class ConstructPayload : public Function {
    public:
     ConstructPayload(size_t f_id, ProtocolConfig *conf, std::vector<std::vector<Ring>> *payloads, std::vector<Ring> output)
-        : Function(f_id, conf, {}, {}, {}, {}, output), payloads(payloads), nodes(conf->nodes) {}
+        : Function(f_id, conf, {}, {}, {}, {}, output, false), payloads(payloads), nodes(conf->nodes) {}
 
     void preprocess() override {}
 

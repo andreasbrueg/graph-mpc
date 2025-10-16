@@ -5,7 +5,7 @@
 class Add : public Function {
    public:
     Add(size_t f_id, ProtocolConfig *conf, std::vector<Ring> input1, std::vector<Ring> input2, std::vector<Ring> output)
-        : Function(f_id, conf, {}, {}, input1, input2, output) {}
+        : Function(f_id, conf, {}, {}, input1, input2, output, false) {}
 
     void preprocess() override {}
 

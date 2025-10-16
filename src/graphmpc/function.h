@@ -8,7 +8,7 @@
 class Function {
    public:
     Function(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
-             std::vector<Ring> input, std::vector<Ring> output)
+             std::vector<Ring> input, std::vector<Ring> output, bool interactive)
         : f_id(f_id),
           id(conf->id),
           rngs(&conf->rngs),
@@ -17,10 +17,11 @@ class Function {
           preproc_vals(preproc_vals),
           online_vals(online_vals),
           input(std::move(input)),
-          output(output) {}
+          output(output),
+          interactive(interactive) {}
 
     Function(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
-             std::vector<Ring> input, std::vector<Ring> input2, std::vector<Ring> output)
+             std::vector<Ring> input, std::vector<Ring> input2, std::vector<Ring> output, bool interactive)
         : f_id(f_id),
           id(conf->id),
           rngs(&conf->rngs),
@@ -30,10 +31,11 @@ class Function {
           online_vals(online_vals),
           input(std::move(input)),
           input2(std::move(input2)),
-          output(output) {}
+          output(output),
+          interactive(interactive) {}
 
     Function(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
-             std::vector<Ring> input, std::vector<Ring> input2, std::vector<Ring> output, size_t &size)
+             std::vector<Ring> input, std::vector<Ring> input2, std::vector<Ring> output, size_t &size, bool interactive)
         : f_id(f_id),
           id(conf->id),
           rngs(&conf->rngs),
@@ -43,7 +45,8 @@ class Function {
           online_vals(online_vals),
           input(std::move(input)),
           input2(std::move(input2)),
-          output(output) {}
+          output(output),
+          interactive(interactive) {}
 
     virtual ~Function() = default;
 
@@ -51,6 +54,7 @@ class Function {
     std::vector<Ring> input;
     std::vector<Ring> input2;
     std::vector<Ring> output;
+    bool interactive;
 
     virtual void preprocess() = 0;
     virtual void evaluate_send() = 0;

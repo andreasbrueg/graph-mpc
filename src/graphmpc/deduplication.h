@@ -5,7 +5,8 @@
 
 class DeduplicationSub : public Function {
    public:
-    DeduplicationSub(size_t f_id, ProtocolConfig *conf, std::vector<Ring> vec_p, std::vector<Ring> vec_dupl) : Function(f_id, conf, {}, {}, vec_p, vec_dupl) {}
+    DeduplicationSub(size_t f_id, ProtocolConfig *conf, std::vector<Ring> vec_p, std::vector<Ring> vec_dupl)
+        : Function(f_id, conf, {}, {}, vec_p, vec_dupl, false) {}
 
     void preprocess() override {}
 
@@ -20,7 +21,7 @@ class DeduplicationSub : public Function {
 
 class Insert : public Function {
    public:
-    Insert(size_t f_id, ProtocolConfig *conf, std::vector<Ring> input) : Function(f_id, conf, {}, {}, input, {}) {}
+    Insert(size_t f_id, ProtocolConfig *conf, std::vector<Ring> input, std::vector<Ring> output) : Function(f_id, conf, {}, {}, input, output, false) {}
 
     void preprocess() override {}
 
@@ -35,7 +36,7 @@ class Insert : public Function {
 class PushBack : public Function {
    public:
     PushBack(size_t f_id, ProtocolConfig *conf, std::vector<std::vector<Ring>> *keys, std::vector<Ring> input)
-        : Function(f_id, conf, {}, {}, input, {}, {}), keys(keys) {}
+        : Function(f_id, conf, {}, {}, input, {}, {}, false), keys(keys) {}
     void preprocess() override {}
 
     void evaluate_send() override {}

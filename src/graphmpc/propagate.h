@@ -5,7 +5,7 @@
 class Propagate_1 : public Function {
    public:
     Propagate_1(size_t f_id, ProtocolConfig *conf, std::vector<Ring> input, std::vector<Ring> output)
-        : Function(f_id, conf, {}, {}, input, output), nodes(conf->nodes) {}
+        : Function(f_id, conf, {}, {}, input, output, false), nodes(conf->nodes) {}
 
     void preprocess() override {}
 
@@ -28,7 +28,7 @@ class Propagate_1 : public Function {
 class Propagate_2 : public Function {
    public:
     Propagate_2(size_t f_id, ProtocolConfig *conf, std::vector<Ring> input1, std::vector<Ring> input2, std::vector<Ring> output)
-        : Function(f_id, conf, {}, {}, input1, input2, output) {}
+        : Function(f_id, conf, {}, {}, input1, input2, output, false) {}
 
     void preprocess() override {}
 

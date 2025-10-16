@@ -5,25 +5,24 @@
 class Shuffle : public Function {
    public:
     Shuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
-            std::vector<Ring> input, std::vector<Ring> output, Party &recv)
-        : Function(f_id, conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(new ShufflePre()) {}
+            std::vector<std::shared_ptr<ShufflePre>> *shuffles, std::vector<Ring> input, std::vector<Ring> output, Party &recv, size_t shuffle_idx)
+        : Function(f_id, conf, preproc_vals, online_vals, input, output, true), recv(recv), ssd(conf->ssd), shuffles(shuffles), shuffle_idx(shuffle_idx) {}
 
     Shuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
-            std::vector<Ring> input, std::vector<Ring> output, Party &recv, FileWriter *disk)
-        : Function(f_id, conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(new ShufflePre()), preproc_disk(disk) {}
-
-    Shuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
-            std::vector<Ring> input, std::vector<Ring> output, Party &recv, ShufflePre *perm_share)
-        : Function(f_id, conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(perm_share) {}
-
-    Shuffle(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
-            std::vector<Ring> input, std::vector<Ring> output, Party &recv, ShufflePre *perm_share, FileWriter *disk)
-        : Function(f_id, conf, preproc_vals, online_vals, input, output), recv(recv), ssd(conf->ssd), perm_share(perm_share), preproc_disk(disk) {}
-
-    ShufflePre *perm_share;
+            std::vector<std::shared_ptr<ShufflePre>> *shuffles, std::vector<Ring> input, std::vector<Ring> output, Party &recv, FileWriter *disk,
+            size_t shuffle_idx)
+        : Function(f_id, conf, preproc_vals, online_vals, input, output, true),
+          recv(recv),
+          ssd(conf->ssd),
+          preproc_disk(disk),
+          shuffles(shuffles),
+          shuffle_idx(shuffle_idx) {}
 
     void preprocess() override {
-        if (perm_share->preprocessed) return;
+        if (shuffles->size() > shuffle_idx) return;  // Already preprocessed
+
+        shuffles->push_back(std::make_shared<ShufflePre>());
+        auto perm_share = shuffles->at(shuffle_idx);
 
         size_t P0_recv_size, P1_recv_size;
         /* Load balancing */
@@ -175,10 +174,10 @@ class Shuffle : public Function {
 
         /* Alternate receiver of larger message */
         recv = recv == P0 ? P1 : P0;
-        perm_share->preprocessed = true;
     }
 
     void evaluate_send() override {
+        auto perm_share = shuffles->at(shuffle_idx);
         /* Read preprocessing from SSD */
         if (ssd) {
             if (id == P0) {
@@ -271,6 +270,8 @@ class Shuffle : public Function {
     }
 
     void evaluate_recv() override {
+        auto perm_share = shuffles->at(shuffle_idx);
+
         Permutation perm;
         if (id == P0) {
             if (perm_share->has_pi_0) {
@@ -301,6 +302,8 @@ class Shuffle : public Function {
    protected:
     Party &recv;
     bool ssd;
+    std::vector<std::shared_ptr<ShufflePre>> *shuffles;
+    size_t shuffle_idx;
 
     FileWriter *preproc_disk;
 };

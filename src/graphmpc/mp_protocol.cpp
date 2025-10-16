@@ -24,7 +24,6 @@ void MPProtocol::preprocess() {
         for (auto &party : {P0, P1}) {
             auto &data_send = ctx.preproc.at(party);
             size_t n_send = data_send.size();
-            // std::cout << "Sending " << n_send << " preprocessing values." << std::endl;
             network->send(party, &n_send, sizeof(size_t));
             network->send_vec(party, n_send, data_send);
         }

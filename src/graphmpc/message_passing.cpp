@@ -1,63 +1,66 @@
 #include "mp_protocol.h"
 
 /* Case deduplication */
-void MPProtocol::add_compute_sorts() {
+void MPProtocol::compute_sorts() {
     ctx.src_order = add_sort(w.src_order_bits, bits + 1);
     ctx.dst_order = add_sort(w.dst_order_bits, bits + 1);
-    ctx.vtx_order = add_sort_iteration(ctx.src_order, w.isV);  // TODO: Invert isV!
+    ctx.vtx_order = add_sort_iteration(ctx.src_order, w.isV_inv);  // TODO: Invert isV!
 }
 
-void MPProtocol::build_initialization() {
-    add_compute_sorts();
+void MPProtocol::prepare_shuffles() {
     /* Prepare vtx order */
-    ctx.vtx_order = add_shuffle(ctx.vtx_order, &ctx.vtx_order_shuffle);
-    ctx.src_order = add_shuffle(ctx.src_order, &ctx.src_order_shuffle);
-    ctx.dst_order = add_shuffle(ctx.dst_order, &ctx.dst_order_shuffle);
+    ctx.vtx_order = shuffle(ctx.vtx_order, shuffle_idx);
+    ctx.src_order = shuffle(ctx.src_order, shuffle_idx++);
+    ctx.dst_order = shuffle(ctx.dst_order, shuffle_idx++);
 
-    ctx.clear_shuffled_vtx_order = add_reveal(ctx.vtx_order);
-    ctx.clear_shuffled_src_order = add_reveal(ctx.src_order);
-    ctx.clear_shuffled_dst_order = add_reveal(ctx.dst_order);
-
-    w.data = add_shuffle(w.data, &ctx.vtx_order_shuffle);
-    w.mp_data_vtx = add_permute(w.data, ctx.clear_shuffled_vtx_order);
+    ctx.clear_shuffled_vtx_order = reveal(ctx.vtx_order);
+    ctx.clear_shuffled_src_order = reveal(ctx.src_order);
+    ctx.clear_shuffled_dst_order = reveal(ctx.dst_order);
 }
 
 void MPProtocol::build_message_passing() {
-    for (size_t i = 0; i < depth; ++i) {
-        f_queue.emplace_back(std::make_unique<AddWeights>(&conf, &w.mp_data, &weights, i));
+    data = shuffle(w.data, 0);
+    data = permute(data, ctx.clear_shuffled_vtx_order);
 
-        w.mp_data_corr = w.mp_data;
+    size_t vtx_src_idx = shuffle_idx;
+    size_t src_dst_idx = shuffle_idx++;
+    size_t dst_vtx_idx = shuffle_idx++;
+
+    for (size_t i = 0; i < depth; ++i) {
+        add_const(data, weights[weights.size() - 1 - i]);
+
+        auto data_corr = data;
 
         /* Propagate-1 */
-        add_propagate_1(w.mp_data);
+        propagate_1(data);
 
         /* Switch Perm from vtx to src order */
-        w.mp_data = add_permute(w.mp_data, ctx.clear_shuffled_vtx_order, true);
-        w.mp_data = add_merged_shuffle(w.mp_data, ctx.vtx_src_merge, ctx.vtx_order_shuffle, ctx.src_order_shuffle);
-        w.mp_data = add_permute(w.mp_data, ctx.clear_shuffled_src_order);
+        data = permute(data, ctx.clear_shuffled_vtx_order, true);
+        data = merged_shuffle(data, ctx.vtx_order_shuffle, ctx.src_order_shuffle, vtx_src_idx);
+        data = permute(data, ctx.clear_shuffled_src_order);
 
-        w.mp_data_corr = add_permute(w.mp_data_corr, ctx.clear_shuffled_vtx_order, true);
-        w.mp_data_corr = add_merged_shuffle(w.mp_data_corr, ctx.vtx_src_merge, ctx.vtx_order_shuffle, ctx.src_order_shuffle);
-        w.mp_data_corr = add_permute(w.mp_data_corr, ctx.clear_shuffled_src_order);
+        data_corr = permute(data_corr, ctx.clear_shuffled_vtx_order, true);
+        data_corr = merged_shuffle(data_corr, ctx.vtx_order_shuffle, ctx.src_order_shuffle, vtx_src_idx);
+        data_corr = permute(data_corr, ctx.clear_shuffled_src_order);
 
         /* Propagate-2 */
-        w.mp_data = add_propagate_2(w.mp_data, w.mp_data_corr);
+        data = propagate_2(data, data_corr);
 
         /* Switch Perm from src to dst order */
-        w.mp_data = add_permute(w.mp_data, ctx.clear_shuffled_src_order, true);
-        w.mp_data = add_merged_shuffle(w.mp_data, ctx.src_dst_merge, ctx.src_order_shuffle, ctx.dst_order_shuffle);
-        w.mp_data = add_permute(w.mp_data, ctx.clear_shuffled_dst_order);
+        data = permute(data, ctx.clear_shuffled_src_order, true);
+        data = merged_shuffle(data, ctx.src_order_shuffle, ctx.dst_order_shuffle, src_dst_idx);
+        data = permute(data, ctx.clear_shuffled_dst_order);
 
         /* Gather-1 */
-        w.mp_data = add_gather_1(w.mp_data);
+        data = gather_1(data);
 
         /* Switch Perm from dst to vtx order */
-        w.mp_data = add_permute(w.mp_data, ctx.clear_shuffled_dst_order, true);
-        w.mp_data = add_merged_shuffle(w.mp_data, ctx.dst_vtx_merge, ctx.dst_order_shuffle, ctx.vtx_order_shuffle);
-        w.mp_data = add_permute(w.mp_data, ctx.clear_shuffled_vtx_order);
+        data = permute(data, ctx.clear_shuffled_dst_order, true);
+        data = merged_shuffle(data, ctx.dst_order_shuffle, ctx.vtx_order_shuffle, dst_vtx_idx);
+        data = permute(data, ctx.clear_shuffled_vtx_order);
 
         /* Gather-2 */
-        w.mp_data = add_gather_2(w.mp_data);
+        data = gather_2(data);
 
         apply();
     }

@@ -56,6 +56,7 @@ class ShufflePre {
             pi_1.perm_vec.clear();
             pi_1.perm_vec.resize(size);
         }
+        preprocessed = false;
         merged = false;
         has_pi_0 = false;
         has_pi_1 = false;

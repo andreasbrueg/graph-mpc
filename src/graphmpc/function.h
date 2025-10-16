@@ -11,7 +11,7 @@ class Function {
              std::vector<Ring> input, std::vector<Ring> output, bool interactive)
         : f_id(f_id),
           id(conf->id),
-          rngs(&conf->rngs),
+          rngs(std::make_shared<RandomGenerators>(conf->rngs)),
           size(conf->size),
           ssd(conf->ssd),
           preproc_vals(preproc_vals),
@@ -24,7 +24,7 @@ class Function {
              std::vector<Ring> input, std::vector<Ring> input2, std::vector<Ring> output, bool interactive)
         : f_id(f_id),
           id(conf->id),
-          rngs(&conf->rngs),
+          rngs(std::make_shared<RandomGenerators>(conf->rngs)),
           size(conf->size),
           ssd(conf->ssd),
           preproc_vals(preproc_vals),
@@ -84,8 +84,8 @@ class Function {
 
    protected:
     Party id;
-    RandomGenerators *rngs;
-    size_t size;
+    std::shared_ptr<RandomGenerators> rngs;
+    const size_t size;
     bool ssd;
 
     std::unordered_map<Party, std::vector<Ring>> *preproc_vals;

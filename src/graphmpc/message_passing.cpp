@@ -9,22 +9,26 @@ void MPProtocol::compute_sorts() {
 
 void MPProtocol::prepare_shuffles() {
     /* Prepare vtx order */
-    ctx.vtx_order = shuffle(ctx.vtx_order, shuffle_idx);
-    ctx.src_order = shuffle(ctx.src_order, shuffle_idx++);
-    ctx.dst_order = shuffle(ctx.dst_order, shuffle_idx++);
+    ctx.vtx_shuffle_idx = shuffle_idx;
+    ctx.src_shuffle_idx = ++shuffle_idx;
+    ctx.dst_shuffle_idx = ++shuffle_idx;
+
+    ctx.vtx_order = shuffle(ctx.vtx_order, ctx.vtx_shuffle_idx);
+    ctx.src_order = shuffle(ctx.src_order, ctx.src_shuffle_idx);
+    ctx.dst_order = shuffle(ctx.dst_order, ctx.dst_shuffle_idx);
 
     ctx.clear_shuffled_vtx_order = reveal(ctx.vtx_order);
     ctx.clear_shuffled_src_order = reveal(ctx.src_order);
     ctx.clear_shuffled_dst_order = reveal(ctx.dst_order);
 }
 
-void MPProtocol::build_message_passing() {
-    data = shuffle(w.data, 0);
+void MPProtocol::message_passing() {
+    data = shuffle(w.data, ++shuffle_idx);
     data = permute(data, ctx.clear_shuffled_vtx_order);
 
-    size_t vtx_src_idx = shuffle_idx;
-    size_t src_dst_idx = shuffle_idx++;
-    size_t dst_vtx_idx = shuffle_idx++;
+    size_t vtx_src_idx = ++shuffle_idx;
+    size_t src_dst_idx = ++shuffle_idx;
+    size_t dst_vtx_idx = ++shuffle_idx;
 
     for (size_t i = 0; i < depth; ++i) {
         add_const(data, weights[weights.size() - 1 - i]);
@@ -36,11 +40,11 @@ void MPProtocol::build_message_passing() {
 
         /* Switch Perm from vtx to src order */
         data = permute(data, ctx.clear_shuffled_vtx_order, true);
-        data = merged_shuffle(data, ctx.vtx_order_shuffle, ctx.src_order_shuffle, vtx_src_idx);
+        data = merged_shuffle(data, ctx.vtx_shuffle_idx, ctx.src_shuffle_idx, vtx_src_idx);
         data = permute(data, ctx.clear_shuffled_src_order);
 
         data_corr = permute(data_corr, ctx.clear_shuffled_vtx_order, true);
-        data_corr = merged_shuffle(data_corr, ctx.vtx_order_shuffle, ctx.src_order_shuffle, vtx_src_idx);
+        data_corr = merged_shuffle(data_corr, ctx.vtx_shuffle_idx, ctx.src_shuffle_idx, vtx_src_idx);
         data_corr = permute(data_corr, ctx.clear_shuffled_src_order);
 
         /* Propagate-2 */
@@ -48,7 +52,7 @@ void MPProtocol::build_message_passing() {
 
         /* Switch Perm from src to dst order */
         data = permute(data, ctx.clear_shuffled_src_order, true);
-        data = merged_shuffle(data, ctx.src_order_shuffle, ctx.dst_order_shuffle, src_dst_idx);
+        data = merged_shuffle(data, ctx.src_shuffle_idx, ctx.dst_shuffle_idx, src_dst_idx);
         data = permute(data, ctx.clear_shuffled_dst_order);
 
         /* Gather-1 */
@@ -56,7 +60,7 @@ void MPProtocol::build_message_passing() {
 
         /* Switch Perm from dst to vtx order */
         data = permute(data, ctx.clear_shuffled_dst_order, true);
-        data = merged_shuffle(data, ctx.dst_order_shuffle, ctx.vtx_order_shuffle, dst_vtx_idx);
+        data = merged_shuffle(data, ctx.dst_shuffle_idx, ctx.vtx_shuffle_idx, dst_vtx_idx);
         data = permute(data, ctx.clear_shuffled_vtx_order);
 
         /* Gather-2 */

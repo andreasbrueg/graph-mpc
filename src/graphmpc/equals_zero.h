@@ -5,10 +5,6 @@
 class EQZ : public Mul {
    public:
     EQZ(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input,
-        std::vector<Ring> output, Party &recv, size_t size, size_t layer)
-        : Mul(f_id, conf, preproc_vals, online_vals, input, {}, output, recv, true, size), layer(layer) {}
-
-    EQZ(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input,
         std::vector<Ring> output, Party &recv, size_t size, size_t layer, FileWriter *preproc_disk, FileWriter *triples_disk)
         : Mul(f_id, conf, preproc_vals, online_vals, input, {}, output, recv, true, size, preproc_disk, triples_disk), layer(layer) {}
 

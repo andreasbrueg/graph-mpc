@@ -5,10 +5,6 @@
 class Bit2A : public Mul {
    public:
     Bit2A(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
-          std::vector<Ring> input, std::vector<Ring> output, Party &recv, size_t size)
-        : Mul(f_id, conf, preproc_vals, online_vals, input, {}, output, recv, false, size) {}
-
-    Bit2A(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
           std::vector<Ring> input, std::vector<Ring> output, Party &recv, size_t size, FileWriter *preproc_disk, FileWriter *triples_disk)
         : Mul(f_id, conf, preproc_vals, online_vals, input, {}, output, recv, false, size, preproc_disk, triples_disk) {}
 

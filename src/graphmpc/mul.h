@@ -5,20 +5,16 @@
 class Mul : public Function {
    public:
     Mul(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input1,
-        std::vector<Ring> input2, std::vector<Ring> output, Party &recv, bool binary)
-        : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output, true), recv(recv), binary(binary) {}
-
-    Mul(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input1,
         std::vector<Ring> input2, std::vector<Ring> output, Party &recv, bool binary, FileWriter *preproc_disk, FileWriter *triples_disk)
         : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output, true),
           recv(recv),
           binary(binary),
           preproc_disk(preproc_disk),
-          triples_disk(triples_disk) {}
-
-    Mul(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input1,
-        std::vector<Ring> input2, std::vector<Ring> output, Party &recv, bool binary, size_t size)
-        : Function(f_id, conf, preproc_vals, online_vals, input1, input2, output, size, true), recv(recv), binary(binary) {}
+          triples_disk(triples_disk) {
+        triples_a.resize(size);
+        triples_b.resize(size);
+        triples_c.resize(size);
+    }
 
     Mul(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals, std::vector<Ring> input1,
         std::vector<Ring> input2, std::vector<Ring> output, Party &recv, bool binary, size_t size, FileWriter *preproc_disk, FileWriter *triples_disk)
@@ -26,7 +22,11 @@ class Mul : public Function {
           recv(recv),
           binary(binary),
           preproc_disk(preproc_disk),
-          triples_disk(triples_disk) {}
+          triples_disk(triples_disk) {
+        triples_a.resize(size);
+        triples_b.resize(size);
+        triples_c.resize(size);
+    }
 
     void preprocess() override {
         std::vector<Ring> a(size);

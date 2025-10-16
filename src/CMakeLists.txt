@@ -9,6 +9,7 @@ target_sources(GraphMPC_lib
     utils/sharing.cpp
     utils/shuffle_preproc.h
     utils/stats.cpp
+    utils/structs.h
     utils/types.h
     io/disk.h
     io/netmp.h
@@ -22,9 +23,11 @@ target_sources(GraphMPC_lib
     graphmpc/flip.h
     graphmpc/function.h
     graphmpc/gather.h
+    graphmpc/input.h
     graphmpc/merged_shuffle.h
     graphmpc/message_passing.cpp
     graphmpc/mp_protocol.cpp
+    graphmpc/f_queue.cpp
     graphmpc/mul.h
     graphmpc/permute.h
     graphmpc/propagate.h

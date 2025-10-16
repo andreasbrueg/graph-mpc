@@ -5,10 +5,6 @@
 class Compaction : public Mul {
    public:
     Compaction(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
-               std::vector<Ring> input, std::vector<Ring> output, Party &recv)
-        : Mul(f_id, conf, preproc_vals, online_vals, input, {}, output, recv, false) {}
-
-    Compaction(size_t f_id, ProtocolConfig *conf, std::unordered_map<Party, std::vector<Ring>> *preproc_vals, std::vector<Ring> *online_vals,
                std::vector<Ring> input, std::vector<Ring> output, Party &recv, FileWriter *preproc_disk, FileWriter *triples_disk)
         : Mul(f_id, conf, preproc_vals, online_vals, input, {}, output, recv, false, preproc_disk, triples_disk) {}
 

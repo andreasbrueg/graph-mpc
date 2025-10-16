@@ -19,10 +19,8 @@ class Shuffle : public Function {
           shuffle_idx(shuffle_idx) {}
 
     void preprocess() override {
-        if (shuffles->size() > shuffle_idx) return;  // Already preprocessed
-
-        shuffles->push_back(std::make_shared<ShufflePre>());
         auto perm_share = shuffles->at(shuffle_idx);
+        if (perm_share->preprocessed) return;  // Already preprocessed
 
         size_t P0_recv_size, P1_recv_size;
         /* Load balancing */
@@ -173,6 +171,7 @@ class Shuffle : public Function {
         }
 
         /* Alternate receiver of larger message */
+        perm_share->preprocessed = true;
         recv = recv == P0 ? P1 : P0;
     }
 

@@ -12,7 +12,7 @@ using json = nlohmann::json;
 
 class Benchmark {
    public:
-    Benchmark(ProtocolConfig &conf, BenchmarkConfig &b_conf, Circuit *circ, std::shared_ptr<io::NetIOMP> network) : circ(circ) {
+    Benchmark(ProtocolConfig &conf, BenchmarkConfig &b_conf, Circuit *circ, std::shared_ptr<io::NetIOMP> network) : circ(circ), network(network) {
         auto io = Storage(conf, circ);
         preproc = new Preprocessor(conf, &io, network);
         eval = new Evaluator(conf, &io, network);

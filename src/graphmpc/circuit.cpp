@@ -6,8 +6,8 @@ void Circuit::build() {
     compute_sorts();
     prepare_shuffles();
     auto data_out = message_passing(in.data);
-    data_out = post_mp(data_out);
-    output(data_out);
+    auto data_post_mp = post_mp(data_out);
+    output(data_post_mp);
 }
 
 void Circuit::set_inputs() {
@@ -29,6 +29,7 @@ void Circuit::level_order() {
     size_t depth = 0;
 
     for (auto &f : f_queue) {
+        if (f->type == Output) continue;
         size_t max_depth = 0;
         for (size_t i = 0; i < f->in1.size(); ++i) {
             auto wire_depth = wire_level[f->in1[i]];
@@ -47,6 +48,11 @@ void Circuit::level_order() {
         }
 
         depth = std::max(depth, max_depth);
+    }
+    for (auto &f : f_queue) {
+        if (f->type == Output) {
+            function_level[f->f_id] = depth;
+        }
     }
 
     circ.resize(depth + 1);
@@ -127,11 +133,12 @@ std::vector<Ring> Circuit::message_passing(std::vector<Ring> &data) {
 
         data_vtx = apply(data_vtx);
     }
-    return data;
+    return data_vtx;
 }
 
 std::vector<Ring> Circuit::sort(std::vector<std::vector<Ring>> &bit_keys, size_t bits) {
-    auto perm = compaction(bit_keys[0]);
+    auto perm_0 = compaction(bit_keys[0]);
+    auto perm = perm_0;
     for (size_t bit = 1; bit < bits; ++bit) {
         perm = sort_iteration(perm, bit_keys[bit]);
     }

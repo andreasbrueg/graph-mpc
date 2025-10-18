@@ -11,12 +11,12 @@ void Circuit::build() {
 }
 
 void Circuit::set_inputs() {
-    in.src_order_bits.resize(bits + 2);
-    in.dst_order_bits.resize(bits + 2);
-    for (size_t i = 0; i < bits + 2; ++i) {
+    in.src_order_bits.resize(bits + 1);
+    in.dst_order_bits.resize(bits + 1);
+    for (size_t i = 0; i < bits + 1; ++i) {
         in.src_order_bits[i] = input();
     }
-    for (size_t i = 0; i < bits + 2; ++i) {
+    for (size_t i = 0; i < bits + 1; ++i) {
         in.dst_order_bits[i] = input();
     }
     in.isV_inv = input();

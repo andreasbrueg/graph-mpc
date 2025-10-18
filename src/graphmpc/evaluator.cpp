@@ -24,24 +24,24 @@ void Evaluator::run(Circuit *circ, Graph &g) {
 
 void Evaluator::set_input(Graph &g) {
     if (id != D) {
-        input_to_val.resize(2 * (bits + 2) * size + 2 * size);
+        input_to_val.resize(2 * (bits + 1) * size + 2 * size);
 
-        for (size_t i = 0; i < bits + 2; ++i) {
+        for (size_t i = 0; i < bits + 1; ++i) {
             for (size_t j = 0; j < size; ++j) {
                 input_to_val[i * size + j] = g.src_order_bits[i][j];
             }
         }
-        for (size_t i = 0; i < bits + 2; ++i) {
+        for (size_t i = 0; i < bits + 1; ++i) {
             for (size_t j = 0; j < size; ++j) {
-                input_to_val[(bits + 2) * size + i * size + j] = g.dst_order_bits[i][j];
+                input_to_val[(bits + 1) * size + i * size + j] = g.dst_order_bits[i][j];
             }
         }
 
         for (size_t i = 0; i < size; ++i) {
-            input_to_val[2 * (bits + 2) * size + i] = g.isV_inv[i];
+            input_to_val[2 * (bits + 1) * size + i] = g.isV_inv[i];
         }
         for (size_t i = 0; i < size; ++i) {
-            input_to_val[2 * (bits + 2) * size + size + i] = g.data[i];
+            input_to_val[2 * (bits + 1) * size + size + i] = g.data[i];
         }
     }
 }
@@ -437,15 +437,17 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                     wires[f->output[i]] = t[i] - perm_share->B[i];
                 }
 
-                std::vector<Ring> input(size);
-                std::vector<Ring> output(size);
-                for (size_t i = 0; i < size; ++i) {
-                    input[i] = wires[f->in1[i]];
-                    output[i] = wires[f->output[i]];
+                if (f->f_id == 11 || f->f_id == 12) {  // Shuffle, Repeat
+                    std::vector<Ring> input(size);
+                    std::vector<Ring> output(size);
+                    for (size_t i = 0; i < size; ++i) {
+                        input[i] = wires[f->in1[i]];
+                        output[i] = wires[f->output[i]];
+                    }
+                    auto input_rev = share::reveal_vec(id, network, input);
+                    auto output_rev = share::reveal_vec(id, network, output);
+                    std::cout << "";
                 }
-                auto input_rev = share::reveal_vec(id, network, input);
-                auto output_rev = share::reveal_vec(id, network, output);
-                std::cout << "";
 
                 break;
             }
@@ -466,27 +468,31 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
 
                 for (size_t i = 0; i < size; ++i) wires[f->output[i]] = vec_t[i];
 
-                std::vector<Ring> input(size);
-                std::vector<Ring> output(size);
-                for (size_t i = 0; i < size; ++i) {
-                    input[i] = wires[f->in1[i]];
-                    output[i] = wires[f->output[i]];
+                if (f->f_id == 17) {  // Shuffle, Repeat
+                    std::vector<Ring> input(size);
+                    std::vector<Ring> output(size);
+                    for (size_t i = 0; i < size; ++i) {
+                        input[i] = wires[f->in1[i]];
+                        output[i] = wires[f->output[i]];
+                    }
+                    auto input_rev = share::reveal_vec(id, network, input);
+                    auto output_rev = share::reveal_vec(id, network, output);
+                    std::cout << "";
                 }
-                auto input_rev = share::reveal_vec(id, network, input);
-                auto output_rev = share::reveal_vec(id, network, output);
-                std::cout << "";
-                std::vector<Ring> vtx_order(size);
-                std::vector<Ring> src_order(size);
-                std::vector<Ring> dst_order(size);
-                for (size_t i = 0; i < size; ++i) {
-                    vtx_order[i] = wires[1008 + i];
-                    src_order[i] = wires[1024 + i];
-                    dst_order[i] = wires[1040 + i];
+                if (f->f_id == 60) {
+                    std::vector<Ring> vtx_order(size);
+                    std::vector<Ring> src_order(size);
+                    std::vector<Ring> dst_order(size);
+                    for (size_t i = 0; i < size; ++i) {
+                        vtx_order[i] = wires[1008 + i];
+                        src_order[i] = wires[1024 + i];
+                        dst_order[i] = wires[1040 + i];
+                    }
+                    auto vtx_order_rev = share::reveal_vec(id, network, vtx_order);
+                    auto src_order_rev = share::reveal_vec(id, network, src_order);
+                    auto dst_order_rev = share::reveal_vec(id, network, dst_order);
+                    std::cout << "";
                 }
-                auto vtx_order_rev = share::reveal_vec(id, network, vtx_order);
-                auto src_order_rev = share::reveal_vec(id, network, src_order);
-                auto dst_order_rev = share::reveal_vec(id, network, dst_order);
-                std::cout << "";
                 break;
             }
 
@@ -530,15 +536,17 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                     wires[f->output[i]] += s_0[i];
                     if (id == P0) wires[f->output[i]]--;
                 }
-                std::vector<Ring> input(size);
-                std::vector<Ring> output(size);
-                for (size_t i = 0; i < size; ++i) {
-                    input[i] = wires[f->in1[i]];
-                    output[i] = wires[f->output[i]];
+                if (f->f_id == 10) {
+                    std::vector<Ring> input(size);
+                    std::vector<Ring> output(size);
+                    for (size_t i = 0; i < size; ++i) {
+                        input[i] = wires[f->in1[i]];
+                        output[i] = wires[f->output[i]];
+                    }
+                    auto input_rev = share::reveal_vec(id, network, input);
+                    auto output_rev = share::reveal_vec(id, network, output);
+                    std::cout << "";
                 }
-                auto input_rev = share::reveal_vec(id, network, input);
-                auto output_rev = share::reveal_vec(id, network, output);
-                std::cout << "";
 
                 break;
             }
@@ -622,6 +630,15 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                 for (size_t i = 0; i < size; ++i) {
                     wires[f->output[i]] = data_revealed[i];
                 }
+                if (f->f_id == 13) {
+                    std::vector<Ring> output(size);
+                    for (size_t i = 0; i < size; ++i) {
+                        output[i] = wires[f->output[i]];
+                    }
+                    auto output_rev = share::reveal_vec(id, network, output);
+                    std::cout << "";
+                }
+
                 break;
             }
 
@@ -642,7 +659,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                         wires[f->output[wires[f->in2[i]]]] = wires[f->in1[i]];
                     }
                 }
-                if (f->f_id == 75 || f->f_id == 78 || f->f_id == 82 || f->f_id == 86) {
+                if (f->f_id == 14 || f->f_id == 16) {
                     std::vector<Ring> input(size);
                     std::vector<Ring> output(size);
                     for (size_t i = 0; i < size; ++i) {

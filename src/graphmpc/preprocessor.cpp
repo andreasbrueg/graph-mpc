@@ -225,6 +225,9 @@ void Preprocessor::preprocess(Circuit *circ) {
                     break;
                 }
                 case MergedShuffle: {
+                    if (f->f_id == 72 || f->f_id == 75) {
+                        std::cout << "";
+                    }
                     auto perm_share = store->load_shuffle(f->shuffle_idx);
                     if (perm_share->preprocessed) break;  // Already preprocessed
 

@@ -106,7 +106,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case MergedShuffle:
             case Shuffle: {
-                if (f->f_id == 11 || f->f_id == 12) {
+                if (f->f_id == 72 || f->f_id == 75) {
                     std::cout << "";
                 }  // Shuffle, Repeat
                 auto perm_share = store->load_shuffle(f->shuffle_idx);
@@ -402,7 +402,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                     wires[f->output[i]] = t[i] - perm_share->B[i];
                 }
 
-                if (f->f_id == 11 || f->f_id == 12) {  // Shuffle, Repeat
+                if (f->f_id == 72 || f->f_id == 75) {
                     std::vector<Ring> input(size);
                     std::vector<Ring> output(size);
                     for (size_t i = 0; i < size; ++i) {
@@ -433,17 +433,6 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
 
                 for (size_t i = 0; i < size; ++i) wires[f->output[i]] = vec_t[i];
 
-                if (f->f_id == 17) {
-                    std::vector<Ring> input(size);
-                    std::vector<Ring> output(size);
-                    for (size_t i = 0; i < size; ++i) {
-                        input[i] = wires[f->in1[i]];
-                        output[i] = wires[f->output[i]];
-                    }
-                    auto input_rev = share::reveal_vec(id, network, input);
-                    auto output_rev = share::reveal_vec(id, network, output);
-                    std::cout << "";
-                }
                 if (f->f_id == 60) {
                     std::vector<Ring> vtx_order(size);
                     std::vector<Ring> src_order(size);

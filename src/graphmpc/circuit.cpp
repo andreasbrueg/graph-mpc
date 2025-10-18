@@ -137,8 +137,7 @@ std::vector<Ring> Circuit::message_passing(std::vector<Ring> &data) {
 }
 
 std::vector<Ring> Circuit::sort(std::vector<std::vector<Ring>> &bit_keys, size_t bits) {
-    auto perm_0 = compaction(bit_keys[0]);
-    auto perm = perm_0;
+    auto perm = compaction(bit_keys[0]);
     for (size_t bit = 1; bit < bits; ++bit) {
         perm = sort_iteration(perm, bit_keys[bit]);
     }

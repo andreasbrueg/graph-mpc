@@ -16,6 +16,7 @@ enum FType {
     Mul,
     Reveal,
     Permute,
+    ReversePermute,
     AddConst,
     Add,
     Sub,

@@ -154,7 +154,6 @@ class NetIOMP {
     }
 
     void send_vec(Party dst, size_t n_elems, std::vector<Ring> &data) {
-        auto begin_send = std::chrono::system_clock::now();
         size_t n_msgs = n_elems / BLOCK_SIZE;
         size_t last_msg_size = n_elems % BLOCK_SIZE;
         for (size_t i = 0; i < n_msgs; i++) {
@@ -171,9 +170,6 @@ class NetIOMP {
             data_send_last[j] = data[n_msgs * BLOCK_SIZE + j];
         }
         send(dst, data_send_last.data(), sizeof(Ring) * last_msg_size);
-        auto end_send = std::chrono::system_clock::now();
-        auto time = std::chrono::duration_cast<std::chrono::microseconds>(end_send - begin_send);
-        std::cout << "Send took: " << time.count() << " us" << std::endl;
     }
 
     void recv(Party src, void *data, size_t len) {
@@ -209,7 +205,6 @@ class NetIOMP {
     }
 
     void recv_vec(Party src, size_t n_elems, std::vector<Ring> &buffer) {
-        auto begin_recv = std::chrono::system_clock::now();
         size_t n_msgs = n_elems / BLOCK_SIZE;
         size_t last_msg_size = n_elems % BLOCK_SIZE;
 
@@ -223,10 +218,6 @@ class NetIOMP {
         if (last_msg_size > 0) {
             recv(src, buffer.data() + (n_msgs * BLOCK_SIZE), sizeof(Ring) * last_msg_size);
         }
-
-        auto end_recv = std::chrono::system_clock::now();
-        auto time = std::chrono::duration_cast<std::chrono::microseconds>(end_recv - begin_recv);
-        std::cout << "Recv took: " << time.count() << " us" << std::endl;
     }
 
     TLSNetIO *get(size_t idx, bool b = false) {

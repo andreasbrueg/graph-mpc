@@ -4,15 +4,15 @@
 
 class Storage {
    public:
-    Storage(ProtocolConfig &conf, Circuit *circ) : size(conf.size), ssd(conf.ssd), unshuffles_idx(0), triples_idx(0), triples_read_idx(0) {
+    Storage(ProtocolConfig &conf, Circuit *circ) : size(conf.size), ssd(conf.ssd), unshuffles_idx(0) {
         if (!ssd) {
             for (size_t i = 0; i < circ->n_shuffles; ++i) {
                 shuffles.push_back(std::make_shared<ShufflePre>());
             }
             unshuffles.resize(circ->n_unshuffles);
-            triples_a.resize(circ->n_triples);
-            triples_b.resize(circ->n_triples);
-            triples_c.resize(circ->n_triples);
+            triples_a.resize(circ->n_mults);
+            triples_b.resize(circ->n_mults);
+            triples_c.resize(circ->n_mults);
         } else {
             triples_disk = FileWriter("triples_" + std::to_string(conf.id) + ".bin");
             for (size_t i = 0; i < circ->n_shuffles; ++i) {
@@ -52,19 +52,11 @@ class Storage {
         return unshuffle;
     }
 
-    void store_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vector<Ring> &c) {
+    void store_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vector<Ring> &c, size_t mul_idx) {
         if (!ssd) {
-            for (size_t i = 0; i < a.size(); ++i) {
-                triples_a[triples_idx * size + i] = a[i];
-            }
-            for (size_t i = 0; i < b.size(); ++i) {
-                triples_b[triples_idx * size + i] = b[i];
-            }
-            for (size_t i = 0; i < c.size(); ++i) {
-                triples_c[triples_idx * size + i] = c[i];
-            }
-            triples_idx++;
-            if (triples_idx == triples_a.size()) triples_idx = 0;
+            triples_a[mul_idx] = a;
+            triples_b[mul_idx] = b;
+            triples_c[mul_idx] = c;
         } else {
             triples_disk.write_vec(a);
             triples_disk.write_vec(b);
@@ -72,12 +64,11 @@ class Storage {
         }
     }
 
-    void load_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vector<Ring> &c) {
+    void load_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vector<Ring> &c, size_t mul_idx) {
         if (!ssd) {
-            a = std::vector<Ring>({triples_a.begin() + (size * triples_read_idx), triples_a.begin() + (size * triples_read_idx) + size});
-            b = std::vector<Ring>({triples_b.begin() + (size * triples_read_idx), triples_b.begin() + (size * triples_read_idx) + size});
-            c = std::vector<Ring>({triples_c.begin() + (size * triples_read_idx), triples_c.begin() + (size * triples_read_idx) + size});
-            triples_idx++;
+            a = triples_a[mul_idx];
+            b = triples_b[mul_idx];
+            c = triples_c[mul_idx];
         } else {
             a = triples_disk.read(size);
             b = triples_disk.read(size);
@@ -91,13 +82,11 @@ class Storage {
 
     std::vector<std::shared_ptr<ShufflePre>> shuffles;
     std::vector<std::vector<Ring>> unshuffles;
-    std::vector<Ring> triples_a;
-    std::vector<Ring> triples_b;
-    std::vector<Ring> triples_c;
+    std::vector<std::vector<Ring>> triples_a;
+    std::vector<std::vector<Ring>> triples_b;
+    std::vector<std::vector<Ring>> triples_c;
     //    size_t shuffles_idx;
     size_t unshuffles_idx;
-    size_t triples_idx;
-    size_t triples_read_idx;
 
     FileWriter triples_disk;
     std::vector<FileWriter> shuffles_disk;

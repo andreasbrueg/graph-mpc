@@ -104,11 +104,11 @@ std::vector<Ring> Circuit::message_passing(std::vector<Ring> &data) {
         auto data_vtx_propagate = propagate_1(data_vtx);
 
         /* Switch Perm from vtx to src order */
-        data_shuffled = permute(data_vtx_propagate, ctx.clear_shuffled_vtx_order, true);
+        data_shuffled = reverse_permute(data_vtx_propagate, ctx.clear_shuffled_vtx_order);
         data_shuffled = merged_shuffle(data_shuffled, vtx_src_idx, ctx.vtx_shuffle_idx, ctx.src_shuffle_idx);
         auto data_src = permute(data_shuffled, ctx.clear_shuffled_src_order);
 
-        auto data_corr_shuffled = permute(data_vtx, ctx.clear_shuffled_vtx_order, true);
+        auto data_corr_shuffled = reverse_permute(data_vtx, ctx.clear_shuffled_vtx_order);
         data_corr_shuffled = merged_shuffle(data_corr_shuffled, vtx_src_idx, ctx.vtx_shuffle_idx, ctx.src_shuffle_idx);
         auto data_corr = permute(data_corr_shuffled, ctx.clear_shuffled_src_order);
 
@@ -116,7 +116,7 @@ std::vector<Ring> Circuit::message_passing(std::vector<Ring> &data) {
         data_src = propagate_2(data_src, data_corr);
 
         /* Switch Perm from src to dst order */
-        data_shuffled = permute(data_src, ctx.clear_shuffled_src_order, true);
+        data_shuffled = reverse_permute(data_src, ctx.clear_shuffled_src_order);
         data_shuffled = merged_shuffle(data_shuffled, src_dst_idx, ctx.src_shuffle_idx, ctx.dst_shuffle_idx);
         auto data_dst = permute(data_shuffled, ctx.clear_shuffled_dst_order);
 
@@ -124,7 +124,7 @@ std::vector<Ring> Circuit::message_passing(std::vector<Ring> &data) {
         data_dst = gather_1(data_dst);
 
         /* Switch Perm from dst to vtx order */
-        data_shuffled = permute(data_dst, ctx.clear_shuffled_dst_order, true);
+        data_shuffled = reverse_permute(data_dst, ctx.clear_shuffled_dst_order);
         data_shuffled = merged_shuffle(data_shuffled, dst_vtx_idx, ctx.dst_shuffle_idx, ctx.vtx_shuffle_idx);
         data_vtx = permute(data_shuffled, ctx.clear_shuffled_vtx_order);
 
@@ -153,7 +153,7 @@ std::vector<Ring> Circuit::sort_iteration(std::vector<Ring> &perm, std::vector<R
 
     auto perm_next = compaction(keys_sorted);
 
-    perm_next = permute(perm_next, clear_perm_shuffled, true);
+    perm_next = reverse_permute(perm_next, clear_perm_shuffled);
     perm_next = unshuffle(perm_next, shuffle_idx);
     shuffle_idx++;
     return perm_next;
@@ -248,8 +248,8 @@ std::vector<Ring> Circuit::compaction(std::vector<Ring> &input) {
     std::iota(output.begin(), output.end(), n_wires);
     n_wires += size;
 
-    f_queue.push_back(std::make_shared<Function>(Compaction, f_queue.size(), input, output));
-    n_triples += size;
+    f_queue.push_back(std::make_shared<Function>(Compaction, f_queue.size(), input, output, n_mults));
+    n_mults++;
     return output;
 }
 
@@ -262,12 +262,21 @@ std::vector<Ring> Circuit::reveal(std::vector<Ring> &input) {
     return output;
 }
 
-std::vector<Ring> Circuit::permute(std::vector<Ring> &input, std::vector<Ring> &perm, bool inverse) {
+std::vector<Ring> Circuit::permute(std::vector<Ring> &input, std::vector<Ring> &perm) {
     std::vector<Ring> output(size);
     std::iota(output.begin(), output.end(), n_wires);
     n_wires += size;
 
-    f_queue.push_back(std::make_shared<Function>(Permute, f_queue.size(), input, perm, output, inverse));
+    f_queue.push_back(std::make_shared<Function>(Permute, f_queue.size(), input, perm, output));
+    return output;
+}
+
+std::vector<Ring> Circuit::reverse_permute(std::vector<Ring> &input, std::vector<Ring> &perm) {
+    std::vector<Ring> output(size);
+    std::iota(output.begin(), output.end(), n_wires);
+    n_wires += size;
+
+    f_queue.push_back(std::make_shared<Function>(ReversePermute, f_queue.size(), input, perm, output));
     return output;
 }
 
@@ -276,8 +285,8 @@ std::vector<Ring> Circuit::equals_zero(std::vector<Ring> &input, size_t size, si
     std::iota(output.begin(), output.end(), n_wires);
     n_wires += size;
 
-    f_queue.push_back(std::make_shared<Function>(EQZ, f_queue.size(), input, output, size, layer));
-    n_triples += size;
+    f_queue.push_back(std::make_shared<Function>(EQZ, f_queue.size(), input, output, size, layer, n_mults));
+    n_mults++;
     return output;
 }
 
@@ -286,8 +295,8 @@ std::vector<Ring> Circuit::bit2A(std::vector<Ring> &input, size_t size) {
     std::iota(output.begin(), output.end(), n_wires);
     n_wires += size;
 
-    f_queue.push_back(std::make_shared<Function>(Bit2A, f_queue.size(), input, output));
-    n_triples += size;
+    f_queue.push_back(std::make_shared<Function>(Bit2A, f_queue.size(), input, output, n_mults));
+    n_mults++;
     return output;
 }
 
@@ -304,8 +313,8 @@ std::vector<Ring> Circuit::mul(std::vector<Ring> &x, std::vector<Ring> &y, bool 
     std::iota(output.begin(), output.end(), n_wires);
     n_wires += size;
 
-    f_queue.push_back(std::make_shared<Function>(Mul, f_queue.size(), x, y, output, binary));
-    n_triples += size;
+    f_queue.push_back(std::make_shared<Function>(Mul, f_queue.size(), x, y, output, n_mults, binary));
+    n_mults++;
     return output;
 }
 
@@ -314,8 +323,8 @@ std::vector<Ring> Circuit::mul(std::vector<Ring> &x, std::vector<Ring> &y, size_
     std::iota(output.begin(), output.end(), n_wires);
     n_wires += size;
 
-    f_queue.push_back(std::make_shared<Function>(Mul, f_queue.size(), x, y, output, size, binary));
-    n_triples += size;
+    f_queue.push_back(std::make_shared<Function>(Mul, f_queue.size(), x, y, output, size, n_mults, binary));
+    n_mults++;
     return output;
 }
 

@@ -198,7 +198,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Compaction: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c);
+                store->load_triples(_a, _b, _c, f->triples_idx);
 
                 std::vector<Ring> f_0(size);
 
@@ -224,9 +224,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
                     s_1[i] = s - s_0[i];
                 }
 
-                size_t old = mul_vals.size();
-                mul_vals.resize(old + 2 * size);
-                auto send_ptr = mul_vals.data() + old;
+                std::vector<Ring> data(2 * size);
 
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) {
@@ -235,15 +233,17 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
                     auto xa = wires[f->in1[i]] + a;
                     auto yb = s_1[i] + b;
-                    send_ptr[2 * i] = xa;
-                    send_ptr[2 * i + 1] = yb;
+                    data[2 * i] = xa;
+                    data[2 * i + 1] = yb;
                 }
+
+                mul_vals.insert(mul_vals.end(), data.begin(), data.end());
                 break;
             }
 
             case Mul: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c);
+                store->load_triples(_a, _b, _c, f->triples_idx);
 
                 std::vector<Ring> data_send(2 * size);
 #pragma omp parallel for if (size > 10000)
@@ -271,7 +271,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case EQZ: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c);
+                store->load_triples(_a, _b, _c, f->triples_idx);
 
                 /* x_0 == -x_1 <=> ~x_0 ^ -x_1 */
                 if (id == P0 && f->layer == 0) {
@@ -322,7 +322,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Bit2A: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c);
+                store->load_triples(_a, _b, _c, f->triples_idx);
 
                 size_t old = mul_vals.size();
                 mul_vals.resize(old + 2 * size);
@@ -420,7 +420,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Compaction: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c);
+                store->load_triples(_a, _b, _c, f->triples_idx);
 
                 std::vector<Ring> f_0(size);
                 // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
@@ -441,6 +441,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
 
                 auto data_recv = read_online(mul_vals, 2 * size);
 
+                std::vector<Ring> output(size);
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) {
                     Ring a = _a[i];
@@ -450,20 +451,23 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                     auto xa = data_recv[2 * i];
                     auto yb = data_recv[2 * i + 1];
 
-                    wires[f->output[i]] = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
+                    output[i] = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
                 }
 
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) {
-                    wires[f->output[i]] += s_0[i];
-                    if (id == P0) wires[f->output[i]]--;
+                    output[i] += s_0[i];
+                    if (id == P0) output[i]--;
+                }
+                for (size_t i = 0; i < size; ++i) {
+                    wires[f->output[i]] = output[i];
                 }
                 break;
             }
 
             case Mul: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c);
+                store->load_triples(_a, _b, _c, f->triples_idx);
 
                 std::vector<Ring> data_recv;
                 if (f->binary) {
@@ -491,7 +495,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
 
             case EQZ: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c);
+                store->load_triples(_a, _b, _c, f->triples_idx);
 
                 std::vector<Ring> data_recv = read_online(and_vals, 2 * size);
 
@@ -518,7 +522,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Bit2A: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c);
+                store->load_triples(_a, _b, _c, f->triples_idx);
 
                 std::vector<Ring> data_recv = read_online(mul_vals, 2 * size);
 #pragma omp parallel for if (size > 10000)
@@ -544,16 +548,27 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
             }
 
             case Permute: {
-                if (f->inverse) {
+                std::vector<Ring> perm(size);
 #pragma omp parallel for if (size > 10000)
-                    for (size_t i = 0; i < size; ++i) {
-                        wires[f->output[i]] = wires[f->in1[wires[f->in2[i]]]];
-                    }
-                } else {
+                for (size_t i = 0; i < size; ++i) {
+                    perm[i] = wires[f->in2[i]];
+                }
+
 #pragma omp parallel for if (size > 10000)
-                    for (size_t i = 0; i < size; ++i) {
-                        wires[f->output[wires[f->in2[i]]]] = wires[f->in1[i]];
-                    }
+                for (size_t i = 0; i < size; ++i) {
+                    wires[f->output[perm[i]]] = wires[f->in1[i]];
+                }
+            }
+
+            case ReversePermute: {
+                std::vector<Ring> inverse_vec(size);
+#pragma omp parallel for if (size > 10000)
+                for (size_t i = 0; i < size; ++i) {
+                    inverse_vec[wires[f->in2[i]]] = i;
+                }
+#pragma omp parallel for if (size > 10000)
+                for (size_t i = 0; i < inverse_vec.size(); ++i) {
+                    wires[f->output[inverse_vec[i]]] = wires[f->in1[i]];
                 }
                 break;
             }

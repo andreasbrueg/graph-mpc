@@ -382,7 +382,7 @@ void Preprocessor::preprocess(Circuit *circ) {
                     c_final = random_share_secret_vec_3P(c, f->binary);
 
                     if (id != D) {
-                        store->store_triples(a, b, c_final);
+                        store->store_triples(a, b, c_final, f->triples_idx);
                     }
                     /* Alternate receiver */
                     recv = recv == P0 ? P1 : P0;

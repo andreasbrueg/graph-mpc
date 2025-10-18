@@ -8,15 +8,7 @@
 class Circuit {
    public:
     Circuit(ProtocolConfig &conf)
-        : n_shuffles(0),
-          n_unshuffles(0),
-          n_triples(0),
-          n_wires(0),
-          size(conf.size),
-          bits(std::ceil(std::log2(conf.nodes + 2))),
-          depth(conf.depth),
-          shuffle_idx(0),
-          weights(conf.weights) {}
+        : n_shuffles(0), n_unshuffles(0), n_mults(0), n_wires(0), size(conf.size), bits(conf.bits), depth(conf.depth), shuffle_idx(0), weights(conf.weights) {}
 
     std::vector<std::vector<std::shared_ptr<Function>>> get() { return circ; }
 
@@ -31,7 +23,7 @@ class Circuit {
 
     size_t n_shuffles;
     size_t n_unshuffles;
-    size_t n_triples;
+    size_t n_mults;
 
     size_t n_wires;
 
@@ -82,7 +74,9 @@ class Circuit {
 
     std::vector<Ring> reveal(std::vector<Ring> &input);
 
-    std::vector<Ring> permute(std::vector<Ring> &input, std::vector<Ring> &perm, bool inverse = false);
+    std::vector<Ring> permute(std::vector<Ring> &input, std::vector<Ring> &perm);
+
+    std::vector<Ring> reverse_permute(std::vector<Ring> &input, std::vector<Ring> &perm);
 
     std::vector<Ring> equals_zero(std::vector<Ring> &input, size_t size, size_t layer);
 

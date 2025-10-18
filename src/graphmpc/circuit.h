@@ -8,15 +8,15 @@
 class Circuit {
    public:
     Circuit(ProtocolConfig &conf)
-        : size(conf.size),
+        : n_shuffles(0),
+          n_unshuffles(0),
+          n_triples(0),
+          n_wires(0),
+          size(conf.size),
           bits(std::ceil(std::log2(conf.nodes + 2))),
           depth(conf.depth),
-          n_wires(0),
           shuffle_idx(0),
-          weights(conf.weights),
-          n_shuffles(0),
-          n_unshuffles(0),
-          n_triples(0) {}
+          weights(conf.weights) {}
 
     std::vector<std::vector<std::shared_ptr<Function>>> get() { return circ; }
 

@@ -57,14 +57,14 @@ class NetIOMP {
     bool connection_established;
 
     NetIOMP(NetworkConfig &conf)
-        : conf(conf),
+        : party(conf.id),
+          nP(conf.n_parties),
+          connection_established(false),
+          conf(conf),
           ios(conf.n_parties),
           ios2(conf.n_parties),
-          party(conf.id),
-          nP(conf.n_parties),
           sent(conf.n_parties, false),
-          BLOCK_SIZE(conf.BLOCK_SIZE),
-          connection_established(false) {
+          BLOCK_SIZE(conf.BLOCK_SIZE) {
         init_thread = std::thread(&NetIOMP::init_network, this);
     }
 
@@ -173,7 +173,7 @@ class NetIOMP {
         send(dst, data_send_last.data(), sizeof(Ring) * last_msg_size);
         auto end_send = std::chrono::system_clock::now();
         auto time = std::chrono::duration_cast<std::chrono::microseconds>(end_send - begin_send);
-        // std::cout << "Send took: " << time.count() << " us" << std::endl;
+        std::cout << "Send took: " << time.count() << " us" << std::endl;
     }
 
     void recv(Party src, void *data, size_t len) {
@@ -226,7 +226,7 @@ class NetIOMP {
 
         auto end_recv = std::chrono::system_clock::now();
         auto time = std::chrono::duration_cast<std::chrono::microseconds>(end_recv - begin_recv);
-        // std::cout << "Recv took: " << time.count() << " us" << std::endl;
+        std::cout << "Recv took: " << time.count() << " us" << std::endl;
     }
 
     TLSNetIO *get(size_t idx, bool b = false) {

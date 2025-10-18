@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
 
         auto circuit = PiRCircuit(conf);
         auto benchmark = Benchmark(conf, b_conf, &circuit, network);
-        benchmark.run(true);
+        benchmark.run();
 
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\nFatal error" << std::endl;

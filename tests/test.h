@@ -32,7 +32,7 @@ class Test {
 
     virtual void run_assertions(Graph &result) = 0;
 
-    void run(bool parallel = false) {
+    void run() {
         circ = create_circuit();
         g = create_graph();
 

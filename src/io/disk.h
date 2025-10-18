@@ -14,7 +14,7 @@ class FileWriter {
    public:
     FileWriter() = default;
 
-    FileWriter(Party id, std::string filename) : id(id), filename(filename), read_idx(0), _size(0) { std::ofstream out(filename, std::ios::binary); }
+    FileWriter(std::string filename) : filename(filename), read_idx(0), _size(0) { std::ofstream out(filename, std::ios::binary); }
 
     ~FileWriter() { std::filesystem::remove(filename); }
 
@@ -85,6 +85,8 @@ class FileWriter {
             n_read += size;
         }
 
+        read_idx += n_read;
+
         return perm_share;
     }
 
@@ -125,7 +127,6 @@ class FileWriter {
     }
 
    private:
-    Party id;
     std::string filename;
     size_t read_idx;
     size_t _size;  // n_elems

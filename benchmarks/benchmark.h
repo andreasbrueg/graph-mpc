@@ -13,7 +13,7 @@ using json = nlohmann::json;
 class Benchmark {
    public:
     Benchmark(ProtocolConfig &conf, BenchmarkConfig &b_conf, Circuit *circ, std::shared_ptr<io::NetIOMP> network)
-        : circ(circ), network(network), io(conf, circ) {
+        : circ(circ), io(conf, circ), network(network) {
         g = Graph::benchmark_graph(conf, network);
 
         preproc = new Preprocessor(conf, &io, network);
@@ -51,7 +51,7 @@ class Benchmark {
     bool save_output;
     json output_data;
 
-    void run(bool parallel = false) {
+    void run() {
         print();
         network->sync();
         for (size_t r = 0; r < repeat; ++r) {

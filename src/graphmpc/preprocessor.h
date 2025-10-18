@@ -7,13 +7,10 @@
 class Preprocessor {
    public:
     Preprocessor(ProtocolConfig &conf, Storage *store, std::shared_ptr<io::NetIOMP> network)
-        : preproc_disk(conf.id, "preproc_" + std::to_string(conf.id) + ".bin"),
+        : preproc_disk("preproc_" + std::to_string(conf.id) + ".bin"),
           store(store),
           id(conf.id),
           size(conf.size),
-          nodes(conf.nodes),
-          depth(conf.depth),
-          bits(std::ceil(std::log2(nodes + 2))),
           ssd(conf.ssd),
           rngs(&conf.rngs),
           network(network),
@@ -27,7 +24,7 @@ class Preprocessor {
     Storage *store;
 
     Party id;
-    size_t size, nodes, depth, bits;
+    size_t size;
     bool ssd;
     RandomGenerators *rngs;
     std::shared_ptr<io::NetIOMP> network;

@@ -27,7 +27,7 @@ class Graph {
     }
 
     Graph(std::vector<Ring> &src, std::vector<Ring> &dst, std::vector<Ring> &isV, std::vector<Ring> &data, size_t n_vertices)
-        : src(src), dst(dst), isV(isV), data(data), n_vertices(n_vertices), is_shared(true) {
+        : src(src), dst(dst), isV(isV), data(data), is_shared(true), n_vertices(n_vertices) {
         assert(src.size() == dst.size());
         assert(dst.size() == isV.size());
         assert(isV.size() == data.size());
@@ -37,7 +37,7 @@ class Graph {
 
     Graph(std::vector<Ring> &src, std::vector<Ring> &dst, std::vector<Ring> &isV, std::vector<Ring> &data, std::vector<std::vector<Ring>> &src_bits,
           std::vector<std::vector<Ring>> &dst_bits, size_t n_vertices)
-        : src(src), dst(dst), isV(isV), data(data), src_bits(src_bits), dst_bits(dst_bits), n_vertices(n_vertices), is_shared(true) {
+        : src(src), dst(dst), isV(isV), data(data), is_shared(true), src_bits(src_bits), dst_bits(dst_bits), n_vertices(n_vertices) {
         assert(src.size() == dst.size());
         assert(dst.size() == isV.size());
         assert(isV.size() == data.size());
@@ -49,7 +49,8 @@ class Graph {
     std::vector<Ring> src;
     std::vector<Ring> dst;
     std::vector<Ring> isV;
-    bool is_shared = false;
+    std::vector<Ring> data;
+    bool is_shared;
 
     /* Specifically for Message-Passing */
     std::vector<std::vector<Ring>> src_bits;
@@ -58,7 +59,6 @@ class Graph {
     std::vector<std::vector<Ring>> src_order_bits;
     std::vector<std::vector<Ring>> dst_order_bits;
     std::vector<Ring> isV_inv;
-    std::vector<Ring> data;
     size_t size = 0;
     size_t n_vertices = 0;
 
@@ -99,6 +99,20 @@ class Graph {
         }
 
         return g;
+    }
+
+    static std::vector<std::vector<Ring>> to_bits(std::vector<Ring> &input_vec, size_t n_bits) {
+        size_t n = input_vec.size();
+        std::vector<std::vector<Ring>> bits(n_bits);
+
+#pragma omp parallel for if (n > 10000)
+        for (size_t i = 0; i < n_bits; ++i) {
+            bits[i].resize(n);
+            for (size_t j = 0; j < n; ++j) {
+                bits[i][j] = (input_vec[j] & (1 << i)) >> i;
+            }
+        }
+        return bits;
     }
 
     std::tuple<Graph, Graph> secret_share(emp::PRG &rng, size_t n_bits) {
@@ -346,18 +360,15 @@ class Graph {
         src_order_bits.resize(src_bits.size() + 1);  // + 2 if deduplication happens (in order to fix pointer issues)
         std::copy(src_bits.begin(), src_bits.end(), src_order_bits.begin() + 1);
         src_order_bits[0] = isV_inv;
-        src_order_bits.push_back(std::vector<Ring>(size));
 
         /* Generate vector containing { isV, dst_bits[0], dst_bits[1], ..., dst_bits[n_bits - 1] } */
         dst_order_bits.resize(dst_bits.size() + 1);  // + 2 if deduplication happens (in order to fix pointer issues)
         std::copy(dst_bits.begin(), dst_bits.end(), dst_order_bits.begin() + 1);
         dst_order_bits[0] = isV;
-        dst_order_bits.push_back(std::vector<Ring>(size));
     }
 
     static Graph benchmark_graph(ProtocolConfig &conf, std::shared_ptr<io::NetIOMP> network) {
         Graph g;
-        size_t bits = std::ceil(std::log2(conf.nodes + 2));
         if (conf.id == P0) {
             for (size_t i = 0; i < conf.nodes / 2; i++) g.add_list_entry(i + 1, i + 1, 1);
             for (size_t i = 0; i < (conf.size - conf.nodes) / 2; i++) g.add_list_entry(1, 2, 0);
@@ -366,7 +377,7 @@ class Graph {
             for (size_t i = conf.nodes / 2; i < conf.nodes; i++) g.add_list_entry(i + 1, i + 1, 1);
             for (size_t i = (conf.size - conf.nodes) / 2; i < conf.size - conf.nodes; i++) g.add_list_entry(1, 2, 0);
         }
-        auto g_shared = g.share_subgraphs(conf.id, conf.rngs, network, bits);
+        auto g_shared = g.share_subgraphs(conf.id, conf.rngs, network, conf.bits);
         g_shared.init_mp(conf.id);
         return g_shared;
     }

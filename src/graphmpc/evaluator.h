@@ -8,15 +8,7 @@
 class Evaluator {
    public:
     Evaluator(ProtocolConfig &conf, Storage *store, std::shared_ptr<io::NetIOMP> network)
-        : store(store),
-          id(conf.id),
-          size(conf.size),
-          nodes(conf.nodes),
-          depth(conf.depth),
-          bits(conf.bits),
-          rngs(&conf.rngs),
-          ssd(conf.ssd),
-          network(network) {}
+        : store(store), id(conf.id), size(conf.size), nodes(conf.nodes), rngs(&conf.rngs), network(network) {}
 
     void run(Circuit *circ, Graph &g);
 
@@ -33,9 +25,8 @@ class Evaluator {
     std::vector<Ring> wires;
 
     Party id;
-    size_t size, nodes, depth, bits;
+    size_t size, nodes;
     RandomGenerators *rngs;
-    bool ssd;
 
     std::shared_ptr<io::NetIOMP> network;
 

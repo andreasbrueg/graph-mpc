@@ -1,7 +1,6 @@
 add_library(GraphMPC_lib STATIC)
 target_sources(GraphMPC_lib 
     PRIVATE 
-    utils/bits.h
     utils/comm.h
     utils/graph.h
     utils/permutation.h

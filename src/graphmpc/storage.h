@@ -14,9 +14,9 @@ class Storage {
             triples_b.resize(circ->n_triples);
             triples_c.resize(circ->n_triples);
         } else {
-            triples_disk = FileWriter(conf.id, "triples_" + std::to_string(conf.id) + ".bin");
+            triples_disk = FileWriter("triples_" + std::to_string(conf.id) + ".bin");
             for (size_t i = 0; i < circ->n_shuffles; ++i) {
-                shuffles_disk[i] = FileWriter(conf.id, "shuffle_" + std::to_string(i) + "_" + std::to_string(conf.id) + ".bin");
+                shuffles_disk[i] = FileWriter("shuffle_" + std::to_string(i) + "_" + std::to_string(conf.id) + ".bin");
             }
         }
     }

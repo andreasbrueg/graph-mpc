@@ -28,13 +28,17 @@ std::vector<Ring> Preprocessor::read_preproc(size_t n_elems) {
     if (ssd) {
         return preproc_disk.read(n_elems);
     } else {
-        std::vector<Ring> data(n_elems);
-        data = {preproc[id].begin(), preproc[id].begin() + n_elems};
+        if (n_elems > preproc[id].size()) {
+            throw new std::invalid_argument("Cannot read more preproc values than available.");
+        } else {
+            std::vector<Ring> data(n_elems);
+            data = {preproc[id].begin(), preproc[id].begin() + n_elems};
 
-        /* Delete read values from buffer */
-        preproc[id].erase(preproc[id].begin(), preproc[id].begin() + n_elems);
+            /* Delete read values from buffer */
+            preproc[id].erase(preproc[id].begin(), preproc[id].begin() + n_elems);
 
-        return data;
+            return data;
+        }
     }
 }
 
@@ -200,7 +204,7 @@ void Preprocessor::preprocess(Circuit *circ) {
                             if (recv == P1) {
                                 /* Receive pi_1_p */
                                 std::vector<Ring> perm_vec(size);
-                                for (int i = 0; i < size; ++i) {
+                                for (size_t i = 0; i < size; ++i) {
                                     perm_vec[i] = D1[D1_idx];
                                     D1_idx++;
                                 }
@@ -242,14 +246,13 @@ void Preprocessor::preprocess(Circuit *circ) {
 
                             std::vector<Ring> R_0(size);
                             std::vector<Ring> R_1(size);
-                            Ring rand;
 
                             /* Sampling 1: R_0 / R_1 */
-                            for (int i = 0; i < size; ++i) {
+                            for (size_t i = 0; i < size; ++i) {
                                 rngs->rng_D0_send().random_data(&R_0[i], sizeof(Ring));
                             }
 
-                            for (int i = 0; i < size; ++i) {
+                            for (size_t i = 0; i < size; ++i) {
                                 rngs->rng_D1_send().random_data(&R_1[i], sizeof(Ring));
                             }
 

@@ -235,7 +235,7 @@ void setup::setupServer(const bpo::variables_map &opts) {
     if (clients > 0) {
         if (id != D) {
             std::cout << "Using pwds from " << passwords_file << std::endl;
-            InputServer server((Party)id, passwords_file, std::to_string(input_port), clients, bits);  // Server expecting two clients
+            InputServer server(passwords_file, std::to_string(input_port), clients, bits);  // Server expecting two clients
             std::cout << "Awaiting " << clients << " packets at " << "localhost:" << std::to_string(input_port) << std::endl;
             server.connect_clients();
             g = server.recv_graph();

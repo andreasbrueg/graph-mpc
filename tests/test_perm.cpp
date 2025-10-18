@@ -9,8 +9,8 @@ RandomGenerators rngs(std::vector<uint64_t>({123456789, 123456789, 123456789, 12
                       std::vector<uint64_t>({123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789}));
 
 bool contains_duplicates(Permutation p) {
-    for (int i = 0; i < p.size(); ++i) {
-        for (int j = 0; j < p.size(); ++j) {
+    for (size_t i = 0; i < p.size(); ++i) {
+        for (size_t j = 0; j < p.size(); ++j) {
             if (i != j) {
                 if (p[i] == p[j]) {
                     return true;
@@ -102,7 +102,7 @@ void test_observation_2_4() {
     assert(left == right);
 }
 
-int main(int argc, char **argv) {
+int main() {
     test_plausibility();
     std::cout << "Passed plausibility." << std::endl;
 

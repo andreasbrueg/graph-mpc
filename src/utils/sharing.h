@@ -3,7 +3,6 @@
 #include <omp.h>
 
 #include "../io/netmp.h"
-#include "bits.h"
 #include "permutation.h"
 
 namespace share {

@@ -48,18 +48,14 @@ class Function {
                type == Reveal;
     }
 
-    size_t f_id;
     FType type;
+    size_t f_id;
     std::vector<Ring> in1;
     std::vector<Ring> in2;
-    std::vector<Ring> output;
     Ring _in1;
     Ring _in2;
+    std::vector<Ring> output;
     Ring _output;
-
-    bool binary;
-    bool inverse;
-    Party recv;
 
     size_t size;
     size_t layer;
@@ -67,4 +63,7 @@ class Function {
     size_t shuffle_idx;
     size_t pi_idx;
     size_t omega_idx;
+
+    bool binary;
+    bool inverse;
 };

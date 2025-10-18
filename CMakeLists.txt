@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #set(CMAKE_CXX_FLAGS_DEBUG "-g")
 #set(CMAKE_CXX_FLAGS_DEBUG "-fsanitize=address")
+set(CMAKE_C_FLAGS "-Wall -Wpedantic -pedantic-errors -Wextra -Wpointer-arith")
 #set(CMAKE_C_FLAGS "-march=native -maes -mrdseed -lntl -g")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}")
 

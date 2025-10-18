@@ -1,12 +1,16 @@
 #include "evaluator.h"
 
 std::vector<Ring> Evaluator::read_online(std::vector<Ring> &buffer, size_t n_elems) {
-    std::vector<Ring> data(n_elems);
-    data = {buffer.begin(), buffer.begin() + n_elems};
+    if (n_elems > buffer.size()) {
+        throw new std::invalid_argument("Trying to read more online elements than available.");
+    } else {
+        std::vector<Ring> data(n_elems);
+        data = {buffer.begin(), buffer.begin() + n_elems};
 
-    /* Delete read values from buffer */
-    buffer.erase(buffer.begin(), buffer.begin() + n_elems);
-    return data;
+        /* Delete read values from buffer */
+        buffer.erase(buffer.begin(), buffer.begin() + n_elems);
+        return data;
+    }
 }
 
 void Evaluator::run(Circuit *circ, Graph &g) {
@@ -24,24 +28,29 @@ void Evaluator::run(Circuit *circ, Graph &g) {
 
 void Evaluator::set_input(Graph &g) {
     if (id != D) {
-        input_to_val.resize(2 * (bits + 1) * size + 2 * size);
+        size_t total_input = g.src_order_bits.size() * g.size + g.dst_order_bits.size() * g.size + g.isV_inv.size() + g.data.size();
+        input_to_val.resize(total_input);
 
-        for (size_t i = 0; i < bits + 1; ++i) {
-            for (size_t j = 0; j < size; ++j) {
-                input_to_val[i * size + j] = g.src_order_bits[i][j];
+        size_t idx = 0;
+        for (size_t i = 0; i < g.src_order_bits.size(); ++i) {
+            for (size_t j = 0; j < g.size; ++j) {
+                input_to_val[idx] = g.src_order_bits[i][j];
+                idx++;
             }
         }
-        for (size_t i = 0; i < bits + 1; ++i) {
-            for (size_t j = 0; j < size; ++j) {
-                input_to_val[(bits + 1) * size + i * size + j] = g.dst_order_bits[i][j];
+        for (size_t i = 0; i < g.dst_order_bits.size(); ++i) {
+            for (size_t j = 0; j < g.size; ++j) {
+                input_to_val[idx] = g.dst_order_bits[i][j];
+                idx++;
             }
         }
-
-        for (size_t i = 0; i < size; ++i) {
-            input_to_val[2 * (bits + 1) * size + i] = g.isV_inv[i];
+        for (size_t i = 0; i < g.size; ++i) {
+            input_to_val[idx] = g.isV_inv[i];
+            idx++;
         }
-        for (size_t i = 0; i < size; ++i) {
-            input_to_val[2 * (bits + 1) * size + size + i] = g.data[i];
+        for (size_t i = 0; i < g.size; ++i) {
+            input_to_val[idx] = g.data[i];
+            idx++;
         }
     }
 }
@@ -166,7 +175,6 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
                 std::vector<Ring> vec_t(size);
                 std::vector<Ring> R(size);
-                Ring rand;
 
                 /* Sampling 1: R_0 / R_1 */
                 if (id == P0) {
@@ -474,7 +482,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                     auto yb = data_recv[2 * i + 1];
 
                     if (f->binary)
-                        wires[f->output[i]] = (xa & yb) * (id) ^ xa & b ^ yb & a ^ c;
+                        wires[f->output[i]] = (xa & yb) * (id) ^ (xa & b) ^ (yb & a) ^ c;
                     else
                         wires[f->output[i]] = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
                 }
@@ -496,7 +504,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                     auto xa = data_recv[2 * i];
                     auto yb = data_recv[2 * i + 1];
 
-                    wires[f->output[i]] = (xa & yb) * (id) ^ xa & b ^ yb & a ^ c;
+                    wires[f->output[i]] = (xa & yb) * (id) ^ (xa & b) ^ (yb & a) ^ c;
                 }
                 if (f->layer == 4) {
 #pragma omp parallel for if (size > 10000)
@@ -618,7 +626,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                     wires[f->output[i]] = wires[f->in1[i]] - sum;
                     sum += wires[f->output[i]];
                 }
-#pragma omp_parallel for if (size - nodes > 10000)
+#pragma omp parallel for if (size > 10000)
                 for (size_t i = nodes; i < size; ++i) {
                     wires[f->output[i]] = 0;
                 }

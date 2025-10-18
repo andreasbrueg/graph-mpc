@@ -77,6 +77,38 @@ class Storage {
         }
     }
 
+    void reset() {
+        for (auto &shuffle : shuffles) {
+            shuffle->pi_0.perm_vec.clear();
+            shuffle->pi_1.perm_vec.clear();
+            shuffle->pi_0_p.perm_vec.clear();
+            shuffle->pi_1_p.perm_vec.clear();
+            shuffle->B.clear();
+            shuffle->R.clear();
+            shuffle->has_pi_0 = false;
+            shuffle->has_pi_1 = false;
+            shuffle->has_pi_0_p = false;
+            shuffle->has_pi_1_p = false;
+            shuffle->has_R = false;
+            shuffle->preprocessed = false;
+        }
+        for (auto &unshuffle : unshuffles) {
+            unshuffle.clear();
+        }
+        for (auto &unshuffle : unshuffles) {
+            unshuffle.clear();
+        }
+        for (auto &triple : triples_a) {
+            triple.clear();
+        }
+        for (auto &triple : triples_b) {
+            triple.clear();
+        }
+        for (auto &triple : triples_c) {
+            triple.clear();
+        }
+    }
+
    private:
     size_t size;
     bool ssd;

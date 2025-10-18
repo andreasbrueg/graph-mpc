@@ -30,8 +30,13 @@ class Function {
     Function(FType type, size_t f_id, std::vector<Ring> in1, std::vector<Ring> in2, std::vector<Ring> output)
         : type(type), f_id(f_id), in1(std::move(in1)), in2(std::move(in2)), output(output) {}
 
-    Function(FType type, size_t f_id, std::vector<Ring> in1, std::vector<Ring> in2, std::vector<Ring> output, bool binary)
-        : type(type), f_id(f_id), in1(std::move(in1)), in2(std::move(in2)), output(output), binary(binary) {}
+    Function(FType type, size_t f_id, std::vector<Ring> in1, std::vector<Ring> in2, std::vector<Ring> output, bool flag)
+        : type(type), f_id(f_id), in1(std::move(in1)), in2(std::move(in2)), output(output) {
+        if (type == Mul)
+            binary = flag;
+        else if (type == Permute)
+            inverse = flag;
+    }
 
     Function(FType type, size_t f_id, std::vector<Ring> in1, std::vector<Ring> in2, std::vector<Ring> output, size_t size, bool binary)
         : type(type), f_id(f_id), in1(std::move(in1)), in2(std::move(in2)), output(output), size(size), binary(binary) {}

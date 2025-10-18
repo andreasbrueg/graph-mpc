@@ -224,10 +224,8 @@ void Preprocessor::preprocess(Circuit *circ) {
                     recv = recv == P0 ? P1 : P0;
                     break;
                 }
+
                 case MergedShuffle: {
-                    if (f->f_id == 72 || f->f_id == 75) {
-                        std::cout << "";
-                    }
                     auto perm_share = store->load_shuffle(f->shuffle_idx);
                     if (perm_share->preprocessed) break;  // Already preprocessed
 
@@ -297,7 +295,6 @@ void Preprocessor::preprocess(Circuit *circ) {
                         case P0: {
                             std::vector<Ring> sigma_0_p_vec(size);
                             std::vector<Ring> B_0(size);
-
                             sigma_0_p_vec = read_preproc(size);
                             B_0 = read_preproc(size);
                             perm_share->pi_0_p = Permutation(sigma_0_p_vec);
@@ -309,7 +306,6 @@ void Preprocessor::preprocess(Circuit *circ) {
                         case P1: {
                             std::vector<Ring> sigma_1_vec(size);
                             std::vector<Ring> B_1(size);
-
                             sigma_1_vec = read_preproc(size);
                             B_1 = read_preproc(size);
                             perm_share->pi_1 = Permutation(sigma_1_vec);
@@ -319,14 +315,10 @@ void Preprocessor::preprocess(Circuit *circ) {
                             break;
                         }
                     }
-                    perm_share->merged = true;
                     perm_share->preprocessed = true;
                     break;
                 }
                 case Unshuffle: {
-                    if (f->f_id == 17) {
-                        std::cout << "";
-                    }
                     auto perm_share = store->load_shuffle(f->shuffle_idx);
                     std::vector<Ring> B_0(size);
                     std::vector<Ring> B_1(size);

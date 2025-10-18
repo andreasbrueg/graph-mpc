@@ -237,7 +237,7 @@ std::vector<Ring> Circuit::merged_shuffle(std::vector<Ring> &input, size_t shuff
     std::iota(output.begin(), output.end(), n_wires);
     n_wires += size;
 
-    f_queue.push_back(std::make_shared<Function>(MergedShuffle, f_queue.size(), input, output, shuffle_idx, omega_idx, pi_idx));
+    f_queue.push_back(std::make_shared<Function>(MergedShuffle, f_queue.size(), input, output, shuffle_idx, pi_idx, omega_idx));
     n_shuffles++;
 
     return output;
@@ -267,7 +267,7 @@ std::vector<Ring> Circuit::permute(std::vector<Ring> &input, std::vector<Ring> &
     std::iota(output.begin(), output.end(), n_wires);
     n_wires += size;
 
-    f_queue.push_back(std::make_shared<Function>(Permute, f_queue.size(), input, perm, output));
+    f_queue.push_back(std::make_shared<Function>(Permute, f_queue.size(), input, perm, output, inverse));
     return output;
 }
 

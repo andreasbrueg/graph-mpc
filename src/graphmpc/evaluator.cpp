@@ -438,9 +438,9 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                     std::vector<Ring> src_order(size);
                     std::vector<Ring> dst_order(size);
                     for (size_t i = 0; i < size; ++i) {
-                        vtx_order[i] = wires[1008 + i];
-                        src_order[i] = wires[1024 + i];
-                        dst_order[i] = wires[1040 + i];
+                        vtx_order[i] = wires[960 + i];
+                        src_order[i] = wires[496 + i];
+                        dst_order[i] = wires[848 + i];
                     }
                     auto vtx_order_rev = share::reveal_vec(id, network, vtx_order);
                     auto src_order_rev = share::reveal_vec(id, network, src_order);

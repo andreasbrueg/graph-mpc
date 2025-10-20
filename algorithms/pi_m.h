@@ -8,7 +8,7 @@ class PiMCircuit : public Circuit {
 
     void pre_mp() override {}
 
-    std::vector<Ring> apply(std::vector<Ring> &data_vtx) override { return data_vtx; }
+    size_t apply(size_t &data_vtx) override { return data_vtx; }
 
-    std::vector<Ring> post_mp(std::vector<Ring> &data) override { return data; }
+    size_t post_mp(size_t &data) override { return data; }
 };

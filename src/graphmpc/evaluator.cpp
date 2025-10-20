@@ -159,7 +159,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
                 /* Compute input + R */
 #pragma omp parallel for if (size > 10000)
                 for (size_t j = 0; j < size; ++j) {
-                    t[j] = wires[f->in1[j]] + R[j];
+                    t[j] = wires[f->in1_idx + j] + R[j];
                 }
 
                 /* Compute perm(input + R) */
@@ -187,7 +187,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
                 }
 
 #pragma omp parallel for if (size > 10000)
-                for (size_t i = 0; i < size; ++i) vec_t[i] = wires[f->in1[i]] + R[i];
+                for (size_t i = 0; i < size; ++i) vec_t[i] = wires[f->in1_idx + i] + R[i];
 
                 Permutation perm = id == P0 ? perm_share->pi_0 : perm_share->pi_1_p;
 
@@ -203,13 +203,13 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Compaction: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->triples_idx);
+                store->load_triples(_a, _b, _c, f->mult_idx);
 
                 std::vector<Ring> f_0(size);
 
                 // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
                 for (size_t i = 0; i < size; ++i) {
-                    f_0[i] = -wires[f->in1[i]];
+                    f_0[i] = -wires[f->in1_idx + i];
                     if (id == P0) {
                         f_0[i] += 1;  // 1 as constant only to one share
                     }
@@ -225,7 +225,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
                 }
 
                 for (size_t i = 0; i < size; ++i) {
-                    s += wires[f->in1[i]];
+                    s += wires[f->in1_idx + i];
                     s_1[i] = s - s_0[i];
                 }
 
@@ -238,7 +238,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
                     Ring a = _a[i];
                     Ring b = _b[i];
 
-                    auto xa = wires[f->in1[i]] + a;
+                    auto xa = wires[f->in1_idx + i] + a;
                     auto yb = s_1[i] + b;
                     send_ptr[2 * i] = xa;
                     send_ptr[2 * i + 1] = yb;
@@ -248,7 +248,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Mul: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->triples_idx);
+                store->load_triples(_a, _b, _c, f->mult_idx);
 
                 std::vector<Ring> data_send(2 * size);
 #pragma omp parallel for if (size > 10000)
@@ -257,11 +257,11 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
                     Ring b = _b[i];
                     Ring xa, yb;
                     if (f->binary) {
-                        xa = wires[f->in1[i]] ^ a;
-                        yb = wires[f->in2[i]] ^ b;
+                        xa = wires[f->in1_idx + i] ^ a;
+                        yb = wires[f->in2_idx + i] ^ b;
                     } else {
-                        xa = wires[f->in1[i]] + a;
-                        yb = wires[f->in2[i]] + b;
+                        xa = wires[f->in1_idx + i] + a;
+                        yb = wires[f->in2_idx + i] + b;
                     }
                     data_send[2 * i] = xa;
                     data_send[2 * i + 1] = yb;
@@ -276,14 +276,14 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case EQZ: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->triples_idx);
+                store->load_triples(_a, _b, _c, f->mult_idx);
 
                 /* x_0 == -x_1 <=> ~x_0 ^ -x_1 */
                 if (id == P0 && f->layer == 0) {
 #pragma omp parallel for if (size > 10000)
                     // for (auto &elem : f->in1) elem = ~elem;
                     for (size_t i = 0; i < f->size; ++i) {
-                        wires[f->in1[i]] = ~wires[f->in1[i]];
+                        wires[f->in1_idx + i] = ~wires[f->in1_idx + i];
                     }
                 }
 
@@ -291,17 +291,17 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 #pragma omp parallel for if (size > 10000)
                     // for (auto &elem : f->in1) elem = -elem;
                     for (size_t i = 0; i < f->size; ++i) {
-                        wires[f->in1[i]] = -wires[f->in1[i]];
+                        wires[f->in1_idx + i] = -wires[f->in1_idx + i];
                     }
                 }
 
                 std::vector<Ring> shares_left(f->size);
                 std::vector<Ring> shares_right(f->size);
                 for (size_t i = 0; i < f->size; ++i) {
-                    shares_left[i] = wires[f->in1[i]];
+                    shares_left[i] = wires[f->in1_idx + i];
                 }
                 for (size_t i = 0; i < f->size; ++i) {
-                    shares_right[i] = wires[f->in1[i]];
+                    shares_right[i] = wires[f->in1_idx + i];
                 }
 
                 size_t width = 1 << (4 - f->layer);
@@ -327,7 +327,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Bit2A: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->triples_idx);
+                store->load_triples(_a, _b, _c, f->mult_idx);
 
                 size_t old = mul_vals.size();
                 mul_vals.resize(old + 2 * size);
@@ -337,8 +337,8 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
                 for (size_t i = 0; i < size; ++i) {
                     Ring a = _a[i];
                     Ring b = _b[i];
-                    auto xa = (id == P0 ? 1 : 0) * (wires[f->in1[i]] & 1) + a;
-                    auto yb = (id == P0 ? 0 : 1) * (wires[f->in1[i]] & 1) + b;
+                    auto xa = (id == P0 ? 1 : 0) * (wires[f->in1_idx + i] & 1) + a;
+                    auto yb = (id == P0 ? 0 : 1) * (wires[f->in1_idx + i] & 1) + b;
                     send_ptr[2 * i] = xa;
                     send_ptr[2 * i + 1] = yb;
                 }
@@ -347,7 +347,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Reveal: {
                 for (size_t i = 0; i < size; ++i) {
-                    reveal_vals.push_back(wires[f->in1[i]]);
+                    reveal_vals.push_back(wires[f->in1_idx + i]);
                 }
                 break;
             }
@@ -362,14 +362,14 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
         switch (f->type) {
             case Input: {
                 for (size_t i = 0; i < size; ++i) {
-                    wires[f->output[i]] = input_to_val[f->output[i]];
+                    wires[f->out_idx + i] = input_to_val[f->out_idx + i];
                 }
                 break;
             }
             case Output: {
                 output.resize(size);
                 for (size_t i = 0; i < size; ++i) {
-                    output[i] = wires[f->in1[i]];
+                    output[i] = wires[f->in1_idx + i];
                 }
                 break;
             }
@@ -399,7 +399,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
 
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) {
-                    wires[f->output[i]] = t[i] - perm_share->B[i];
+                    wires[f->out_idx + i] = t[i] - perm_share->B[i];
                 }
                 store->store_shuffle(f->shuffle_idx);
                 break;
@@ -419,7 +419,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) vec_t[i] -= unshuffle[i];
 
-                for (size_t i = 0; i < size; ++i) wires[f->output[i]] = vec_t[i];
+                for (size_t i = 0; i < size; ++i) wires[f->out_idx + i] = vec_t[i];
 
                 store->store_shuffle(f->shuffle_idx);
                 break;
@@ -427,12 +427,12 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Compaction: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->triples_idx);
+                store->load_triples(_a, _b, _c, f->mult_idx);
 
                 std::vector<Ring> f_0(size);
                 // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
                 for (size_t i = 0; i < size; ++i) {
-                    f_0[i] = -wires[f->in1[i]];
+                    f_0[i] = -wires[f->in1_idx + i];
                     if (id == P0) {
                         f_0[i] += 1;  // 1 as constant only to one share
                     }
@@ -467,14 +467,14 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                     if (id == P0) output[i]--;
                 }
                 for (size_t i = 0; i < size; ++i) {
-                    wires[f->output[i]] = output[i];
+                    wires[f->out_idx + i] = output[i];
                 }
                 break;
             }
 
             case Mul: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->triples_idx);
+                store->load_triples(_a, _b, _c, f->mult_idx);
 
                 std::vector<Ring> data_recv;
                 if (f->binary) {
@@ -493,16 +493,16 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                     auto yb = data_recv[2 * i + 1];
 
                     if (f->binary)
-                        wires[f->output[i]] = (xa & yb) * (id) ^ (xa & b) ^ (yb & a) ^ c;
+                        wires[f->out_idx + i] = (xa & yb) * (id) ^ (xa & b) ^ (yb & a) ^ c;
                     else
-                        wires[f->output[i]] = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
+                        wires[f->out_idx + i] = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
                 }
                 break;
             }
 
             case EQZ: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->triples_idx);
+                store->load_triples(_a, _b, _c, f->mult_idx);
 
                 std::vector<Ring> data_recv = read_online(and_vals, 2 * size);
 
@@ -515,13 +515,13 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                     auto xa = data_recv[2 * i];
                     auto yb = data_recv[2 * i + 1];
 
-                    wires[f->output[i]] = (xa & yb) * (id) ^ (xa & b) ^ (yb & a) ^ c;
+                    wires[f->out_idx + i] = (xa & yb) * (id) ^ (xa & b) ^ (yb & a) ^ c;
                 }
                 if (f->layer == 4) {
 #pragma omp parallel for if (size > 10000)
                     for (size_t i = 0; i < f->size; ++i) {
-                        wires[f->output[i]] <<= 31;
-                        wires[f->output[i]] >>= 31;
+                        wires[f->out_idx + i] <<= 31;
+                        wires[f->out_idx + i] >>= 31;
                     }
                 }
                 break;
@@ -529,7 +529,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Bit2A: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->triples_idx);
+                store->load_triples(_a, _b, _c, f->mult_idx);
 
                 std::vector<Ring> data_recv = read_online(mul_vals, 2 * size);
 #pragma omp parallel for if (size > 10000)
@@ -541,7 +541,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                     auto yb = data_recv[2 * i + 1];
 
                     auto mul_result = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
-                    wires[f->output[i]] = (wires[f->in1[i]] & 1) - 2 * mul_result;
+                    wires[f->out_idx + i] = (wires[f->in1_idx + i] & 1) - 2 * mul_result;
                 }
                 break;
             }
@@ -549,21 +549,21 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
             case Reveal: {
                 auto data_revealed = read_online(reveal_vals, size);
                 for (size_t i = 0; i < size; ++i) {
-                    wires[f->output[i]] = data_revealed[i];
+                    wires[f->out_idx + i] = data_revealed[i];
                 }
                 break;
             }
 
             case Permute: {
 #pragma omp parallel for if (size > 10000)
-                for (size_t i = 0; i < size; ++i) wires[f->output[wires[f->in2[i]]]] = wires[f->in1[i]];
+                for (size_t i = 0; i < size; ++i) wires[f->out_idx + wires[f->in2_idx + i]] = wires[f->in1_idx + i];
                 break;
             }
 
             case ReversePermute: {
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) {
-                    wires[f->output[i]] = wires[f->in1[wires[f->in2[i]]]];
+                    wires[f->out_idx + i] = wires[f->in1_idx + wires[f->in2_idx + i]];
                 }
                 break;
             }
@@ -572,9 +572,9 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
 #pragma omp parallel for if (nodes > 10000)
                 for (size_t j = 0; j < size; ++j) {
                     if (id == P0 && j < nodes) {
-                        wires[f->output[j]] = wires[f->in1[j]] + f->_in2;
+                        wires[f->out_idx + j] = wires[f->in1_idx + j] + f->val;
                     } else {
-                        wires[f->output[j]] = wires[f->in1[j]];
+                        wires[f->out_idx + j] = wires[f->in1_idx + j];
                     }
                 }
                 break;
@@ -583,7 +583,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
             case Add: {
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) {
-                    wires[f->output[i]] = wires[f->in1[i]] + wires[f->in2[i]];
+                    wires[f->out_idx + i] = wires[f->in1_idx + i] + wires[f->in2_idx + i];
                 }
                 break;
             }
@@ -592,9 +592,9 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) {
                     if (id == P0) {
-                        wires[f->output[i]] = 1 - wires[f->in1[i]];
+                        wires[f->out_idx + i] = 1 - wires[f->in1_idx + i];
                     } else if (id == P1) {
-                        wires[f->output[i]] = -wires[f->in1[i]];
+                        wires[f->out_idx + i] = -wires[f->in1_idx + i];
                     }
                 }
                 break;
@@ -602,11 +602,11 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Propagate1: {
                 for (size_t i = nodes - 1; i > 0; --i) {
-                    wires[f->output[i]] = wires[f->in1[i]] - wires[f->in1[i - 1]];
+                    wires[f->out_idx + i] = wires[f->in1_idx + i] - wires[f->in1_idx + i - 1];
                 }
-                wires[f->output[0]] = wires[f->in1[0]];
+                wires[f->out_idx] = wires[f->in1_idx];
                 for (size_t i = nodes; i < size; ++i) {
-                    wires[f->output[i]] = wires[f->in1[i]];
+                    wires[f->out_idx + i] = wires[f->in1_idx + i];
                 }
                 break;
             }
@@ -614,8 +614,8 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
             case Propagate2: {
                 Ring sum = 0;
                 for (size_t i = 0; i < size; ++i) {
-                    sum += wires[f->in1[i]];
-                    wires[f->output[i]] = sum - wires[f->in2[i]];
+                    sum += wires[f->in1_idx + i];
+                    wires[f->out_idx + i] = sum - wires[f->in2_idx + i];
                 }
                 break;
             }
@@ -623,8 +623,8 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
             case Gather1: {
                 Ring sum = 0;
                 for (size_t i = 0; i < size; ++i) {
-                    sum += wires[f->in1[i]];
-                    wires[f->output[i]] = sum;
+                    sum += wires[f->in1_idx + i];
+                    wires[f->out_idx + i] = sum;
                 }
                 break;
             }
@@ -633,12 +633,12 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                 Ring sum = 0;
 
                 for (size_t i = 0; i < nodes; ++i) {
-                    wires[f->output[i]] = wires[f->in1[i]] - sum;
-                    sum += wires[f->output[i]];
+                    wires[f->out_idx + i] = wires[f->in1_idx + i] - sum;
+                    sum += wires[f->out_idx + i];
                 }
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = nodes; i < size; ++i) {
-                    wires[f->output[i]] = 0;
+                    wires[f->out_idx + i] = 0;
                 }
                 break;
             }

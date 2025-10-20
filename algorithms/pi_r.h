@@ -15,13 +15,13 @@ class PiRCircuit : public Circuit {
 
     void pre_mp() override {}
 
-    std::vector<Ring> apply(std::vector<Ring> &data_vtx) override {
+    size_t apply(size_t &data_vtx) override {
         return data_vtx;
         // w.buf = add(w.data, w.buf);
         // w.buf = w.data;
     }
 
-    std::vector<Ring> post_mp(std::vector<Ring> &data) override {
+    size_t post_mp(size_t &data) override {
         // add_clip();
         // w.data = construct_payload(w.mp_data_parallel);
         return data;

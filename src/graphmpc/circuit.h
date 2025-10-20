@@ -17,8 +17,8 @@ class Circuit {
     void level_order();
 
     virtual void pre_mp() = 0;
-    virtual std::vector<Ring> apply(std::vector<Ring> &data_vtx) = 0;
-    virtual std::vector<Ring> post_mp(std::vector<Ring> &data) = 0;
+    virtual size_t apply(size_t &data_vtx) = 0;
+    virtual size_t post_mp(size_t &data) = 0;
     virtual void compute_sorts();  // Can be overwritten
 
     size_t n_shuffles;
@@ -44,55 +44,55 @@ class Circuit {
 
     void prepare_shuffles();
 
-    std::vector<Ring> message_passing(std::vector<Ring> &data);
+    size_t message_passing(size_t &data);
 
-    std::vector<Ring> sort(std::vector<std::vector<Ring>> &bit_keys, size_t bits);
+    size_t sort(std::vector<size_t> &bit_keys, size_t bits);
 
-    std::vector<Ring> sort_iteration(std::vector<Ring> &perm, std::vector<Ring> &keys);
+    size_t sort_iteration(size_t &perm, size_t &keys);
 
     /* ----- Single Functions ----- */
 
-    std::vector<Ring> input();
+    size_t input();
 
-    void output(std::vector<Ring> &input);
+    void output(size_t &input);
 
-    std::vector<Ring> propagate_1(std::vector<Ring> &input);
+    size_t propagate_1(size_t &input);
 
-    std::vector<Ring> propagate_2(std::vector<Ring> &input1, std::vector<Ring> &input2);
+    size_t propagate_2(size_t &input1, size_t &input2);
 
-    std::vector<Ring> gather_1(std::vector<Ring> &input);
+    size_t gather_1(size_t &input);
 
-    std::vector<Ring> gather_2(std::vector<Ring> &input);
+    size_t gather_2(size_t &input);
 
-    std::vector<Ring> shuffle(std::vector<Ring> &input, size_t shuffle_idx);
+    size_t shuffle(size_t &input, size_t shuffle_idx);
 
-    std::vector<Ring> unshuffle(std::vector<Ring> &input, size_t shuffle_idx);
+    size_t unshuffle(size_t &input, size_t shuffle_idx);
 
-    std::vector<Ring> merged_shuffle(std::vector<Ring> &input, size_t shuffle_idx, size_t pi_idx, size_t omega_idx);
+    size_t merged_shuffle(size_t &input, size_t shuffle_idx, size_t pi_idx, size_t omega_idx);
 
-    std::vector<Ring> compaction(std::vector<Ring> &input);
+    size_t compaction(size_t &input);
 
-    std::vector<Ring> reveal(std::vector<Ring> &input);
+    size_t reveal(size_t &input);
 
-    std::vector<Ring> permute(std::vector<Ring> &input, std::vector<Ring> &perm);
+    size_t permute(size_t &input, size_t &perm);
 
-    std::vector<Ring> reverse_permute(std::vector<Ring> &input, std::vector<Ring> &perm);
+    size_t reverse_permute(size_t &input, size_t &perm);
 
-    std::vector<Ring> equals_zero(std::vector<Ring> &input, size_t size, size_t layer);
+    size_t equals_zero(size_t &input, size_t size, size_t layer);
 
-    std::vector<Ring> bit2A(std::vector<Ring> &input, size_t size);
+    size_t bit2A(size_t &input, size_t size);
 
-    Ring sub(Ring &input1, Ring &input2);
+    size_t sub(size_t &input1, size_t &input2);
 
-    std::vector<Ring> mul(std::vector<Ring> &x, std::vector<Ring> &y, bool binary = false);
+    size_t mul(size_t &x, size_t &y, bool binary = false);
 
-    std::vector<Ring> mul(std::vector<Ring> &x, std::vector<Ring> &y, size_t size, bool binary = false);
+    size_t mul(size_t &x, size_t &y, size_t size, bool binary = false);
 
-    std::vector<Ring> flip(std::vector<Ring> &input);
+    size_t flip(size_t &input);
 
-    std::vector<Ring> add(std::vector<Ring> &input1, std::vector<Ring> &input2);
+    size_t add(size_t &input1, size_t &input2);
 
-    std::vector<Ring> add_const(std::vector<Ring> &data, Ring val);
+    size_t add_const(size_t &data, Ring val);
 
     // void deduplication() {
     // ctx.dst_order = add_sort(g.dst_order_bits, bits + 1);

@@ -16,12 +16,12 @@ struct MPContext {
     std::vector<Ring> shuffle_vals;
     std::vector<Ring> reveal_vals;
 
-    std::vector<Ring> vtx_order;
-    std::vector<Ring> src_order;
-    std::vector<Ring> dst_order;
-    std::vector<Ring> clear_shuffled_vtx_order;
-    std::vector<Ring> clear_shuffled_src_order;
-    std::vector<Ring> clear_shuffled_dst_order;
+    size_t vtx_order;
+    size_t src_order;
+    size_t dst_order;
+    size_t clear_shuffled_vtx_order;
+    size_t clear_shuffled_src_order;
+    size_t clear_shuffled_dst_order;
 
     size_t vtx_shuffle_idx;
     size_t src_shuffle_idx;
@@ -29,8 +29,8 @@ struct MPContext {
 };
 
 struct Inputs {
-    std::vector<std::vector<Ring>> src_order_bits;
-    std::vector<std::vector<Ring>> dst_order_bits;
-    std::vector<Ring> isV_inv;
-    std::vector<Ring> data;
+    std::vector<size_t> src_order_bits;
+    std::vector<size_t> dst_order_bits;
+    size_t isV_inv;
+    size_t data;
 };

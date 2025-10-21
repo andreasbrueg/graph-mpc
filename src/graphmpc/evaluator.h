@@ -50,7 +50,9 @@ class Evaluator {
         for (auto &layer : circ->get()) {
             for (auto &f : layer) {
                 waiting[f->in1_idx]++;
-                waiting[f->in2_idx]++;
+                if (f->in2_idx != 0) {  // in2 set to zero means no in2
+                    waiting[f->in2_idx]++;
+                }
             }
         }
     }

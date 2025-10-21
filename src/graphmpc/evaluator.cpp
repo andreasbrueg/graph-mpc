@@ -32,12 +32,12 @@ void Evaluator::set_input(Graph &g) {
     if (id != D) {
         size_t idx = 0;
 
-        for (size_t i = 0; i < g.src_order_bits.size(); ++i) {
-            input_to_val[idx] = g.src_order_bits[i];
+        for (size_t i = 0; i < g.src_bits.size(); ++i) {
+            input_to_val[idx] = g.src_bits[i];
             idx++;
         }
-        for (size_t i = 0; i < g.dst_order_bits.size(); ++i) {
-            input_to_val[idx] = g.dst_order_bits[i];
+        for (size_t i = 0; i < g.dst_bits.size(); ++i) {
+            input_to_val[idx] = g.dst_bits[i];
             idx++;
         }
         input_to_val[idx] = g.isV_inv;

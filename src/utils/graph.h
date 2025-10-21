@@ -56,8 +56,6 @@ class Graph {
     std::vector<std::vector<Ring>> src_bits;
     std::vector<std::vector<Ring>> dst_bits;
 
-    std::vector<std::vector<Ring>> src_order_bits;
-    std::vector<std::vector<Ring>> dst_order_bits;
     std::vector<Ring> isV_inv;
     size_t size = 0;
     size_t n_vertices = 0;
@@ -357,14 +355,10 @@ class Graph {
         }
 
         /* Generate vector containing { 1-isV, src_bits[0], src_bits[1], ..., src_bits[n_bits - 1] } */
-        src_order_bits.resize(src_bits.size() + 1);  // + 2 if deduplication happens (in order to fix pointer issues)
-        std::copy(src_bits.begin(), src_bits.end(), src_order_bits.begin() + 1);
-        src_order_bits[0] = isV_inv;
+        src_bits.insert(src_bits.begin(), isV_inv);
 
         /* Generate vector containing { isV, dst_bits[0], dst_bits[1], ..., dst_bits[n_bits - 1] } */
-        dst_order_bits.resize(dst_bits.size() + 1);  // + 2 if deduplication happens (in order to fix pointer issues)
-        std::copy(dst_bits.begin(), dst_bits.end(), dst_order_bits.begin() + 1);
-        dst_order_bits[0] = isV;
+        dst_bits.insert(dst_bits.begin(), isV);
     }
 
     static Graph benchmark_graph(ProtocolConfig &conf, std::shared_ptr<io::NetIOMP> network) {

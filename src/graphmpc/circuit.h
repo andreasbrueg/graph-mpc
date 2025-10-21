@@ -8,7 +8,7 @@
 class Circuit {
    public:
     Circuit(ProtocolConfig &conf)
-        : n_shuffles(0), n_unshuffles(0), n_mults(0), n_wires(0), size(conf.size), bits(conf.bits), depth(conf.depth), shuffle_idx(0), weights(conf.weights) {}
+        : n_shuffles(0), n_unshuffles(0), n_mults(0), n_wires(0), bits(conf.bits), depth(conf.depth), shuffle_idx(0), weights(conf.weights) {}
 
     std::vector<std::vector<std::shared_ptr<Function>>> get() { return circ; }
 
@@ -34,7 +34,6 @@ class Circuit {
     MPContext ctx;
     Inputs in;
 
-    size_t size;
     size_t bits;
     size_t depth;
     size_t shuffle_idx;
@@ -80,7 +79,7 @@ class Circuit {
 
     size_t equals_zero(size_t &input, size_t size, size_t layer);
 
-    size_t bit2A(size_t &input, size_t size);
+    size_t bit2A(size_t &input);
 
     size_t sub(size_t &input1, size_t &input2);
 

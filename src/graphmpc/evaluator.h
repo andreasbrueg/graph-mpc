@@ -19,10 +19,12 @@ class Evaluator {
     std::vector<Ring> shuffle_vals;
     std::vector<Ring> reveal_vals;
 
-    std::vector<Ring> input_to_val;
+    std::unordered_map<size_t, std::vector<Ring>> input_to_val;
     std::vector<Ring> output;
     Storage *store;
-    std::vector<Ring> wires;
+
+    std::unordered_map<size_t, std::vector<Ring>> wires;
+    std::vector<size_t> waiting;
 
     Party id;
     size_t size, nodes;
@@ -42,4 +44,27 @@ class Evaluator {
     void evaluate_recv(std::vector<std::shared_ptr<Function>> &layer);
 
     std::vector<Ring> read_online(std::vector<Ring> &buffer, size_t n_elems);
+
+    void init_waiting(Circuit *circ) {
+        waiting.resize(circ->n_wires);
+        for (auto &layer : circ->get()) {
+            for (auto &f : layer) {
+                waiting[f->in1_idx]++;
+                waiting[f->in2_idx]++;
+            }
+        }
+    }
+
+    void update_wires(std::vector<std::shared_ptr<Function>> &layer) {
+        for (auto &f : layer) {
+            waiting[f->in1_idx]--;
+            waiting[f->in2_idx]--;
+        }
+        for (size_t i = 0; i < waiting.size(); ++i) {
+            if (waiting[i] == 0) {
+                std::vector<Ring>().swap(wires[i]);  // Free memory
+                wires.erase(i);
+            }
+        }
+    }
 };

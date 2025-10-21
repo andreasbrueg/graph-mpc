@@ -41,9 +41,7 @@ void Circuit::level_order() {
         if (f->interactive()) max_depth++;
 
         function_level[f->f_id] = max_depth;
-        for (size_t i = 0; i < size; ++i) {
-            wire_level[f->out_idx + i] = max_depth;
-        }
+        wire_level[f->out_idx] = max_depth;
 
         depth = std::max(depth, max_depth);
     }
@@ -161,8 +159,7 @@ size_t Circuit::sort_iteration(size_t &perm, size_t &keys) {
 
 size_t Circuit::input() {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Input, f_queue.size(), output));
     return output;
 }
@@ -174,49 +171,43 @@ void Circuit::output(size_t &input) {
 
 size_t Circuit::propagate_1(size_t &input) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Propagate1, f_queue.size(), input, output));
     return output;
 }
 
 size_t Circuit::propagate_2(size_t &input1, size_t &input2) {
     size_t output;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Propagate2, f_queue.size(), input1, input2, output));
     return output;
 }
 
 size_t Circuit::gather_1(size_t &input) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Gather1, f_queue.size(), input, output));
     return output;
 }
 
 size_t Circuit::gather_2(size_t &input) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Gather2, f_queue.size(), input, output));
     return output;
 }
 
 size_t Circuit::shuffle(size_t &input, size_t shuffle_idx) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Shuffle, f_queue.size(), input, output, shuffle_idx));
     n_shuffles++;
-
     return output;
 }
 
 size_t Circuit::unshuffle(size_t &input, size_t shuffle_idx) {
     size_t output = n_wires;
-    n_wires += size;
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Unshuffle, f_queue.size(), input, output, shuffle_idx));
     n_unshuffles++;
     return output;
@@ -224,18 +215,15 @@ size_t Circuit::unshuffle(size_t &input, size_t shuffle_idx) {
 
 size_t Circuit::merged_shuffle(size_t &input, size_t shuffle_idx, size_t pi_idx, size_t omega_idx) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(MergedShuffle, f_queue.size(), input, output, shuffle_idx, pi_idx, omega_idx));
     n_shuffles++;
-
     return output;
 }
 
 size_t Circuit::compaction(size_t &input) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Compaction, f_queue.size(), input, output, n_mults));
     n_mults++;
     return output;
@@ -243,41 +231,36 @@ size_t Circuit::compaction(size_t &input) {
 
 size_t Circuit::reveal(size_t &input) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Reveal, f_queue.size(), input, output));
     return output;
 }
 
 size_t Circuit::permute(size_t &input, size_t &perm) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Permute, f_queue.size(), input, perm, output));
     return output;
 }
 
 size_t Circuit::reverse_permute(size_t &input, size_t &perm) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(ReversePermute, f_queue.size(), input, perm, output));
     return output;
 }
 
 size_t Circuit::equals_zero(size_t &input, size_t size, size_t layer) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(EQZ, f_queue.size(), input, output, size, layer, n_mults));
     n_mults++;
     return output;
 }
 
-size_t Circuit::bit2A(size_t &input, size_t size) {
+size_t Circuit::bit2A(size_t &input) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Bit2A, f_queue.size(), input, output, n_mults));
     n_mults++;
     return output;
@@ -286,15 +269,13 @@ size_t Circuit::bit2A(size_t &input, size_t size) {
 size_t Circuit::sub(size_t &input1, size_t &input2) {
     size_t output = n_wires;
     n_wires++;
-
     f_queue.push_back(std::make_shared<Function>(Sub, f_queue.size(), input1, input2, output));
     return output;
 }
 
 size_t Circuit::mul(size_t &x, size_t &y, bool binary) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Mul, f_queue.size(), x, y, output, n_mults, binary));
     n_mults++;
     return output;
@@ -302,8 +283,7 @@ size_t Circuit::mul(size_t &x, size_t &y, bool binary) {
 
 size_t Circuit::mul(size_t &x, size_t &y, size_t size, bool binary) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Mul, f_queue.size(), x, y, output, size, n_mults, binary));
     n_mults++;
     return output;
@@ -311,24 +291,21 @@ size_t Circuit::mul(size_t &x, size_t &y, size_t size, bool binary) {
 
 size_t Circuit::flip(size_t &input) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Flip, f_queue.size(), input, output));
     return output;
 }
 
 size_t Circuit::add(size_t &input1, size_t &input2) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(Add, f_queue.size(), input1, input2, output));
     return output;
 }
 
 size_t Circuit::add_const(size_t &data, Ring val) {
     size_t output = n_wires;
-    n_wires += size;
-
+    n_wires++;
     f_queue.push_back(std::make_shared<Function>(AddConst, f_queue.size(), data, val, output));
     return output;
 }

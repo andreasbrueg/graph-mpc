@@ -19,7 +19,7 @@ class Function {
     Function(FType type, size_t f_id, size_t in1_idx, size_t out_idx, bool inverse)
         : type(type), f_id(f_id), in1_idx(in1_idx), in2_idx(0), out_idx(out_idx), inverse(inverse) {}
 
-    /* Used by Propagate-2, Shuffle, Unshuffle, Bit2A, Compaction */
+    /* Used by Propagate-2, Shuffle, Unshuffle, Bit2A, Compaction, Add, Sub */
     Function(FType type, size_t f_id, size_t param1, size_t param2, size_t param3) : type(type), f_id(f_id) {
         if (type == Propagate2 || type == Permute || type == ReversePermute || type == Sub || type == Add) {
             in1_idx = param1;

@@ -7,60 +7,152 @@
 class Function {
    public:
     /* Used by Input */
-    Function(FType type, size_t f_id, size_t out_idx) : type(type), f_id(f_id), in1_idx(0), in2_idx(0), out_idx(out_idx) {}
+    Function(FType type, size_t f_id, size_t out_idx)
+        : type(type),
+          f_id(f_id),
+          in1_idx(0),
+          in2_idx(0),
+          val(0),
+          out_idx(out_idx),
+          size(0),
+          layer(0),
+          shuffle_idx(0),
+          pi_idx(0),
+          omega_idx(0),
+          mult_idx(0),
+          inverse(false),
+          binary(false) {}
 
     /* Used by Output, Propagate-1, Gather-1, Gather-2, Reveal */
-    Function(FType type, size_t f_id, size_t in1_idx, size_t out_idx) : type(type), f_id(f_id), in1_idx(in1_idx), in2_idx(0), out_idx(out_idx) {}
+    Function(FType type, size_t f_id, size_t in1_idx, size_t out_idx)
+        : type(type),
+          f_id(f_id),
+          in1_idx(in1_idx),
+          in2_idx(0),
+          val(0),
+          out_idx(out_idx),
+          size(0),
+          layer(0),
+          shuffle_idx(0),
+          pi_idx(0),
+          omega_idx(0),
+          mult_idx(0),
+          inverse(false),
+          binary(false) {}
 
     /* Used by AddConst */
     Function(FType type, size_t f_id, size_t in1_idx, Ring val, size_t out_idx)
-        : type(type), f_id(f_id), in1_idx(in1_idx), in2_idx(0), val(val), out_idx(out_idx) {}
+        : type(type),
+          f_id(f_id),
+          in1_idx(in1_idx),
+          in2_idx(0),
+          val(val),
+          out_idx(out_idx),
+          size(0),
+          layer(0),
+          shuffle_idx(0),
+          pi_idx(0),
+          omega_idx(0),
+          mult_idx(0),
+          inverse(false),
+          binary(false) {}
 
     Function(FType type, size_t f_id, size_t in1_idx, size_t out_idx, bool inverse)
-        : type(type), f_id(f_id), in1_idx(in1_idx), in2_idx(0), out_idx(out_idx), inverse(inverse) {}
+        : type(type),
+          f_id(f_id),
+          in1_idx(in1_idx),
+          in2_idx(0),
+          val(0),
+          out_idx(out_idx),
+          size(0),
+          layer(0),
+          shuffle_idx(0),
+          pi_idx(0),
+          omega_idx(0),
+          mult_idx(0),
+          inverse(inverse),
+          binary(false) {}
 
     /* Used by Propagate-2, Shuffle, Unshuffle, Bit2A, Compaction, Add, Sub */
-    Function(FType type, size_t f_id, size_t param1, size_t param2, size_t param3) : type(type), f_id(f_id) {
+    Function(FType type, size_t f_id, size_t param1, size_t param2, size_t param3)
+        : type(type), f_id(f_id), val(0), size(0), layer(0), pi_idx(0), omega_idx(0), inverse(false), binary(false) {
         if (type == Propagate2 || type == Permute || type == ReversePermute || type == Sub || type == Add) {
             in1_idx = param1;
             in2_idx = param2;
             out_idx = param3;
+            shuffle_idx = 0;
+            mult_idx = 0;
         } else if (type == Shuffle || type == Unshuffle) {
             in1_idx = param1;
             in2_idx = 0;
             out_idx = param2;
             shuffle_idx = param3;
+            mult_idx = 0;
         } else if (type == Bit2A || type == Compaction) {
             in1_idx = param1;
             in2_idx = 0;
             out_idx = param2;
+            shuffle_idx = param3;
             mult_idx = param3;
-            binary = false;
         }
     }
 
     /* Used by MergedShuffle and EQZ */
     Function(FType type, size_t f_id, size_t in1_idx, size_t out_idx, size_t n1, size_t n2, size_t n3)
-        : type(type), f_id(f_id), in1_idx(in1_idx), in2_idx(0), out_idx(out_idx) {
+        : type(type), f_id(f_id), in1_idx(in1_idx), in2_idx(0), val(0), out_idx(out_idx) {
         if (type == MergedShuffle) {
+            size = 0;
+            layer = 0;
             shuffle_idx = n1;
             pi_idx = n2;
             omega_idx = n3;
+            mult_idx = 0;
+            inverse = false;
+            binary = false;
         } else if (type == EQZ) {
             size = n1;
             layer = n2;
+            shuffle_idx = 0;
+            pi_idx = 0;
+            omega_idx = 0;
             mult_idx = n3;
+            inverse = false;
             binary = true;
         }
     }
 
     /* Used by Mul */
     Function(FType type, size_t f_id, size_t in1_idx, size_t in2_idx, size_t out_idx, size_t triples_idx, bool binary)
-        : type(type), f_id(f_id), in1_idx(in1_idx), in2_idx(in2_idx), out_idx(out_idx), mult_idx(triples_idx), binary(binary) {}
+        : type(type),
+          f_id(f_id),
+          in1_idx(in1_idx),
+          in2_idx(in2_idx),
+          val(0),
+          out_idx(out_idx),
+          size(0),
+          layer(0),
+          shuffle_idx(0),
+          pi_idx(0),
+          omega_idx(0),
+          mult_idx(triples_idx),
+          inverse(false),
+          binary(binary) {}
 
     /* Used by Mul */
     Function(FType type, size_t f_id, size_t in1_idx, size_t in2_idx, size_t out_idx, size_t size, size_t mult_idx, bool binary)
-        : type(type), f_id(f_id), in1_idx(in1_idx), in2_idx(in2_idx), out_idx(out_idx), size(size), mult_idx(mult_idx), binary(binary) {}
+        : type(type),
+          f_id(f_id),
+          in1_idx(in1_idx),
+          in2_idx(in2_idx),
+          out_idx(out_idx),
+          size(size),
+          layer(0),
+          shuffle_idx(0),
+          pi_idx(0),
+          omega_idx(0),
+          mult_idx(mult_idx),
+          inverse(false),
+          binary(binary) {}
 
     virtual ~Function() = default;
 

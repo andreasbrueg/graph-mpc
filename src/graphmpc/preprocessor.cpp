@@ -12,7 +12,6 @@ void Preprocessor::run(Circuit *circ) {
     }
 
     preprocess(circ);
-    preproc_disk.reset_idx();
 
     if (id == D) {
         for (auto &party : {P0, P1}) {

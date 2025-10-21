@@ -16,8 +16,12 @@ std::vector<Ring> Evaluator::read_online(std::vector<Ring> &buffer, size_t n_ele
 void Evaluator::run(Circuit *circ, Graph &g) {
     if (id == D) return;
 
+    if (!initialized) {
+        waiting.resize(circ->n_wires);
+        set_input(g);
+        initialized = true;
+    }
     init_waiting(circ);  // Initialize mapping of how many functions wait for which output
-    set_input(g);
     for (auto &layer : circ->get()) {
         evaluate_send(layer);
         online_communication();
@@ -26,7 +30,6 @@ void Evaluator::run(Circuit *circ, Graph &g) {
     }
     g.data = output;
     std::vector<Ring>().swap(output);
-    wires.clear();
 }
 
 void Evaluator::set_input(Graph &g) {

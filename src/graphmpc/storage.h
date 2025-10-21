@@ -130,30 +130,19 @@ class Storage {
             }
         } else {
             for (auto &shuffle : shuffles) {
-                shuffle->pi_0.perm_vec.clear();
-                shuffle->pi_1.perm_vec.clear();
-                shuffle->pi_0_p.perm_vec.clear();
-                shuffle->pi_1_p.perm_vec.clear();
-                shuffle->B.clear();
-                shuffle->R.clear();
-                shuffle->has_pi_0 = false;
-                shuffle->has_pi_1 = false;
-                shuffle->has_pi_0_p = false;
-                shuffle->has_pi_1_p = false;
-                shuffle->has_R = false;
-                shuffle->preprocessed = false;
+                shuffle = std::make_shared<ShufflePre>();
             }
             for (auto &unshuffle : unshuffles) {
-                unshuffle.clear();
+                unshuffle = std::vector<Ring>(size, 0);
             }
             for (auto &triple : triples_a) {
-                triple.clear();
+                triple = std::vector<Ring>(size, 0);
             }
             for (auto &triple : triples_b) {
-                triple.clear();
+                triple = std::vector<Ring>(size, 0);
             }
             for (auto &triple : triples_c) {
-                triple.clear();
+                triple = std::vector<Ring>(size, 0);
             }
         }
     }

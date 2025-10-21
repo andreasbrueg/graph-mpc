@@ -8,7 +8,7 @@
 class Evaluator {
    public:
     Evaluator(ProtocolConfig &conf, Storage *store, std::shared_ptr<io::NetIOMP> network)
-        : store(store), id(conf.id), size(conf.size), nodes(conf.nodes), rngs(&conf.rngs), network(network) {}
+        : store(store), initialized(false), id(conf.id), size(conf.size), nodes(conf.nodes), rngs(&conf.rngs), network(network) {}
 
     void run(Circuit *circ, Graph &g);
 
@@ -25,6 +25,7 @@ class Evaluator {
 
     std::unordered_map<size_t, std::vector<Ring>> wires;
     std::vector<size_t> waiting;
+    bool initialized;
 
     Party id;
     size_t size, nodes;
@@ -46,7 +47,6 @@ class Evaluator {
     std::vector<Ring> read_online(std::vector<Ring> &buffer, size_t n_elems);
 
     void init_waiting(Circuit *circ) {
-        waiting.resize(circ->n_wires);
         for (auto &layer : circ->get()) {
             for (auto &f : layer) {
                 waiting[f->in1_idx]++;

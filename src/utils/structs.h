@@ -31,6 +31,8 @@ struct MPContext {
 struct Inputs {
     std::vector<size_t> src_order_bits;
     std::vector<size_t> dst_order_bits;
+    size_t src;
+    size_t dst;
     size_t isV_inv;
     size_t data;
 };

@@ -25,6 +25,7 @@ void Evaluator::run(Circuit *circ, Graph &g) {
         update_wires(layer);
     }
     g.data = output;
+    std::vector<Ring>().swap(output);
     wires.clear();
 }
 
@@ -40,6 +41,11 @@ void Evaluator::set_input(Graph &g) {
             input_to_val[idx] = g.dst_bits[i];
             idx++;
         }
+
+        input_to_val[idx] = g.src;
+        idx++;
+        input_to_val[idx] = g.dst;
+        idx++;
         input_to_val[idx] = g.isV_inv;
         idx++;
         input_to_val[idx] = g.data;
@@ -239,11 +245,11 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Mul: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->mult_idx);
+                store->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
-                std::vector<Ring> data_send(2 * size);
+                std::vector<Ring> data_send(2 * f->size);
 #pragma omp parallel for if (size > 10000)
-                for (size_t i = 0; i < size; ++i) {
+                for (size_t i = 0; i < f->size; ++i) {
                     Ring a = _a[i];
                     Ring b = _b[i];
                     Ring xa, yb;
@@ -267,7 +273,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case EQZ: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->mult_idx);
+                store->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
                 /* x_0 == -x_1 <=> ~x_0 ^ -x_1 */
                 if (id == P0 && f->layer == 0) {
@@ -301,11 +307,11 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
                 for (auto &elem : shares_left) elem >>= width;
 
                 size_t old = and_vals.size();
-                and_vals.resize(old + 2 * size);
+                and_vals.resize(old + 2 * f->size);
                 auto send_ptr = and_vals.data() + old;
 
 #pragma omp parallel for if (size > 10000)
-                for (size_t i = 0; i < size; ++i) {
+                for (size_t i = 0; i < f->size; ++i) {
                     Ring a = _a[i];
                     Ring b = _b[i];
                     auto xa = shares_left[i] ^ a;
@@ -318,14 +324,14 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Bit2A: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->mult_idx);
+                store->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
                 size_t old = mul_vals.size();
-                mul_vals.resize(old + 2 * size);
+                mul_vals.resize(old + 2 * f->size);
                 auto send_ptr = mul_vals.data() + old;
 
 #pragma omp parallel for if (size > 10000)
-                for (size_t i = 0; i < size; ++i) {
+                for (size_t i = 0; i < f->size; ++i) {
                     Ring a = _a[i];
                     Ring b = _b[i];
                     auto xa = (id == P0 ? 1 : 0) * (wires[f->in1_idx][i] & 1) + a;
@@ -465,19 +471,19 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
             }
 
             case Mul: {
-                std::vector<Ring> output(size);
+                std::vector<Ring> output(f->size);
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->mult_idx);
+                store->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
                 std::vector<Ring> data_recv;
                 if (f->binary) {
-                    data_recv = read_online(and_vals, 2 * size);
+                    data_recv = read_online(and_vals, 2 * f->size);
                 } else {
-                    data_recv = read_online(mul_vals, 2 * size);
+                    data_recv = read_online(mul_vals, 2 * f->size);
                 }
 
 #pragma omp parallel for if (size > 10000)
-                for (size_t i = 0; i < size; ++i) {
+                for (size_t i = 0; i < f->size; ++i) {
                     Ring a = _a[i];
                     Ring b = _b[i];
                     Ring c = _c[i];
@@ -495,14 +501,14 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
             }
 
             case EQZ: {
-                std::vector<Ring> output(size);
+                std::vector<Ring> output(f->size);
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->mult_idx);
+                store->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
-                std::vector<Ring> data_recv = read_online(and_vals, 2 * size);
+                std::vector<Ring> data_recv = read_online(and_vals, 2 * f->size);
 
 #pragma omp parallel for if (size > 10000)
-                for (size_t i = 0; i < size; ++i) {
+                for (size_t i = 0; i < f->size; ++i) {
                     Ring a = _a[i];
                     Ring b = _b[i];
                     Ring c = _c[i];
@@ -524,13 +530,13 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
             }
 
             case Bit2A: {
-                std::vector<Ring> output(size);
+                std::vector<Ring> output(f->size);
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->mult_idx);
+                store->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
-                std::vector<Ring> data_recv = read_online(mul_vals, 2 * size);
+                std::vector<Ring> data_recv = read_online(mul_vals, 2 * f->size);
 #pragma omp parallel for if (size > 10000)
-                for (size_t i = 0; i < size; ++i) {
+                for (size_t i = 0; i < f->size; ++i) {
                     Ring a = _a[i];
                     Ring b = _b[i];
                     Ring c = _c[i];
@@ -540,17 +546,14 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                     auto mul_result = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
                     output[i] = (wires[f->in1_idx][i] & 1) - 2 * mul_result;
                 }
+                auto result = share::reveal_vec(id, network, output);
                 wires[f->out_idx] = output;
                 break;
             }
 
             case Reveal: {
-                std::vector<Ring> output(size);
                 auto data_revealed = read_online(reveal_vals, size);
-                for (size_t i = 0; i < size; ++i) {
-                    output[i] = data_revealed[i];
-                }
-                wires[f->out_idx] = output;
+                wires[f->out_idx] = data_revealed;
                 break;
             }
 
@@ -656,6 +659,22 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                 for (size_t i = nodes; i < size; ++i) {
                     output[i] = 0;
                 }
+                wires[f->out_idx] = output;
+                break;
+            }
+
+            case Sub: {
+                std::vector<Ring> output(size - 1);
+                for (size_t i = 1; i < size; ++i) {
+                    output[i - 1] = wires[f->in1_idx][i] - wires[f->in1_idx][i - 1];
+                }
+                wires[f->out_idx] = output;
+                break;
+            }
+
+            case Insert: {
+                std::vector<Ring> output({wires[f->in1_idx].begin(), wires[f->in1_idx].end()});
+                output.insert(output.begin(), 0);
                 wires[f->out_idx] = output;
                 break;
             }

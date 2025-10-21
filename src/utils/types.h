@@ -26,7 +26,8 @@ enum FType {
     Gather2,
     Propagate1,
     Propagate2,
-    Flip
+    Flip,
+    Insert
 };
 
 typedef uint32_t Ring;

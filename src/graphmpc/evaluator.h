@@ -60,7 +60,9 @@ class Evaluator {
     void update_wires(std::vector<std::shared_ptr<Function>> &layer) {
         for (auto &f : layer) {
             waiting[f->in1_idx]--;
-            waiting[f->in2_idx]--;
+            if (f->in2_idx != 0) {
+                waiting[f->in2_idx]--;
+            }
         }
         for (size_t i = 0; i < waiting.size(); ++i) {
             if (waiting[i] == 0) {

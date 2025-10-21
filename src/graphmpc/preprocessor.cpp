@@ -44,34 +44,33 @@ std::vector<Ring> Preprocessor::read_preproc(size_t n_elems) {
 
 std::vector<Ring> Preprocessor::random_share_secret_vec_3P(std::vector<Ring> &secret, bool binary) {
     if (id == D) {
-        assert(secret.size() == size);
-        std::vector<Ring> share_0(size);
-        std::vector<Ring> share_1(size);
+        std::vector<Ring> share_0(secret.size());
+        std::vector<Ring> share_1(secret.size());
 
         if (recv == P1) {
-            for (size_t i = 0; i < size; ++i) rngs->rng_D0_prep().random_data(&share_0[i], sizeof(Ring));
+            for (size_t i = 0; i < share_0.size(); ++i) rngs->rng_D0_prep().random_data(&share_0[i], sizeof(Ring));
         }
         if (recv == P0) {
-            for (size_t i = 0; i < size; ++i) rngs->rng_D1_prep().random_data(&share_0[i], sizeof(Ring));
+            for (size_t i = 0; i < share_1.size(); ++i) rngs->rng_D1_prep().random_data(&share_0[i], sizeof(Ring));
         }
 
         if (binary) {
-            for (size_t i = 0; i < size; ++i) share_1[i] = (secret[i] ^ share_0[i]);
+            for (size_t i = 0; i < secret.size(); ++i) share_1[i] = (secret[i] ^ share_0[i]);
         } else {
-            for (size_t i = 0; i < size; ++i) share_1[i] = (secret[i] - share_0[i]);
+            for (size_t i = 0; i < secret.size(); ++i) share_1[i] = (secret[i] - share_0[i]);
         }
 
         preproc[recv].insert(preproc[recv].end(), share_1.begin(), share_1.end());
         return secret;
     } else if (id == recv) {
-        return read_preproc(size);
+        return read_preproc(secret.size());
     } else {
-        std::vector<Ring> share(size);
+        std::vector<Ring> share(secret.size());
         if (id == P0) {
-            for (size_t i = 0; i < size; ++i) rngs->rng_D0_prep().random_data(&share[i], sizeof(Ring));
+            for (size_t i = 0; i < share.size(); ++i) rngs->rng_D0_prep().random_data(&share[i], sizeof(Ring));
         }
         if (id == P1) {
-            for (size_t i = 0; i < size; ++i) rngs->rng_D1_prep().random_data(&share[i], sizeof(Ring));
+            for (size_t i = 0; i < share.size(); ++i) rngs->rng_D1_prep().random_data(&share[i], sizeof(Ring));
         }
         return share;
     }
@@ -364,10 +363,14 @@ void Preprocessor::preprocess(Circuit *circ) {
                 case Mul:
                 case EQZ:
                 case Bit2A: {
-                    std::vector<Ring> a(size);
-                    std::vector<Ring> b(size);
-                    std::vector<Ring> c(size);
-                    std::vector<Ring> c_final(size);
+                    size_t triple_size = size;
+                    if (f->type != Compaction) {
+                        triple_size = f->size;
+                    }
+                    std::vector<Ring> a(triple_size);
+                    std::vector<Ring> b(triple_size);
+                    std::vector<Ring> c(triple_size);
+                    std::vector<Ring> c_final(triple_size);
                     a = share::random_share_vec_3P(id, *rngs, size, f->binary);
                     b = share::random_share_vec_3P(id, *rngs, size, f->binary);
 

@@ -105,9 +105,29 @@ class Storage {
             c = triples_c[mul_idx];
         }
     }
+    void load_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vector<Ring> &c, size_t mul_idx, size_t triple_size) {
+        if (ssd) {
+            a = triples_disk[mul_idx].read(triple_size);
+            b = triples_disk[mul_idx].read(triple_size);
+            c = triples_disk[mul_idx].read(triple_size);
+        } else {
+            a = triples_a[mul_idx];
+            b = triples_b[mul_idx];
+            c = triples_c[mul_idx];
+        }
+    }
 
     void reset() {
         if (ssd) {  // Clear all files
+            for (auto &disk : shuffles_disk) {
+                std::filesystem::remove(disk.name());
+            }
+
+            std::filesystem::remove(unshuffles_disk.name());
+
+            for (auto &disk : triples_disk) {
+                std::filesystem::remove(disk.name());
+            }
         } else {
             for (auto &shuffle : shuffles) {
                 shuffle->pi_0.perm_vec.clear();

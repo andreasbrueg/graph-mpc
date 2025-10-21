@@ -4,7 +4,7 @@
 int main(int argc, char **argv) {
     auto prog_opts(setup::programOptionsBenchmark());
 
-    bpo::options_description cmdline("Benchmark the secure computation of the reach score.");
+    bpo::options_description cmdline("Benchmark the secure computation of the Truncated Katz Score.");
     cmdline.add(prog_opts);
     cmdline.add_options()("config,c", bpo::value<std::string>(), "configuration file for easy specification of cmd line arguments")("help,h",
                                                                                                                                     "produce help message");
@@ -17,6 +17,9 @@ int main(int argc, char **argv) {
         auto network = setup::setupNetwork(opts);
 
         auto circuit = PiKCircuit(conf);
+        circuit.build();
+        circuit.level_order();
+
         auto benchmark = Benchmark(conf, b_conf, &circuit, network);
         benchmark.run();
 

@@ -19,6 +19,8 @@ void Circuit::set_inputs() {
     for (size_t i = 0; i < bits + 1; ++i) {
         in.dst_order_bits[i] = input();
     }
+    in.src = input();
+    in.dst = input();
     in.isV_inv = input();
     in.data = input();
 }
@@ -258,18 +260,25 @@ size_t Circuit::equals_zero(size_t &input, size_t size, size_t layer) {
     return output;
 }
 
-size_t Circuit::bit2A(size_t &input) {
+size_t Circuit::bit2A(size_t &input, size_t size) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Function>(Bit2A, f_queue.size(), input, output, n_mults));
+    f_queue.push_back(std::make_shared<Function>(Bit2A, f_queue.size(), input, output, size, n_mults));
     n_mults++;
     return output;
 }
 
-size_t Circuit::sub(size_t &input1, size_t &input2) {
+size_t Circuit::deduplication_sub(size_t &input1) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Function>(Sub, f_queue.size(), input1, input2, output));
+    f_queue.push_back(std::make_shared<Function>(Sub, f_queue.size(), input1, output));
+    return output;
+}
+
+size_t Circuit::deduplication_insert(size_t &input1) {
+    size_t output = n_wires;
+    n_wires++;
+    f_queue.push_back(std::make_shared<Function>(Insert, f_queue.size(), input1, output));
     return output;
 }
 

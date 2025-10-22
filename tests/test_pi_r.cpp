@@ -94,11 +94,11 @@ class TestPiR : public Test {
 
             print_vec(result);
 
-            assert(result.data[0] == 4);
-            assert(result.data[1] == 5);
-            assert(result.data[2] == 3);
-            assert(result.data[3] == 4);
-            assert(result.data[4] == 3);
+            assert(result[0] == 4);
+            assert(result[1] == 5);
+            assert(result[2] == 3);
+            assert(result[3] == 4);
+            assert(result[4] == 3);
 
             std::cout << "test_pi_r passed." << std::endl;
         }

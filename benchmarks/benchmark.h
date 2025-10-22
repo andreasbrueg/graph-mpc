@@ -15,7 +15,7 @@ class Benchmark {
     Benchmark(ProtocolConfig &conf, BenchmarkConfig &b_conf, Circuit *circ, std::shared_ptr<io::NetIOMP> network, Graph &g)
         : conf(conf), circ(circ), io(conf, circ), g(g), network(network) {
         preproc = new Preprocessor(conf, &io, network);
-        eval = new Evaluator(conf, &io, network);
+        eval = new Evaluator(conf, &io, network, g);
 
         input_file = b_conf.input_file;
         save_file = b_conf.save_file;
@@ -79,7 +79,7 @@ class Benchmark {
 
             /* Evaluation */
             StatsPoint start_online(*network);
-            eval->run(circ, g);
+            eval->run(circ);
             StatsPoint end_online(*network);
 
             auto rbench = end_online - start_online;

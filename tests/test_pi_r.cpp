@@ -88,15 +88,19 @@ class TestPiR : public Test {
         return g_shared;
     }
 
-    void run_assertions(Graph &result) override {
+    void run_assertions(std::vector<Ring> &result) override {
         if (id != D) {
-            result.print();
+            result = share::reveal_vec(id, network, result);
+
+            print_vec(result);
 
             assert(result.data[0] == 4);
             assert(result.data[1] == 5);
             assert(result.data[2] == 3);
             assert(result.data[3] == 4);
             assert(result.data[4] == 3);
+
+            std::cout << "test_pi_r passed." << std::endl;
         }
     }
 };

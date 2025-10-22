@@ -9,13 +9,6 @@
 #include "types.h"
 
 struct MPContext {
-    std::unordered_map<Party, std::vector<Ring>> preproc;
-    std::vector<Ring> data_recv;
-    std::vector<Ring> mult_vals;
-    std::vector<Ring> and_vals;
-    std::vector<Ring> shuffle_vals;
-    std::vector<Ring> reveal_vals;
-
     size_t vtx_order;
     size_t src_order;
     size_t dst_order;

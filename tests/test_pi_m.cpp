@@ -65,14 +65,18 @@ class TestPiM : public Test {
         return g_shared;
     }
 
-    void run_assertions(Graph &result) override {
+    void run_assertions(std::vector<Ring> &result) override {
         if (conf.id != D) {
-            result.print();
+            result = share::reveal_vec(id, network, result);
+
+            print_vec(result);
 
             assert(result.data[0] == 31030096);  // 3 of length 1, 10 of length 2, 30 of length 3,  96 of length 4
             assert(result.data[1] == 41036100);  // 4 of length 1, 10 of length 2, 36 of length 3, 100 of length 4
             assert(result.data[2] == 31030096);  // 3 of length 1, 10 of length 2, 30 of length 3,  96 of length 4
             assert(result.data[3] == 20820072);  // 2 of length 1,  8 of length 2, 20 of length 3,  72 of length 4
+
+            std::cout << "test_pi_m passed." << std::endl;
         }
     }
 };

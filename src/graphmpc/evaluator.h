@@ -7,10 +7,39 @@
 
 class Evaluator {
    public:
-    Evaluator(ProtocolConfig &conf, Storage *store, std::shared_ptr<io::NetIOMP> network)
-        : store(store), initialized(false), id(conf.id), size(conf.size), nodes(conf.nodes), rngs(&conf.rngs), network(network) {}
+    Evaluator(ProtocolConfig &conf, Storage *store, std::shared_ptr<io::NetIOMP> network, Graph &g)
+        : store(store), initialized(false), id(conf.id), size(conf.size), nodes(conf.nodes), rngs(&conf.rngs), network(network) {
+        if (id != D) {
+            size_t idx = 0;
 
-    void run(Circuit *circ, Graph &g);
+            for (size_t i = 0; i < g.src_bits.size(); ++i) {
+                input_to_val[idx] = g.src_bits[i];
+                idx++;
+            }
+            for (size_t i = 0; i < g.dst_bits.size(); ++i) {
+                input_to_val[idx] = g.dst_bits[i];
+                idx++;
+            }
+
+            input_to_val[idx] = g.src;
+            idx++;
+            input_to_val[idx] = g.dst;
+            idx++;
+            input_to_val[idx] = g.isV_inv;
+            idx++;
+            input_to_val[idx] = g.data;
+            idx++;
+
+            for (size_t i = 0; i < g.data_parallel.size(); ++i) {
+                input_to_val[idx] = g.data_parallel[i];
+                idx++;
+            }
+        }
+    }
+
+    void run(Circuit *circ);
+
+    const std::vector<Ring> result();
 
    private:
     std::vector<Ring> data_recv;
@@ -35,8 +64,6 @@ class Evaluator {
 
     long long comm_ms = 0;
     long long sr_ms = 0;
-
-    void set_input(Graph &g);
 
     void evaluate_send(std::vector<std::shared_ptr<Function>> &layer);
 

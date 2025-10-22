@@ -13,55 +13,25 @@ std::vector<Ring> Evaluator::read_online(std::vector<Ring> &buffer, size_t n_ele
     }
 }
 
-void Evaluator::run(Circuit *circ, Graph &g) {
+void Evaluator::run(Circuit *circ) {
     if (id == D) return;
 
     if (!initialized) {
         waiting.resize(circ->n_wires);
         wires.resize(circ->n_wires);
-        set_input(g);
         initialized = true;
     }
 
-    init_waiting(circ);  // Initialize mapping of how many functions wait for which output
+    init_waiting(circ);  // Initialize mapping of which level outputs are no longer needed
     for (auto &layer : circ->get()) {
         evaluate_send(layer);
         online_communication();
         evaluate_recv(layer);
         update_wires(layer);
     }
-    g.data = output;
-    std::vector<Ring>().swap(output);
 }
 
-void Evaluator::set_input(Graph &g) {
-    if (id != D) {
-        size_t idx = 0;
-
-        for (size_t i = 0; i < g.src_bits.size(); ++i) {
-            input_to_val[idx] = g.src_bits[i];
-            idx++;
-        }
-        for (size_t i = 0; i < g.dst_bits.size(); ++i) {
-            input_to_val[idx] = g.dst_bits[i];
-            idx++;
-        }
-
-        input_to_val[idx] = g.src;
-        idx++;
-        input_to_val[idx] = g.dst;
-        idx++;
-        input_to_val[idx] = g.isV_inv;
-        idx++;
-        input_to_val[idx] = g.data;
-        idx++;
-
-        for (size_t i = 0; i < g.data_parallel.size(); ++i) {
-            input_to_val[idx] = g.data_parallel[i];
-            idx++;
-        }
-    }
-}
+const std::vector<Ring> Evaluator::result() { return output; }
 
 void Evaluator::online_communication() {
     auto round_begin = std::chrono::high_resolution_clock::now();

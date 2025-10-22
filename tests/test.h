@@ -15,30 +15,13 @@ class Test {
    public:
     Test(ProtocolConfig &conf, std::shared_ptr<io::NetIOMP> network) : id(conf.id), conf(conf), network(network) {}
 
-    Circuit *circ;
-    Preprocessor *preproc;
-    Evaluator *eval;
-
-    Graph g;
-
-    Party id;
-    ProtocolConfig conf;
-    std::shared_ptr<io::NetIOMP> network;
-    json output_data;
-
-    virtual Circuit *create_circuit() = 0;
-
-    virtual Graph create_graph() = 0;
-
-    virtual void run_assertions(Graph &result) = 0;
-
     void run() {
         circ = create_circuit();
         g = create_graph();
 
         auto io = Storage(conf, circ);
         preproc = new Preprocessor(conf, &io, network);
-        eval = new Evaluator(conf, &io, network);
+        eval = new Evaluator(conf, &io, network, g);
 
         network->sync();
         size_t bytes_sent_pre = 0;
@@ -63,7 +46,7 @@ class Test {
 
         /* Evaluation */
         StatsPoint start_online(*network);
-        eval->run(circ, g);
+        eval->run(circ);
         StatsPoint end_online(*network);
 
         auto rbench = end_online - start_online;
@@ -85,7 +68,32 @@ class Test {
         }
         std::cout << std::endl;
 
-        auto result = g.reveal(id, network);
+        auto result = eval->result();
         run_assertions(result);
+    }
+
+   protected:
+    Circuit *circ;
+    Preprocessor *preproc;
+    Evaluator *eval;
+
+    Graph g;
+
+    Party id;
+    ProtocolConfig conf;
+    std::shared_ptr<io::NetIOMP> network;
+    json output_data;
+
+    virtual Circuit *create_circuit() = 0;
+
+    virtual Graph create_graph() = 0;
+
+    virtual void run_assertions(std::vector<Ring> &result) = 0;
+
+    void print_vec(std::vector<Ring> &vec) {
+        for (size_t i = 0; i < vec.size(); ++i) {
+            std::cout << vec[i] << std::endl;
+        }
+        std::cout << std::endl;
     }
 };

@@ -4,7 +4,7 @@
 
 class Storage {
    public:
-    Storage(ProtocolConfig &conf, Circuit *circ) : size(conf.size), ssd(conf.ssd), unshuffles_idx(0) {
+    Storage(ProtocolConfig &conf, Circuit *circ) : id(conf.id), size(conf.size), ssd(conf.ssd), unshuffles_idx(0) {
         if (ssd) {
             shuffles.resize(circ->n_shuffles);  // Shuffles need to be stored in RAM either way
 
@@ -130,24 +130,16 @@ class Storage {
             }
         } else {
             for (auto &shuffle : shuffles) {
-                shuffle = std::make_shared<ShufflePre>();
-            }
-            for (auto &unshuffle : unshuffles) {
-                unshuffle = std::vector<Ring>(size, 0);
-            }
-            for (auto &triple : triples_a) {
-                triple = std::vector<Ring>(size, 0);
-            }
-            for (auto &triple : triples_b) {
-                triple = std::vector<Ring>(size, 0);
-            }
-            for (auto &triple : triples_c) {
-                triple = std::vector<Ring>(size, 0);
+                if (shuffle)
+                    shuffle->clear(id);
+                else
+                    shuffle = std::make_shared<ShufflePre>();
             }
         }
     }
 
    private:
+    Party id;
     size_t size;
     bool ssd;
 

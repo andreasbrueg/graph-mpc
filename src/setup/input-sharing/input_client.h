@@ -15,7 +15,7 @@ class InputClient {
         std::vector<Ring> entries;
     };
 
-    InputClient(int id, size_t n_bits, std::string password) : id(id), n_bits(n_bits), password(password), connected(false) {
+    InputClient(size_t n_bits, std::string password) : n_bits(n_bits), connected(false), password(password) {
         auto PRINT_LOG = [](const std::string &strLogMsg) { std::cout << strLogMsg << std::endl; };
 
         m_pSSLTCPClient.reset(new CTCPSSLClient(PRINT_LOG));
@@ -34,14 +34,14 @@ class InputClient {
     void send_graph(Graph &g, size_t start) {
         Packet pkt;
         pkt.start = start;
-        pkt.end = start + g.size();
+        pkt.end = start + g.size;
         pkt.entries = g.serialize(n_bits);
 
         if (connected) {
             size_t password_size = password.size();
             send(password_size);
             send(password);
-            auto n_vertices = g.n_vertices();
+            auto n_vertices = g.n_vertices;
             send(n_vertices);
             send_packet(pkt);
             std::cout << "Graph sent successfully." << std::endl;
@@ -63,7 +63,6 @@ class InputClient {
     }
 
    private:
-    int id;
     size_t n_bits;
     bool connected;
     std::string password;

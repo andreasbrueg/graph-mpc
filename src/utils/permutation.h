@@ -29,6 +29,8 @@ class Permutation {
 
     Permutation(std::vector<Ring> _perm_vec) : perm_vec(_perm_vec) {};
 
+    std::vector<Ring> perm_vec;
+
     [[nodiscard]] static Permutation random(int n_rows, emp::PRG &rng) {
         Permutation p = Permutation(n_rows);
         for (int i = 0; i < n_rows; ++i) {
@@ -53,15 +55,12 @@ class Permutation {
 
     [[nodiscard]] Ring operator[](size_t idx) { return perm_vec[idx]; }
 
-    [[nodiscard]] std::vector<Ring> get_perm_vec() { return perm_vec; }
-
     template <typename T>
     std::vector<T> operator()(const std::vector<T> &input_vec) const {
         assert(input_vec.size() == perm_vec.size());
         std::vector<T> result(input_vec.size());
 #pragma omp parallel for if (perm_vec.size() > 10000)
         for (size_t i = 0; i < perm_vec.size(); ++i) {
-            if (perm_vec[i] > input_vec.size()) throw std::logic_error("Cannot apply secret shared permutation.");
             result[perm_vec[i]] = input_vec[i];
         }
         return result;
@@ -114,7 +113,4 @@ class Permutation {
         }
         std::cout << perm_vec[perm_vec.size() - 1] << "}" << std::endl;
     }
-
-   private:
-    std::vector<Ring> perm_vec;
 };

@@ -7,23 +7,16 @@
 
 class TestPiK : public Test {
    public:
-    TestPiK(bpo::variables_map &opts) : Test(opts) {}
+    TestPiK(ProtocolConfig &conf, std::shared_ptr<io::NetIOMP> network) : Test(conf, network) {}
 
-    virtual MPProtocol *create_protocol() {
-        bool ssd = false;
-        const size_t nodes = 4;
-        const size_t depth = 4;
-        std::vector<Ring> weights = {10000000, 100000, 1000, 1};
-        bits = std::ceil(std::log2(nodes + 2));
-        size_t size = 16;
-
-        ProtocolConfig conf = {id, size, nodes, depth, rngs, ssd, weights};
-        PiKProtocol *prot = new PiKProtocol(conf, network);
-
-        return prot;
+    Circuit *create_circuit() override {
+        auto circ = new PiKCircuit(conf);
+        circ->build();
+        circ->level_order();
+        return circ;
     }
 
-    virtual Graph create_graph() {
+    Graph create_graph() override {
         /*
             Graph instance:
             v1 - v2
@@ -50,37 +43,40 @@ class TestPiK : public Test {
         */
 
         Graph g;
-        if (id == P0) {
-            g.add_list_entry(1, 1, 1);
-            g.add_list_entry(2, 2, 1);
-            g.add_list_entry(1, 2, 0);
-            g.add_list_entry(2, 1, 0);
-            g.add_list_entry(1, 3, 0);
-            g.add_list_entry(1, 3, 0);
-            g.add_list_entry(3, 1, 0);
-            g.add_list_entry(4, 4, 1);
-        }
-        if (id == P1) {
-            g.add_list_entry(3, 3, 1);
-            g.add_list_entry(3, 1, 0);
-            g.add_list_entry(3, 2, 0);
-            g.add_list_entry(2, 3, 0);
-            g.add_list_entry(2, 4, 0);
-            g.add_list_entry(4, 2, 0);
-            g.add_list_entry(2, 4, 0);
-            g.add_list_entry(4, 2, 0);
-        }
-        return g.share_subgraphs(id, rngs, network, bits);
+        g.add_list_entry(1, 1, 1);
+        g.add_list_entry(2, 2, 1);
+        g.add_list_entry(1, 2, 0);
+        g.add_list_entry(2, 1, 0);
+        g.add_list_entry(1, 3, 0);
+        g.add_list_entry(1, 3, 0);
+        g.add_list_entry(3, 1, 0);
+        g.add_list_entry(4, 4, 1);
+        g.add_list_entry(3, 3, 1);
+        g.add_list_entry(3, 1, 0);
+        g.add_list_entry(3, 2, 0);
+        g.add_list_entry(2, 3, 0);
+        g.add_list_entry(2, 4, 0);
+        g.add_list_entry(4, 2, 0);
+        g.add_list_entry(2, 4, 0);
+        g.add_list_entry(4, 2, 0);
+
+        Graph g_shared = g.secret_share_parties(conf.id, conf.rngs, network, conf.bits, P0);
+        g_shared.init_mp(conf.id);
+        return g_shared;
     }
 
-    virtual void run_assertions(Graph &result) {
-        if (id != D) {
-            result.print();
+    void run_assertions(std::vector<Ring> &result) override {
+        if (conf.id != D) {
+            result = share::reveal_vec(id, network, result);
 
-            assert(result._data[0] == 20510023);  // 2 of length 1, 5 of length 2, 10 of length 3, 23 of length 4
-            assert(result._data[1] == 30513025);  // 3 of length 1, 5 of length 2, 13 of length 3, 25 of length 4
-            assert(result._data[2] == 20510023);  // 2 of length 1, 5 of length 2, 10 of length 3, 23 of length 4
-            assert(result._data[3] == 10305013);  // 1 of length 1, 3 of length 2,  5 of length 3, 13 of length 4
+            print_vec(result);
+
+            assert(result.data[0] == 20510023);  // 2 of length 1, 5 of length 2, 10 of length 3, 23 of length 4
+            assert(result.data[1] == 30513025);  // 3 of length 1, 5 of length 2, 13 of length 3, 25 of length 4
+            assert(result.data[2] == 20510023);  // 2 of length 1, 5 of length 2, 10 of length 3, 23 of length 4
+            assert(result.data[3] == 10305013);  // 1 of length 1, 3 of length 2,  5 of length 3, 13 of length 4
+
+            std::cout << "test_pi_k passed." << std::endl;
         }
     }
 };
@@ -88,7 +84,7 @@ class TestPiK : public Test {
 int main(int argc, char **argv) {
     auto prog_opts(setup::programOptionsTest());
 
-    bpo::options_description cmdline("Test for the secure computation of the Reach Score.");
+    bpo::options_description cmdline("Test for the secure computation of the Truncated Katz Score.");
     cmdline.add(prog_opts);
     cmdline.add_options()("config,c", bpo::value<std::string>(), "configuration file for easy specification of cmd line arguments")("help,h",
                                                                                                                                     "produce help message");
@@ -96,7 +92,19 @@ int main(int argc, char **argv) {
     bpo::variables_map opts = setup::parseOptions(cmdline, prog_opts, argc, argv);
 
     try {
-        auto test = TestPiK(opts);
+        Party id = (Party)opts["pid"].as<size_t>();
+        const size_t size = 16;
+        const size_t nodes = 4;
+        const size_t depth = 4;
+        const size_t bits = std::ceil(std::log2(nodes + 2));
+        auto rngs = setup::setupRNGs(opts);
+        bool ssd = false;
+        std::vector<Ring> weights = {10000000, 100000, 1000, 1};
+
+        ProtocolConfig conf = {id, size, nodes, depth, bits, rngs, ssd, weights};
+        auto network = setup::setupNetwork(opts);
+
+        auto test = TestPiK(conf, network);
         test.run();
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\nFatal error" << std::endl;

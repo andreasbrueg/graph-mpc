@@ -15,8 +15,8 @@ class InputServer {
         std::vector<Ring> entries;
     };
 
-    InputServer(Party id, std::string passwords_file, std::string port, size_t n_clients, size_t n_bits)
-        : id(id), passwords_file(passwords_file), n_clients(n_clients), n_bits(n_bits), clients(n_clients) {
+    InputServer(std::string passwords_file, std::string port, size_t n_clients, size_t n_bits)
+        : passwords_file(passwords_file), n_bits(n_bits), clients(n_clients) {
         auto PRINT_LOG = [](const std::string &strLogMsg) { std::cout << strLogMsg << std::endl; };
         m_pSSLTCPServer.reset(new CTCPSSLServer(PRINT_LOG, port));  // creates an SSL/TLS TCP server
 
@@ -60,7 +60,7 @@ class InputServer {
         size_t n_vertices_total = 0;
         for (auto &client : clients) {
             size_t n_vertices;
-            auto n_bytes_recvd = m_pSSLTCPServer->Receive(client, reinterpret_cast<char *>(&n_vertices), sizeof(size_t));
+            m_pSSLTCPServer->Receive(client, reinterpret_cast<char *>(&n_vertices), sizeof(size_t));
             n_vertices_total += n_vertices;
         }
         std::cout << "n_vertices received: " << n_vertices_total << std::endl;
@@ -78,9 +78,8 @@ class InputServer {
         size_t total_size = 0;
         for (auto &pkt : pkts) {
             size_t pkt_size = pkt.end - pkt.start;
-            size_t expected_size = (4 + 2 * n_bits) * pkt_size;
             assert(pkt.start < pkt.end);
-            assert(pkt.entries.size() == expected_size);
+            assert(pkt.entries.size() == (4 + 2 * n_bits) * pkt_size);
             total_size += pkt_size;
         }
 
@@ -94,7 +93,6 @@ class InputServer {
         for (auto &pkt : pkts) {
             size_t pkt_size = pkt.end - pkt.start;
             size_t pkt_idx = 0;
-            size_t idx = pkt.start;
 
             for (size_t i = pkt.start; i < pkt.start + pkt_size; ++i) {
                 src[i] = pkt.entries[pkt_idx++];
@@ -178,9 +176,7 @@ class InputServer {
         return false;
     }
 
-    Party id;
     std::string passwords_file;
-    size_t n_clients;
     size_t n_bits;
     std::vector<ASecureSocket::SSLSocket> clients;
     std::unique_ptr<CTCPSSLServer> m_pSSLTCPServer;

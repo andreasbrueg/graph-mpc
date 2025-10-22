@@ -1,37 +1,26 @@
 #pragma once
 
-#include "../src/graphmpc/clip.h"
-#include "../src/graphmpc/mp_protocol.h"
+#include "../src/graphmpc/circuit.h"
 
-class PiRProtocol : public MPProtocol {
+class PiRCircuit : public Circuit {
    public:
-    PiRProtocol(ProtocolConfig &conf, std::shared_ptr<io::NetIOMP> &network) : MPProtocol(conf, network) {}
+    PiRCircuit(ProtocolConfig &conf) : Circuit(conf) { in.data_parallel.resize(conf.nodes); }
 
-    virtual void pre_mp_preprocessing(MPPreprocessing &preproc) {}
+    void pre_mp() override {}
 
-    virtual void apply_preprocessing(MPPreprocessing &preproc) {}
+    size_t apply(size_t &data_old, size_t &data_new) override { return add(data_old, data_new); }
 
-    virtual void post_mp_preprocessing(MPPreprocessing &preproc) {
-        clip::equals_zero_preprocess(id, rngs, network, nodes, preproc, recv_mul, ssd);
-        clip::B2A_preprocess(id, rngs, network, nodes, preproc, recv_mul, ssd);
-    }
-
-    virtual void pre_mp_evaluation(MPPreprocessing &preproc, Graph &g) {}
-
-    virtual void apply_evaluation(MPPreprocessing &preproc, Graph &g, std::vector<Ring> &new_data) {
-        for (size_t i = 0; i < g.size(); ++i) {
-            g._data[i] += new_data[i];
+    size_t post_mp(size_t &data) override {
+        for (size_t i = 0; i < in.data_parallel.size(); ++i) {
+            in.data_parallel[i] = equals_zero(in.data_parallel[i], size, 0);
+            in.data_parallel[i] = equals_zero(in.data_parallel[i], size, 1);
+            in.data_parallel[i] = equals_zero(in.data_parallel[i], size, 2);
+            in.data_parallel[i] = equals_zero(in.data_parallel[i], size, 3);
+            in.data_parallel[i] = equals_zero(in.data_parallel[i], size, 4);
+            in.data_parallel[i] = bit2A(in.data_parallel[i], size);
+            in.data_parallel[i] = flip(in.data_parallel[i]);
         }
-    }
 
-    virtual void post_mp_evaluation(MPPreprocessing &preproc, Graph &g) {
-        std::vector<Ring> nodes_data(nodes);
-        std::copy(g._data.begin(), g._data.begin() + nodes_data.size(), nodes_data.begin());
-
-        auto data_p = clip::equals_zero_evaluate(id, rngs, network, preproc, nodes_data, ssd);
-        data_p = clip::B2A_evaluate(id, rngs, network, nodes, preproc, data_p, ssd);
-        data_p = clip::flip(id, data_p);
-
-        std::copy(data_p.begin(), data_p.end(), g._data.begin());
+        return construct_data(in.data_parallel);
     }
 };

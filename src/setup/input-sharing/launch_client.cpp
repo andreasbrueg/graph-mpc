@@ -5,7 +5,7 @@
 #include "../cmdline.h"
 #include "input_client.h"
 
-void launch_client(int id, size_t start_idx, std::string ip_0, std::string ip_1, int port_0, int port_1, std::string input_file, emp::PRG rng, size_t n_bits,
+void launch_client(size_t start_idx, std::string ip_0, std::string ip_1, int port_0, int port_1, std::string input_file, emp::PRG rng, size_t n_bits,
                    std::string &password) {
     Graph g = Graph::parse(input_file);
     std::cout << "Graph loaded from file." << std::endl;
@@ -13,7 +13,7 @@ void launch_client(int id, size_t start_idx, std::string ip_0, std::string ip_1,
     auto [share_0, share_1] = g.secret_share(rng, n_bits);
 
     /* Send shares*/
-    InputClient client(id, n_bits, password);
+    InputClient client(n_bits, password);
     client.connect(ip_0, port_0);
     client.send_graph(share_0, start_idx);
 
@@ -42,5 +42,5 @@ int main(int argc, char **argv) {
     auto seed_block = emp::makeBlock(14132, 68436);
     rng.reseed(&seed_block, 0);
 
-    launch_client(id, start_idx, ip_0, ip_1, port_0, port_1, input_file, rng, n_bits, password);
+    launch_client(start_idx, ip_0, ip_1, port_0, port_1, input_file, rng, n_bits, password);
 }

@@ -2,7 +2,9 @@
 
 #include <nlohmann/json.hpp>
 
-#include "../src/graphmpc/mp_protocol.h"
+#include "../src/graphmpc/circuit.h"
+#include "../src/graphmpc/evaluator.h"
+#include "../src/graphmpc/preprocessor.h"
 #include "../src/setup/cmdline.h"
 #include "../src/utils/stats.h"
 
@@ -10,41 +12,61 @@ using json = nlohmann::json;
 
 class Benchmark {
    public:
-    Benchmark(bpo::variables_map &opts, MPProtocol *prot) : prot(prot), network(prot->network) {
-        auto conf = setup::setupBenchmark(opts);
-        input_file = conf.input_file;
-        save_file = conf.save_file;
-        repeat = conf.repeat;
-        save_output = conf.save_output;
+    Benchmark(ProtocolConfig &conf, BenchmarkConfig &b_conf, Circuit *circ, std::shared_ptr<io::NetIOMP> network, Graph &g)
+        : conf(conf), circ(circ), io(conf, circ), g(g), network(network) {
+        preproc = new Preprocessor(conf, &io, network);
+        eval = new Evaluator(conf, &io, network, g);
 
-        output_data["details"] = {{"input file", input_file}, {"save file", save_file}, {"repeat", repeat}, {"save output", save_output}};
+        input_file = b_conf.input_file;
+        save_file = b_conf.save_file;
+        repeat = b_conf.repeat;
+        save_output = b_conf.save_output;
+
+        output_data["details"] = {{"Party", conf.id},
+                                  {"Size", conf.size},
+                                  {"Nodes", conf.nodes},
+                                  {"Depth", conf.depth},
+                                  {"Bits", conf.bits},
+                                  {"SSD Utilization", conf.ssd},
+                                  {"Communication rounds", circ->get().size()},
+                                  {"input file", input_file},
+                                  {"save file", save_file},
+                                  {"repeat", repeat},
+                                  {"save output", save_output}};
         output_data["benchmarks_pre"] = json::array();
         output_data["benchmarks"] = json::array();
     }
 
-    MPProtocol *prot;
+    ProtocolConfig conf;
+    Circuit *circ;
+    Preprocessor *preproc;
+    Evaluator *eval;
+    Storage io;
+
+    Graph g;
+
     std::shared_ptr<io::NetIOMP> network;
     std::string input_file, save_file;
     size_t repeat;
     bool save_output;
     json output_data;
 
-    void run(bool parallel = false) {
+    void run() {
         print();
-
-        // network->sync();
+        network->sync();
         for (size_t r = 0; r < repeat; ++r) {
             std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
-            /* Construct and share graph */
-            Graph g = prot->benchmark_graph();
 
             size_t bytes_sent_pre = 0;
             size_t bytes_sent_eval = 0;
 
             /* Preprocessing */
             StatsPoint start_pre(*network);
-            prot->mp_preprocess(parallel);
+            preproc->run(circ);
             StatsPoint end_pre(*network);
+
+            /* Network Sync */
+            network->sync();
 
             auto rbench_pre = end_pre - start_pre;
             output_data["benchmarks_pre"].push_back(rbench_pre);
@@ -55,18 +77,15 @@ class Benchmark {
             std::cout << "preprocessing time: " << rbench_pre["time"] << " ms" << std::endl;
             std::cout << "preprocessing sent: " << bytes_sent_pre << " bytes" << std::endl;
 
-            /* Network Sync */
-            network->sync();
-
             /* Evaluation */
             StatsPoint start_online(*network);
-            prot->mp_evaluate(g, parallel);
+            eval->run(circ);
             StatsPoint end_online(*network);
 
             auto rbench = end_online - start_online;
             output_data["benchmarks"].push_back(rbench);
 
-            prot->reset();
+            io.reset();
             network->sync();
 
             for (const auto &val : rbench["communication"]) {
@@ -89,7 +108,6 @@ class Benchmark {
     }
 
     virtual void print() {
-        prot->print();
         std::cout << "--- Benchmark Details ---\n";
         for (const auto &[key, value] : output_data["details"].items()) {
             std::cout << key << ": " << value << "\n";

@@ -1,20 +1,14 @@
 #pragma once
 
-#include "../src/graphmpc/mp_protocol.h"
+#include "../src/graphmpc/circuit.h"
 
-class PiMProtocol : public MPProtocol {
+class PiMCircuit : public Circuit {
    public:
-    PiMProtocol(ProtocolConfig &conf, std::shared_ptr<io::NetIOMP> &network) : MPProtocol(conf, network) {}
+    PiMCircuit(ProtocolConfig &conf) : Circuit(conf) {}
 
-    virtual void pre_mp_preprocessing(MPPreprocessing &preproc) {}
+    void pre_mp() override {}
 
-    virtual void apply_preprocessing(MPPreprocessing &preproc) {}
+    size_t apply(size_t &data_old, size_t &data_new) override { return data_new; }
 
-    virtual void post_mp_preprocessing(MPPreprocessing &preproc) {}
-
-    virtual void pre_mp_evaluation(MPPreprocessing &preproc, Graph &g) {}
-
-    virtual void apply_evaluation(MPPreprocessing &preproc, Graph &g, std::vector<Ring> &new_data) { g._data = new_data; }
-
-    virtual void post_mp_evaluation(MPPreprocessing &preproc, Graph &g) {}
+    size_t post_mp(size_t &data) override { return data; }
 };

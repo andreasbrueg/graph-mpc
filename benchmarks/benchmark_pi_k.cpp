@@ -4,7 +4,7 @@
 int main(int argc, char **argv) {
     auto prog_opts(setup::programOptionsBenchmark());
 
-    bpo::options_description cmdline("Benchmark the secure computation of the reach score.");
+    bpo::options_description cmdline("Benchmark the secure computation of the Truncated Katz Score.");
     cmdline.add(prog_opts);
     cmdline.add_options()("config,c", bpo::value<std::string>(), "configuration file for easy specification of cmd line arguments")("help,h",
                                                                                                                                     "produce help message");
@@ -12,13 +12,18 @@ int main(int argc, char **argv) {
     bpo::variables_map opts = setup::parseOptions(cmdline, prog_opts, argc, argv);
 
     try {
-        auto network = setup::setupNetwork(opts);
         auto conf = setup::setupProtocol(opts);
+        auto b_conf = setup::setupBenchmark(opts);
+        auto network = setup::setupNetwork(opts);
 
-        auto protocol = PiKProtocol(conf, network);
-        auto benchmark = Benchmark(opts, &protocol);
+        auto circuit = PiKCircuit(conf);
+        circuit.build();
+        circuit.level_order();
 
-        benchmark.run(true);
+        Graph g = Graph::benchmark_graph(conf, network);
+
+        auto benchmark = Benchmark(conf, b_conf, &circuit, network, g);
+        benchmark.run();
 
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\nFatal error" << std::endl;

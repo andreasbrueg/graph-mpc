@@ -17,7 +17,7 @@ target_sources(GraphMPC_lib
     graphmpc/preprocessor.cpp
     graphmpc/evaluator.cpp
     graphmpc/circuit.cpp
-    graphmpc/function.h
+    graphmpc/function.cpp
     setup/cmdline.cpp
     setup/configs.h
     setup/input-sharing/input_client.h

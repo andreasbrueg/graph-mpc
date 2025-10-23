@@ -77,6 +77,12 @@ class FileWriter {
         if (read_idx >= _size) reset_idx();
     }
 
+    void reset() {
+        std::filesystem::remove(filename);
+        read_idx = 0;
+        _size = 0;
+    }
+
    private:
     std::string filename;
     size_t read_idx;

@@ -13,9 +13,9 @@ using json = nlohmann::json;
 class Benchmark {
    public:
     Benchmark(ProtocolConfig &conf, BenchmarkConfig &b_conf, Circuit *circ, std::shared_ptr<io::NetIOMP> network, Graph &g)
-        : conf(conf), circ(circ), io(conf, circ), g(g), network(network) {
-        preproc = new Preprocessor(conf, &io, network);
-        eval = new Evaluator(conf, &io, network, g);
+        : conf(conf), circ(circ), data(conf, circ), g(g), network(network) {
+        preproc = new Preprocessor(conf, &data, network);
+        eval = new Evaluator(conf, &data, network, g);
 
         input_file = b_conf.input_file;
         save_file = b_conf.save_file;
@@ -41,7 +41,7 @@ class Benchmark {
     Circuit *circ;
     Preprocessor *preproc;
     Evaluator *eval;
-    Storage io;
+    Storage data;
 
     Graph g;
 
@@ -85,7 +85,7 @@ class Benchmark {
             auto rbench = end_online - start_online;
             output_data["benchmarks"].push_back(rbench);
 
-            io.reset();
+            data.reset();
             network->sync();
 
             for (const auto &val : rbench["communication"]) {

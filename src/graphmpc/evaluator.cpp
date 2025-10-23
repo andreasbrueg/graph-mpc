@@ -112,18 +112,18 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
                 /* Sampling 2: pi_0_p / pi_1 */
                 if (id == P0) {
-                    if (store->pi_0_p[f->shuffle_idx].size() == 0) {
+                    if (data->pi_0_p[f->shuffle_idx].size() == 0) {
                         perm = Permutation::random(size, rngs->rng_D0_send());
-                        store->pi_0_p[f->shuffle_idx] = perm;
+                        data->pi_0_p[f->shuffle_idx] = perm;
                     } else {
-                        perm = store->pi_0_p[f->shuffle_idx];
+                        perm = data->pi_0_p[f->shuffle_idx];
                     }
                 } else {
-                    if (store->pi_1[f->shuffle_idx].size() == 0) {
+                    if (data->pi_1[f->shuffle_idx].size() == 0) {
                         perm = Permutation::random(size, rngs->rng_D1_send());
-                        store->pi_1[f->shuffle_idx] = perm;
+                        data->pi_1[f->shuffle_idx] = perm;
                     } else {
-                        perm = store->pi_1[f->shuffle_idx];
+                        perm = data->pi_1[f->shuffle_idx];
                     }
                 }
 
@@ -156,7 +156,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) vec_t[i] = wires[f->in1_idx][i] + R[i];
 
-                Permutation perm = id == P0 ? store->pi_0[f->shuffle_idx] : store->pi_1_p[f->shuffle_idx];
+                Permutation perm = id == P0 ? data->pi_0[f->shuffle_idx] : data->pi_1_p[f->shuffle_idx];
 
                 std::vector<Ring> vec_t_permuted(size);
                 vec_t_permuted = perm.inverse()(vec_t);
@@ -168,7 +168,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Compaction: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->mult_idx);
+                data->load_triples(_a, _b, _c, f->mult_idx);
 
                 std::vector<Ring> f_0(size);
 
@@ -213,7 +213,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Mul: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->mult_idx, f->size);
+                data->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
                 std::vector<Ring> data_send(2 * f->size);
 #pragma omp parallel for if (size > 10000)
@@ -241,7 +241,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case EQZ: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->mult_idx, f->size);
+                data->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
                 /* x_0 == -x_1 <=> ~x_0 ^ -x_1 */
                 if (id == P0 && f->layer == 0) {
@@ -292,7 +292,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case Bit2A: {
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->mult_idx, f->size);
+                data->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
                 size_t old = mul_vals.size();
                 mul_vals.resize(old + 2 * f->size);
@@ -341,18 +341,18 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                 std::vector<Ring> output(size);
                 Permutation perm;
                 if (id == P0) {
-                    if (store->pi_0[f->shuffle_idx].size() == 0) {
+                    if (data->pi_0[f->shuffle_idx].size() == 0) {
                         perm = Permutation::random(size, rngs->rng_D0_recv());
-                        store->pi_0[f->shuffle_idx] = perm;
+                        data->pi_0[f->shuffle_idx] = perm;
                     } else {
-                        perm = store->pi_0[f->shuffle_idx];
+                        perm = data->pi_0[f->shuffle_idx];
                     }
                 } else {
-                    if (store->pi_1_p[f->shuffle_idx].size() == 0) {
+                    if (data->pi_1_p[f->shuffle_idx].size() == 0) {
                         perm = Permutation::random(size, rngs->rng_D1_recv());
-                        store->pi_1_p[f->shuffle_idx] = perm;
+                        data->pi_1_p[f->shuffle_idx] = perm;
                     } else {
-                        perm = store->pi_1_p[f->shuffle_idx];
+                        perm = data->pi_1_p[f->shuffle_idx];
                     }
                 }
 
@@ -360,7 +360,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
                 t = perm(t);
 
                 std::vector<Ring> B;
-                store->read_preproc(B, size);
+                data->read_preproc(B, size);
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) {
                     output[i] = t[i] - B[i];  // Read B directly from preprocessing (needs recv also in evaluator)
@@ -372,7 +372,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
             case Unshuffle: {
                 std::vector<Ring> output(size);
                 Permutation perm;
-                perm = id == P0 ? store->pi_0_p[f->shuffle_idx] : store->pi_1[f->shuffle_idx];
+                perm = id == P0 ? data->pi_0_p[f->shuffle_idx] : data->pi_1[f->shuffle_idx];
 
                 std::vector<Ring> vec_t = read_online(shuffle_vals, size);
 
@@ -381,7 +381,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
 
                 /* Last step: subtract B_0 / B_1 */
                 std::vector<Ring> unshuffle;
-                store->read_preproc(unshuffle, size);  // Read directly from preprocessing
+                data->read_preproc(unshuffle, size);  // Read directly from preprocessing
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) vec_t[i] -= unshuffle[i];
 
@@ -394,7 +394,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
             case Compaction: {
                 std::vector<Ring> output(size);
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->mult_idx);
+                data->load_triples(_a, _b, _c, f->mult_idx);
 
                 std::vector<Ring> f_0(size);
                 // set f_0 to 1 - input and f_1 to input, we just immediately use input instead of f_1
@@ -440,7 +440,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
             case Mul: {
                 std::vector<Ring> output(f->size);
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->mult_idx, f->size);
+                data->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
                 std::vector<Ring> data_recv;
                 if (f->binary) {
@@ -470,7 +470,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
             case EQZ: {
                 std::vector<Ring> output(f->size);
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->mult_idx, f->size);
+                data->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
                 std::vector<Ring> data_recv = read_online(and_vals, 2 * f->size);
 
@@ -499,7 +499,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
             case Bit2A: {
                 std::vector<Ring> output(f->size);
                 std::vector<Ring> _a, _b, _c;
-                store->load_triples(_a, _b, _c, f->mult_idx, f->size);
+                data->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
                 std::vector<Ring> data_recv = read_online(mul_vals, 2 * f->size);
 #pragma omp parallel for if (size > 10000)

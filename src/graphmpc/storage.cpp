@@ -88,9 +88,9 @@ void Storage::load_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vect
 void Storage::reset() {
     if (ssd) {  // Clear all files
         for (auto &disk : triples_disk) {
-            std::filesystem::remove(disk.name());
+            disk.reset();
         }
-        std::filesystem::remove(preproc_disk.name());
+        preproc_disk.reset();
     }
 
     for (auto &perm : pi_0) {
@@ -104,6 +104,9 @@ void Storage::reset() {
     }
     for (auto &perm : pi_1_p) {
         perm.perm_vec.clear();
+    }
+    for (size_t i = 0; i < preprocessed.size(); ++i) {
+        preprocessed[i] = false;
     }
 
     preproc.clear();

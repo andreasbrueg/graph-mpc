@@ -7,8 +7,8 @@
 
 class Evaluator {
    public:
-    Evaluator(ProtocolConfig &conf, Storage *store, std::shared_ptr<io::NetIOMP> network, Graph &g)
-        : store(store), initialized(false), id(conf.id), size(conf.size), nodes(conf.nodes), rngs(&conf.rngs), network(network) {
+    Evaluator(ProtocolConfig &conf, Storage *data, std::shared_ptr<io::NetIOMP> network, Graph &g)
+        : data(data), initialized(false), id(conf.id), size(conf.size), nodes(conf.nodes), rngs(&conf.rngs), network(network) {
         if (id != D) {
             size_t idx = 0;
 
@@ -50,7 +50,7 @@ class Evaluator {
 
     std::unordered_map<size_t, std::vector<Ring>> input_to_val;
     std::vector<Ring> output;
-    Storage *store;
+    Storage *data;
 
     std::vector<std::vector<Ring>> wires;
     std::vector<size_t> waiting;

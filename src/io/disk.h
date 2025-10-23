@@ -36,13 +36,6 @@ class FileWriter {
         _size += n_elems;
     }
 
-    void overwrite(const std::vector<Ring> &data) {
-        std::ofstream out(filename, std::ios::binary);  // Deletes all content!
-        if (!out) throw std::runtime_error("Failed to open file for writing.");
-        out.write(reinterpret_cast<const char *>(data.data()), data.size() * sizeof(Ring));
-        _size = data.size();
-    }
-
     void print_content() {
         std::vector<Ring> vec(_size);
         read(vec, _size);
@@ -78,7 +71,9 @@ class FileWriter {
     }
 
     void reset() {
-        std::filesystem::remove(filename);
+        /* Clear contents but do not remove file */
+        std::ofstream out(filename, std::ios::binary);  // Deletes all content!
+        out.close();
         read_idx = 0;
         _size = 0;
     }

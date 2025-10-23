@@ -274,9 +274,6 @@ void Preprocessor::preprocess(Circuit *circ) {
                 case Mul:
                 case EQZ:
                 case Bit2A: {
-                    if (f->mult_idx == 18) {
-                        std::cout << "";
-                    }
                     size_t triple_size = size;
                     if (f->type != Compaction) {
                         triple_size = f->size;

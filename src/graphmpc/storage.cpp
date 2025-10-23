@@ -65,9 +65,6 @@ void Storage::store_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vec
 }
 
 void Storage::load_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vector<Ring> &c, size_t mul_idx) {
-    if (mul_idx == 18) {
-        std::cout << "";
-    }
     if (ssd) {
         a = triples_disk[mul_idx].read(size);
         b = triples_disk[mul_idx].read(size);
@@ -79,9 +76,6 @@ void Storage::load_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vect
     }
 }
 void Storage::load_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vector<Ring> &c, size_t mul_idx, size_t triple_size) {
-    if (mul_idx == 18) {
-        std::cout << "";
-    }
     if (ssd) {
         a = triples_disk[mul_idx].read(triple_size);
         b = triples_disk[mul_idx].read(triple_size);

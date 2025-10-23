@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
         const size_t depth = 2;
         const size_t bits = std::ceil(std::log2(nodes + 2));
         auto rngs = setup::setupRNGs(opts);
-        bool ssd = false;
+        bool ssd = true;
         std::vector<Ring> weights(depth);
 
         ProtocolConfig conf = {id, size, nodes, depth, bits, rngs, ssd, weights};

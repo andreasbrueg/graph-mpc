@@ -8,7 +8,7 @@
 class Circuit {
    public:
     Circuit(ProtocolConfig &conf)
-        : shuffle_idx(0), n_unshuffles(0), n_mults(0), n_wires(0), size(conf.size), bits(conf.bits), depth(conf.depth), weights(conf.weights) {}
+        : shuffle_idx(0), n_shuffles(0), n_mults(0), n_wires(0), size(conf.size), bits(conf.bits), depth(conf.depth), weights(conf.weights) {}
 
     std::vector<std::vector<std::shared_ptr<Function>>> get() { return circ; }
 
@@ -22,7 +22,7 @@ class Circuit {
     virtual void compute_sorts();  // Can be overwritten
 
     size_t shuffle_idx;
-    size_t n_unshuffles;
+    size_t n_shuffles;
     size_t n_mults;
 
     size_t n_wires;

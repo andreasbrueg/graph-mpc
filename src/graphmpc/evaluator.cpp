@@ -98,43 +98,32 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 
             case MergedShuffle:
             case Shuffle: {
-                auto perm_share = store->load_shuffle(f->shuffle_idx);
-
                 std::vector<Ring> t(size);
                 std::vector<Ring> R(size);
                 Permutation perm;
 
-                if (!perm_share->has_R) {
-                    /* Sampling 1: R_0 / R_1 */
-                    for (size_t i = 0; i < size; ++i) {
-                        if (id == P0)
-                            rngs->rng_D0_send().random_data(&R[i], sizeof(Ring));
-                        else if (id == P1)
-                            rngs->rng_D1_send().random_data(&R[i], sizeof(Ring));
-                    }
-                    perm_share->R = R;
-                    perm_share->has_R = true;
-                } else {
-                    R = perm_share->R;
+                /* Sampling 1: R_0 / R_1 */
+                for (size_t i = 0; i < size; ++i) {
+                    if (id == P0)
+                        rngs->rng_D0_send().random_data(&R[i], sizeof(Ring));
+                    else if (id == P1)
+                        rngs->rng_D1_send().random_data(&R[i], sizeof(Ring));
                 }
 
                 /* Sampling 2: pi_0_p / pi_1 */
                 if (id == P0) {
-                    if (perm_share->has_pi_0_p) {
-                        perm = perm_share->pi_0_p;
-                    } else {
+                    if (store->pi_0_p[f->shuffle_idx].size() == 0) {
                         perm = Permutation::random(size, rngs->rng_D0_send());
-                        perm_share->pi_0_p = perm;
-                        perm_share->has_pi_0_p = true;
+                        store->pi_0_p[f->shuffle_idx] = perm;
+                    } else {
+                        perm = store->pi_0_p[f->shuffle_idx];
                     }
                 } else {
-                    /* Reuse pi_1 if saved earlier */
-                    if (perm_share->has_pi_1) {
-                        perm = perm_share->pi_1;
-                    } else {
+                    if (store->pi_1[f->shuffle_idx].size() == 0) {
                         perm = Permutation::random(size, rngs->rng_D1_send());
-                        perm_share->pi_1 = perm;
-                        perm_share->has_pi_1 = true;
+                        store->pi_1[f->shuffle_idx] = perm;
+                    } else {
+                        perm = store->pi_1[f->shuffle_idx];
                     }
                 }
 
@@ -150,14 +139,10 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
                 t.swap(t_permuted);
 
                 shuffle_vals.insert(shuffle_vals.end(), t.begin(), t.end());
-
-                store->store_shuffle(f->shuffle_idx);
                 break;
             }
 
             case Unshuffle: {
-                auto perm_share = store->load_shuffle(f->shuffle_idx);
-
                 std::vector<Ring> vec_t(size);
                 std::vector<Ring> R(size);
 
@@ -171,15 +156,13 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Function>> &layer) {
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) vec_t[i] = wires[f->in1_idx][i] + R[i];
 
-                Permutation perm = id == P0 ? perm_share->pi_0 : perm_share->pi_1_p;
+                Permutation perm = id == P0 ? store->pi_0[f->shuffle_idx] : store->pi_1_p[f->shuffle_idx];
 
                 std::vector<Ring> vec_t_permuted(size);
                 vec_t_permuted = perm.inverse()(vec_t);
                 vec_t.swap(vec_t_permuted);
 
                 shuffle_vals.insert(shuffle_vals.end(), vec_t.begin(), vec_t.end());
-
-                store->store_shuffle(f->shuffle_idx);
                 break;
             }
 
@@ -356,55 +339,52 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Function>> &layer) {
             case MergedShuffle:
             case Shuffle: {
                 std::vector<Ring> output(size);
-                auto perm_share = store->load_shuffle(f->shuffle_idx);
                 Permutation perm;
                 if (id == P0) {
-                    if (perm_share->has_pi_0) {
-                        perm = perm_share->pi_0;
-                    } else {
+                    if (store->pi_0[f->shuffle_idx].size() == 0) {
                         perm = Permutation::random(size, rngs->rng_D0_recv());
-                        perm_share->pi_0 = perm;
-                        perm_share->has_pi_0 = true;
+                        store->pi_0[f->shuffle_idx] = perm;
+                    } else {
+                        perm = store->pi_0[f->shuffle_idx];
                     }
                 } else {
-                    if (perm_share->has_pi_1_p) {
-                        perm = perm_share->pi_1_p;
-                    } else {
+                    if (store->pi_1_p[f->shuffle_idx].size() == 0) {
                         perm = Permutation::random(size, rngs->rng_D1_recv());
-                        perm_share->pi_1_p = perm;
-                        perm_share->has_pi_1_p = true;
+                        store->pi_1_p[f->shuffle_idx] = perm;
+                    } else {
+                        perm = store->pi_1_p[f->shuffle_idx];
                     }
                 }
-                auto t = read_online(shuffle_vals, size);  // t1
+
+                auto t = read_online(shuffle_vals, size);  // t
                 t = perm(t);
 
+                auto B = store->read_preproc(size);
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) {
-                    output[i] = t[i] - perm_share->B[i];
+                    output[i] = t[i] - B[i];  // Read B directly from preprocessing (needs recv also in evaluator)
                 }
                 wires[f->out_idx] = output;
-                store->store_shuffle(f->shuffle_idx);
                 break;
             }
 
             case Unshuffle: {
                 std::vector<Ring> output(size);
-                auto perm_share = store->load_shuffle(f->shuffle_idx);
                 Permutation perm;
-                perm = id == P0 ? perm_share->pi_0_p : perm_share->pi_1;
+                perm = id == P0 ? store->pi_0_p[f->shuffle_idx] : store->pi_1[f->shuffle_idx];
+
                 std::vector<Ring> vec_t = read_online(shuffle_vals, size);
 
                 /* Apply inverse */
                 vec_t = perm.inverse()(vec_t);
 
                 /* Last step: subtract B_0 / B_1 */
-                std::vector<Ring> unshuffle = store->load_unshuffle();
+                std::vector<Ring> unshuffle = store->read_preproc(size);  // Read directly from preprocessing
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) vec_t[i] -= unshuffle[i];
 
                 for (size_t i = 0; i < size; ++i) output[i] = vec_t[i];
 
-                store->store_shuffle(f->shuffle_idx);
                 wires[f->out_idx] = output;
                 break;
             }

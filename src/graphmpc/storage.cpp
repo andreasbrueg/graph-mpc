@@ -1,25 +1,24 @@
 #include "storage.h"
 
-Storage::Storage(ProtocolConfig &conf, Circuit *circ) : id(conf.id), size(conf.size), ssd(conf.ssd), unshuffles_idx(0) {
-    size_t n_shuffles = circ->shuffle_idx + 1;
+Storage::Storage(ProtocolConfig &conf, Circuit *circ)
+    : preproc_disk("preproc_" + std::to_string(conf.id) + ".bin"), id(conf.id), size(conf.size), ssd(conf.ssd) {
+    if (id == D || id == P0) pi_0.resize(circ->shuffle_idx + 1);
+    if (id == D || id == P1) pi_1.resize(circ->shuffle_idx + 1);
+    if (id == P0) pi_0_p.resize(circ->shuffle_idx + 1);
+    if (id == P1) pi_1_p.resize(circ->shuffle_idx + 1);
+
+    if (id == D) {
+        B[P0].reserve(size * circ->n_shuffles);
+        B[P1].reserve(size * circ->n_shuffles);
+    }
+
+    preprocessed.resize(circ->shuffle_idx + 1);
+
     if (ssd) {
-        shuffles.resize(n_shuffles);  // Shuffles need to be stored in RAM either way
-
-        for (size_t i = 0; i < n_shuffles; ++i) {
-            const std::string filename = "shuffle_" + std::to_string(i) + "_" + std::to_string(conf.id) + ".bin";
-            shuffles_disk.emplace_back(filename);
-        }
-
-        unshuffles_disk = FileWriter("unshuffle_" + std::to_string(conf.id) + ".bin");
-
         for (size_t i = 0; i < circ->n_mults; ++i) {
             triples_disk.emplace_back("triples_" + std::to_string(i) + "_" + std::to_string(conf.id) + ".bin");
         }
     } else {
-        for (size_t i = 0; i < n_shuffles; ++i) {
-            shuffles.push_back(std::make_shared<ShufflePre>());
-        }
-        unshuffles.resize(circ->n_unshuffles);
         triples_a.resize(circ->n_mults);
         triples_b.resize(circ->n_mults);
         triples_c.resize(circ->n_mults);
@@ -28,53 +27,27 @@ Storage::Storage(ProtocolConfig &conf, Circuit *circ) : id(conf.id), size(conf.s
 
 Storage::~Storage() {
     if (ssd) {
-        for (auto &disk : shuffles_disk) {
-            std::filesystem::remove(disk.name());
-        }
-
-        std::filesystem::remove(unshuffles_disk.name());
-
         for (auto &disk : triples_disk) {
             std::filesystem::remove(disk.name());
         }
     }
 }
 
-void Storage::store_shuffle(size_t shuffle_idx) {
+std::vector<Ring> Storage::read_preproc(size_t n_elems) {
     if (ssd) {
-        auto perm_share = *shuffles[shuffle_idx];
-        shuffles_disk[shuffle_idx].write_shuffle(perm_share);
-        shuffles[shuffle_idx] = nullptr;
-    }
-}
-
-std::shared_ptr<ShufflePre> Storage::load_shuffle(size_t shuffle_idx) {
-    if (ssd) {
-        auto perm_share = shuffles_disk[shuffle_idx].read_shuffle(size);
-        shuffles[shuffle_idx] = std::make_shared<ShufflePre>(perm_share);
-    }
-    return shuffles[shuffle_idx];
-}
-
-void Storage::store_unshuffle(std::vector<Ring> &unshuffle) {
-    if (ssd) {
-        unshuffles_disk.write(unshuffle);
-        unshuffle.clear();
+        return preproc_disk.read(n_elems);
     } else {
-        unshuffles[unshuffles_idx] = unshuffle;
-        unshuffles_idx++;
-        if (unshuffles_idx == unshuffles.size()) unshuffles_idx = 0;
-    }
-}
+        if (n_elems > preproc[id].size()) {
+            throw new std::invalid_argument("Cannot read more preproc values than available.");
+        } else {
+            std::vector<Ring> data(n_elems);
+            data = {preproc[id].begin(), preproc[id].begin() + n_elems};
 
-std::vector<Ring> Storage::load_unshuffle() {
-    if (ssd) {
-        return unshuffles_disk.read(size);  // Unshuffle preprocessing is always of size n
-    } else {
-        auto unshuffle = unshuffles[unshuffles_idx];
-        unshuffles_idx++;
-        if (unshuffles_idx == unshuffles.size()) unshuffles_idx = 0;
-        return unshuffle;
+            /* Delete read values from buffer */
+            preproc[id].erase(preproc[id].begin(), preproc[id].begin() + n_elems);
+
+            return data;
+        }
     }
 }
 
@@ -91,6 +64,9 @@ void Storage::store_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vec
 }
 
 void Storage::load_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vector<Ring> &c, size_t mul_idx) {
+    if (mul_idx == 18) {
+        std::cout << "";
+    }
     if (ssd) {
         a = triples_disk[mul_idx].read(size);
         b = triples_disk[mul_idx].read(size);
@@ -102,6 +78,9 @@ void Storage::load_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vect
     }
 }
 void Storage::load_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vector<Ring> &c, size_t mul_idx, size_t triple_size) {
+    if (mul_idx == 18) {
+        std::cout << "";
+    }
     if (ssd) {
         a = triples_disk[mul_idx].read(triple_size);
         b = triples_disk[mul_idx].read(triple_size);
@@ -115,21 +94,9 @@ void Storage::load_triples(std::vector<Ring> &a, std::vector<Ring> &b, std::vect
 
 void Storage::reset() {
     if (ssd) {  // Clear all files
-        for (auto &disk : shuffles_disk) {
-            std::filesystem::remove(disk.name());
-        }
-
-        std::filesystem::remove(unshuffles_disk.name());
-
         for (auto &disk : triples_disk) {
             std::filesystem::remove(disk.name());
         }
     } else {
-        for (auto &shuffle : shuffles) {
-            if (shuffle)
-                shuffle->clear(id);
-            else
-                shuffle = std::make_shared<ShufflePre>();
-        }
     }
 }

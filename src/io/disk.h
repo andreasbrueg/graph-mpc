@@ -8,7 +8,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "../utils/shuffle_preproc.h"
+#include "../utils/types.h"
 
 class FileWriter {
    public:

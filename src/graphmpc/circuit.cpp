@@ -38,11 +38,11 @@ void Circuit::set_inputs() {
 }
 
 void Circuit::level_order() {
-    std::vector<size_t> wire_level(f_queue.size(), 0);
-    std::vector<size_t> function_level(f_queue.size(), 0);
+    std::vector<size_t> wire_level(gates.size(), 0);
+    std::vector<size_t> function_level(gates.size(), 0);
     size_t depth = 0;
 
-    for (auto &f : f_queue) {
+    for (auto &f : gates) {
         if (f->type == Output) continue;
         size_t max_depth = 0;
 
@@ -59,7 +59,7 @@ void Circuit::level_order() {
 
         depth = std::max(depth, max_depth);
     }
-    for (auto &f : f_queue) {
+    for (auto &f : gates) {
         if (f->type == Output) {
             function_level[f->g_id] = depth;
         }
@@ -67,15 +67,15 @@ void Circuit::level_order() {
 
     circ.resize(depth + 1);
 
-    for (size_t i = 0; i < f_queue.size(); ++i) {
-        auto &f = f_queue[i];
+    for (size_t i = 0; i < gates.size(); ++i) {
+        auto &f = gates[i];
         if (f == nullptr) {
             std::cout << "nullptr function at index " << i << std::endl;
             continue;
         }
         circ[function_level[f->g_id]].push_back(f);
     }
-    f_queue.clear();
+    gates.clear();
 }
 
 void Circuit::compute_sorts() {
@@ -175,47 +175,47 @@ size_t Circuit::sort_iteration(size_t &perm, size_t &keys) {
 size_t Circuit::input() {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Input, f_queue.size(), output));
+    gates.push_back(std::make_shared<Gate>(Input, gates.size(), output));
     return output;
 }
 
 void Circuit::output(size_t &input) {
     size_t output;
-    f_queue.push_back(std::make_shared<Gate>(Output, f_queue.size(), input, output));
+    gates.push_back(std::make_shared<Gate>(Output, gates.size(), input, output));
 }
 
 size_t Circuit::propagate_1(size_t &input) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Propagate1, f_queue.size(), input, output));
+    gates.push_back(std::make_shared<Gate>(Propagate1, gates.size(), input, output));
     return output;
 }
 
 size_t Circuit::propagate_2(size_t &input1, size_t &input2) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Propagate2, f_queue.size(), input1, input2, output));
+    gates.push_back(std::make_shared<Gate>(Propagate2, gates.size(), input1, input2, output));
     return output;
 }
 
 size_t Circuit::gather_1(size_t &input) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Gather1, f_queue.size(), input, output));
+    gates.push_back(std::make_shared<Gate>(Gather1, gates.size(), input, output));
     return output;
 }
 
 size_t Circuit::gather_2(size_t &input) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Gather2, f_queue.size(), input, output));
+    gates.push_back(std::make_shared<Gate>(Gather2, gates.size(), input, output));
     return output;
 }
 
 size_t Circuit::shuffle(size_t &input, size_t shuffle_idx) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Shuffle, f_queue.size(), input, output, shuffle_idx));
+    gates.push_back(std::make_shared<Gate>(Shuffle, gates.size(), input, output, shuffle_idx));
     n_shuffles++;
     return output;
 }
@@ -223,7 +223,7 @@ size_t Circuit::shuffle(size_t &input, size_t shuffle_idx) {
 size_t Circuit::unshuffle(size_t &input, size_t shuffle_idx) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Unshuffle, f_queue.size(), input, output, shuffle_idx));
+    gates.push_back(std::make_shared<Gate>(Unshuffle, gates.size(), input, output, shuffle_idx));
     n_shuffles++;
     return output;
 }
@@ -231,7 +231,7 @@ size_t Circuit::unshuffle(size_t &input, size_t shuffle_idx) {
 size_t Circuit::merged_shuffle(size_t &input, size_t shuffle_idx, size_t pi_idx, size_t omega_idx) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(MergedShuffle, f_queue.size(), input, output, shuffle_idx, pi_idx, omega_idx));
+    gates.push_back(std::make_shared<Gate>(MergedShuffle, gates.size(), input, output, shuffle_idx, pi_idx, omega_idx));
     n_shuffles++;
     return output;
 }
@@ -239,7 +239,7 @@ size_t Circuit::merged_shuffle(size_t &input, size_t shuffle_idx, size_t pi_idx,
 size_t Circuit::compaction(size_t &input) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Compaction, f_queue.size(), input, output, n_mults));
+    gates.push_back(std::make_shared<Gate>(Compaction, gates.size(), input, output, n_mults));
     n_mults++;
     return output;
 }
@@ -247,28 +247,28 @@ size_t Circuit::compaction(size_t &input) {
 size_t Circuit::reveal(size_t &input) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Reveal, f_queue.size(), input, output));
+    gates.push_back(std::make_shared<Gate>(Reveal, gates.size(), input, output));
     return output;
 }
 
 size_t Circuit::permute(size_t &input, size_t &perm) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Permute, f_queue.size(), input, perm, output));
+    gates.push_back(std::make_shared<Gate>(Permute, gates.size(), input, perm, output));
     return output;
 }
 
 size_t Circuit::reverse_permute(size_t &input, size_t &perm) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(ReversePermute, f_queue.size(), input, perm, output));
+    gates.push_back(std::make_shared<Gate>(ReversePermute, gates.size(), input, perm, output));
     return output;
 }
 
 size_t Circuit::equals_zero(size_t &input, size_t size, size_t layer) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(EQZ, f_queue.size(), input, output, size, layer, n_mults));
+    gates.push_back(std::make_shared<Gate>(EQZ, gates.size(), input, output, size, layer, n_mults));
     n_mults++;
     return output;
 }
@@ -276,7 +276,7 @@ size_t Circuit::equals_zero(size_t &input, size_t size, size_t layer) {
 size_t Circuit::bit2A(size_t &input, size_t size) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Bit2A, f_queue.size(), input, output, size, n_mults));
+    gates.push_back(std::make_shared<Gate>(Bit2A, gates.size(), input, output, size, n_mults));
     n_mults++;
     return output;
 }
@@ -284,21 +284,21 @@ size_t Circuit::bit2A(size_t &input, size_t size) {
 size_t Circuit::deduplication_sub(size_t &input1) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Sub, f_queue.size(), input1, output));
+    gates.push_back(std::make_shared<Gate>(Sub, gates.size(), input1, output));
     return output;
 }
 
 size_t Circuit::deduplication_insert(size_t &input1) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Insert, f_queue.size(), input1, output));
+    gates.push_back(std::make_shared<Gate>(Insert, gates.size(), input1, output));
     return output;
 }
 
 size_t Circuit::mul(size_t &x, size_t &y, bool binary) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Mul, f_queue.size(), x, y, output, n_mults, binary));
+    gates.push_back(std::make_shared<Gate>(Mul, gates.size(), x, y, output, n_mults, binary));
     n_mults++;
     return output;
 }
@@ -306,7 +306,7 @@ size_t Circuit::mul(size_t &x, size_t &y, bool binary) {
 size_t Circuit::mul(size_t &x, size_t &y, size_t size, bool binary) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Mul, f_queue.size(), x, y, output, size, n_mults, binary));
+    gates.push_back(std::make_shared<Gate>(Mul, gates.size(), x, y, output, size, n_mults, binary));
     n_mults++;
     return output;
 }
@@ -314,27 +314,27 @@ size_t Circuit::mul(size_t &x, size_t &y, size_t size, bool binary) {
 size_t Circuit::flip(size_t &input) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Flip, f_queue.size(), input, output));
+    gates.push_back(std::make_shared<Gate>(Flip, gates.size(), input, output));
     return output;
 }
 
 size_t Circuit::add(size_t &input1, size_t &input2) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(Add, f_queue.size(), input1, input2, output));
+    gates.push_back(std::make_shared<Gate>(Add, gates.size(), input1, input2, output));
     return output;
 }
 
 size_t Circuit::add_const(size_t &data, Ring val) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(AddConst, f_queue.size(), data, val, output));
+    gates.push_back(std::make_shared<Gate>(AddConst, gates.size(), data, val, output));
     return output;
 }
 
 size_t Circuit::construct_data(std::vector<size_t> &parallel_data) {
     size_t output = n_wires;
     n_wires++;
-    f_queue.push_back(std::make_shared<Gate>(ConstructData, f_queue.size(), parallel_data[parallel_data.size() - 1], output, parallel_data));
+    gates.push_back(std::make_shared<Gate>(ConstructData, gates.size(), parallel_data[parallel_data.size() - 1], output, parallel_data));
     return output;
 }

@@ -79,33 +79,33 @@ class NetIOMP {
                 if (i == party) {
                     usleep(1000);
                     if (conf.localhost) {
-                        ios[j] = std::make_unique<TLSNetIO>("127.0.0.1", conf.port + 2 * (i * nP + j), conf.trusted_cert_path, true);
+                        ios[j] = std::make_unique<TLSNetIO>("127.0.0.1", conf.port + 2 * (i * nP + j), conf.trusted_cert_path, BLOCK_SIZE, true);
                     } else {
-                        ios[j] = std::make_unique<TLSNetIO>(conf.IP[j].c_str(), conf.port + 2 * (i * nP + j), conf.trusted_cert_path, true);
+                        ios[j] = std::make_unique<TLSNetIO>(conf.IP[j].c_str(), conf.port + 2 * (i * nP + j), conf.trusted_cert_path, BLOCK_SIZE, true);
                     }
                     ios[j]->set_nodelay();
 
                     usleep(1000);
                     if (conf.localhost) {
-                        ios2[j] = std::make_unique<TLSNetIO>(conf.port + 2 * (i * nP + j) + 1, conf.certificate_path, conf.private_key_path, true);
+                        ios2[j] = std::make_unique<TLSNetIO>(conf.port + 2 * (i * nP + j) + 1, conf.certificate_path, conf.private_key_path, BLOCK_SIZE, true);
                     } else {
-                        ios2[j] = std::make_unique<TLSNetIO>(conf.port + 2 * (i * nP + j) + 1, conf.certificate_path, conf.private_key_path, true);
+                        ios2[j] = std::make_unique<TLSNetIO>(conf.port + 2 * (i * nP + j) + 1, conf.certificate_path, conf.private_key_path, BLOCK_SIZE, true);
                     }
                     ios2[j]->set_nodelay();
                 } else if (j == party) {
                     usleep(1000);
                     if (conf.localhost) {
-                        ios[i] = std::make_unique<TLSNetIO>(conf.port + 2 * (i * nP + j), conf.certificate_path, conf.private_key_path, true);
+                        ios[i] = std::make_unique<TLSNetIO>(conf.port + 2 * (i * nP + j), conf.certificate_path, conf.private_key_path, BLOCK_SIZE, true);
                     } else {
-                        ios[i] = std::make_unique<TLSNetIO>(conf.port + 2 * (i * nP + j), conf.certificate_path, conf.private_key_path, true);
+                        ios[i] = std::make_unique<TLSNetIO>(conf.port + 2 * (i * nP + j), conf.certificate_path, conf.private_key_path, BLOCK_SIZE, true);
                     }
                     ios[i]->set_nodelay();
 
                     usleep(1000);
                     if (conf.localhost) {
-                        ios2[i] = std::make_unique<TLSNetIO>("127.0.0.1", conf.port + 2 * (i * nP + j) + 1, conf.trusted_cert_path, true);
+                        ios2[i] = std::make_unique<TLSNetIO>("127.0.0.1", conf.port + 2 * (i * nP + j) + 1, conf.trusted_cert_path, BLOCK_SIZE, true);
                     } else {
-                        ios2[i] = std::make_unique<TLSNetIO>(conf.IP[i].c_str(), conf.port + 2 * (i * nP + j) + 1, conf.trusted_cert_path, true);
+                        ios2[i] = std::make_unique<TLSNetIO>(conf.IP[i].c_str(), conf.port + 2 * (i * nP + j) + 1, conf.trusted_cert_path, BLOCK_SIZE, true);
                     }
                     ios2[i]->set_nodelay();
                 }
@@ -149,28 +149,19 @@ class NetIOMP {
                 ios2[dst]->send_data(data, len);
             sent[dst] = true;
         }
-        // #ifdef __clang__
         flush(dst);
-        // #endif
     }
 
     void send_vec(Party dst, std::vector<Ring> &data, size_t n_elems) {
         size_t n_msgs = n_elems / BLOCK_SIZE;
         size_t last_msg_size = n_elems % BLOCK_SIZE;
-        for (size_t i = 0; i < n_msgs; i++) {
-            std::vector<Ring> data_send_i;
-            data_send_i.resize(BLOCK_SIZE);
-            for (size_t j = 0; j < BLOCK_SIZE; j++) {
-                data_send_i[j] = data[i * BLOCK_SIZE + j];
-            }
-            send(dst, data_send_i.data(), sizeof(Ring) * BLOCK_SIZE);
-        }
 
-        std::vector<Ring> data_send_last(last_msg_size);
-        for (size_t j = 0; j < last_msg_size; j++) {
-            data_send_last[j] = data[n_msgs * BLOCK_SIZE + j];
+        for (size_t i = 0; i < n_msgs; i++) {
+            send(dst, data.data() + i * BLOCK_SIZE, sizeof(Ring) * BLOCK_SIZE);
         }
-        send(dst, data_send_last.data(), sizeof(Ring) * last_msg_size);
+        if (last_msg_size > 0) {
+            send(dst, data.data() + n_msgs * BLOCK_SIZE, sizeof(Ring) * last_msg_size);
+        }
     }
 
     void recv(Party src, void *data, size_t len) {
@@ -199,6 +190,7 @@ class NetIOMP {
         }
 
         if (last_msg_size > 0) {
+            tmp.resize(last_msg_size);
             recv(src, tmp.data(), sizeof(Ring) * last_msg_size);
             disk.write(tmp.data(), last_msg_size);
         }

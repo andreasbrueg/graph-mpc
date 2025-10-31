@@ -6,13 +6,11 @@ target_sources(GraphMPC_lib
     utils/permutation.h
     utils/random_generators.h
     utils/sharing.cpp
-    utils/shuffle_preproc.h
     utils/stats.cpp
     utils/structs.h
     utils/types.h
     io/disk.h
     io/netmp.h
-    io/buffers.h
     graphmpc/storage.cpp
     graphmpc/preprocessor.cpp
     graphmpc/evaluator.cpp

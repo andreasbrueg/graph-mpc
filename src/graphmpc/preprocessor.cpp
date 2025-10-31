@@ -55,14 +55,15 @@ void Preprocessor::run(Circuit *circ) {
 
 std::vector<Ring> Preprocessor::random_share_secret_vec_3P(std::vector<Ring> &secret, bool binary) {
     if (id == D) {
-        std::vector<Ring> share_0(secret.size());
-        std::vector<Ring> share_1(secret.size());
+        size_t n = secret.size();
+        std::vector<Ring> share_0(n);
+        std::vector<Ring> share_1(n);
 
         if (recv == P1) {
             for (size_t i = 0; i < share_0.size(); ++i) rngs->rng_D0_prep().random_data(&share_0[i], sizeof(Ring));
         }
         if (recv == P0) {
-            for (size_t i = 0; i < share_1.size(); ++i) rngs->rng_D1_prep().random_data(&share_0[i], sizeof(Ring));
+            for (size_t i = 0; i < share_0.size(); ++i) rngs->rng_D1_prep().random_data(&share_0[i], sizeof(Ring));
         }
 
         if (binary) {
@@ -309,9 +310,9 @@ void Preprocessor::preprocess(Circuit *circ) {
                     b = share::random_share_vec_3P(id, *rngs, triple_size, f->binary);
 
                     if (f->binary) {
-                        for (size_t i = 0; i < size; ++i) c[i] = (a[i] & b[i]);
+                        for (size_t i = 0; i < triple_size; ++i) c[i] = (a[i] & b[i]);
                     } else {
-                        for (size_t i = 0; i < size; ++i) c[i] = (a[i] * b[i]);
+                        for (size_t i = 0; i < triple_size; ++i) c[i] = (a[i] * b[i]);
                     }
 
                     c_final = random_share_secret_vec_3P(c, f->binary);

@@ -24,7 +24,7 @@ class Circuit {
 
    protected:
     std::vector<std::vector<std::shared_ptr<Gate>>> circ;
-    std::vector<std::shared_ptr<Gate>> f_queue;
+    std::vector<std::shared_ptr<Gate>> gates;
 
     MPContext ctx;
     Inputs in;

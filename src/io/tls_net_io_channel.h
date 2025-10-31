@@ -35,7 +35,7 @@ class TLSNetIO : public IOChannel<TLSNetIO> {
     SSL *ssl;
     BIO *buf_bio;
 
-    TLSNetIO(const char *address, int port, std::string trusted_cert_path, bool quiet = false) {
+    TLSNetIO(const char *address, int port, std::string trusted_cert_path, size_t BLOCK_SIZE, bool quiet = false) {
         if (port < 0 || port > 65535) {
             throw std::runtime_error("Invalid port number!");
         }
@@ -110,13 +110,13 @@ class TLSNetIO : public IOChannel<TLSNetIO> {
         // setvbuf(stream, buffer, _IOFBF, NETWORK_BUFFER_SIZE);
 
         buf_bio = BIO_new(BIO_f_buffer());
-        BIO_set_buffer_size(buf_bio, NETWORK_BUFFER_SIZE);
+        BIO_set_buffer_size(buf_bio, 30 * BLOCK_SIZE);
         BIO_push(buf_bio, ssl_bio);
 
         if (!quiet) std::cout << "connected\n";
     }
 
-    TLSNetIO(int port, std::string certificate_chain_file, std::string private_key_file, bool quiet = false) {
+    TLSNetIO(int port, std::string certificate_chain_file, std::string private_key_file, size_t BLOCK_SIZE, bool quiet = false) {
         if (port < 0 || port > 65535) {
             throw std::runtime_error("Invalid port number!");
         }
@@ -204,7 +204,7 @@ class TLSNetIO : public IOChannel<TLSNetIO> {
         // setvbuf(stream, buffer, _IOFBF, NETWORK_BUFFER_SIZE);
 
         buf_bio = BIO_new(BIO_f_buffer());
-        BIO_set_buffer_size(buf_bio, NETWORK_BUFFER_SIZE);
+        BIO_set_buffer_size(buf_bio, 30 * BLOCK_SIZE);
         BIO_push(buf_bio, ssl_bio);
 
         if (!quiet) std::cout << "connected\n";

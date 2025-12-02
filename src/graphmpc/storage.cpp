@@ -36,8 +36,8 @@ Storage::Storage(ProtocolConfig &conf, Circuit *circ) : id(conf.id), size(conf.s
 
         if (id == D) {
             B.resize(2);
-            B[P0].reserve(size * circ->n_shuffles);
-            B[P1].reserve(size * circ->n_shuffles);
+            // B[P0].reserve(size * circ->n_shuffles);
+            // B[P1].reserve(size * circ->n_shuffles);
         }
 
         triples_a.resize(circ->n_mults);

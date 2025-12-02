@@ -295,7 +295,7 @@ void Preprocessor::preprocess(Circuit *circ) {
                     break;
                 }
                 case Compaction:
-                case Mul:
+                case MulSIMD:
                 case EQZ:
                 case Bit2A: {
                     size_t triple_size = size;

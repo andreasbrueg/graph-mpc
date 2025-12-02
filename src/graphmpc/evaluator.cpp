@@ -27,13 +27,20 @@ void Evaluator::run(Circuit *circ) {
     init_waiting(circ);  // Initialize mapping of which level outputs are no longer needed
     for (auto &layer : circ->get()) {
         evaluate_send(layer);
+        auto begin_comm = std::chrono::high_resolution_clock::now();
         online_communication();
+        auto end_comm = std::chrono::high_resolution_clock::now();
+        auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end_comm - begin_comm);
+        time_comm += time.count();
         evaluate_recv(layer);
         mul_vals.clear();
         and_vals.clear();
         shuffle_vals.clear();
         reveal_vals.clear();
     }
+    std::cout << "Time Comm: " << time_comm << " ms" << std::endl;
+    std::cout << "Time Unshuffle: " << time_unshuffle << " ms" << std::endl;
+    std::cout << "Time Permute: " << time_permute << " ms" << std::endl;
 }
 
 const std::vector<Ring> Evaluator::result() { return output; }
@@ -131,6 +138,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Gate>> &layer) {
             }
 
             case Unshuffle: {
+                auto begin_comm = std::chrono::high_resolution_clock::now();
                 std::vector<Ring> t(size);
                 std::vector<Ring> R(size);
 
@@ -148,6 +156,9 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Gate>> &layer) {
                 update_wire(f->in1_idx);
 
                 shuffle_vals.insert(shuffle_vals.end(), t.begin(), t.end());
+                auto end_comm = std::chrono::high_resolution_clock::now();
+                auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end_comm - begin_comm);
+                time_unshuffle += time.count();
                 break;
             }
 
@@ -197,6 +208,33 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Gate>> &layer) {
             }
 
             case Mul: {
+                std::vector<Ring> _a, _b, _c;
+                data->load_triples(_a, _b, _c, f->mult_idx, f->size);
+
+                std::vector<Ring> data_send(2);
+                Ring a = _a[0];
+                Ring b = _b[0];
+                Ring xa, yb;
+                if (f->binary) {
+                    xa = wires[f->in1_idx][0] ^ a;
+                    yb = wires[f->in2_idx][0] ^ b;
+                } else {
+                    xa = wires[f->in1_idx][0] + a;
+                    yb = wires[f->in2_idx][0] + b;
+                }
+                data_send[0] = xa;
+                data_send[1] = yb;
+
+                if (f->binary) {
+                    and_vals.insert(and_vals.end(), data_send.begin(), data_send.end());
+                } else {
+                    mul_vals.insert(mul_vals.end(), data_send.begin(), data_send.end());
+                }
+                update_wires(f->in1_idx, f->in2_idx);
+                break;
+            }
+
+            case MulSIMD: {
                 std::vector<Ring> _a, _b, _c;
                 data->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
@@ -354,6 +392,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
             }
 
             case Unshuffle: {
+                auto begin_comm = std::chrono::high_resolution_clock::now();
                 wires[f->out_idx].resize(size);
                 Permutation perm;
                 perm = id == P0 ? data->pi_0_p[f->shuffle_idx] : data->pi_1[f->shuffle_idx];
@@ -365,6 +404,9 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
                 for (size_t i = 0; i < size; ++i) {
                     wires[f->out_idx][i] = t[perm[i]] - unshuffle[i];
                 }
+                auto end_comm = std::chrono::high_resolution_clock::now();
+                auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end_comm - begin_comm);
+                time_unshuffle += time.count();
                 break;
             }
 
@@ -414,6 +456,32 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
             }
 
             case Mul: {
+                wires[f->out_idx].resize(1);
+                std::vector<Ring> _a, _b, _c;
+                data->load_triples(_a, _b, _c, f->mult_idx, f->size);
+
+                std::vector<Ring> data_recv;
+                if (f->binary) {
+                    data_recv = read_online(and_vals, 2, and_idx);
+                } else {
+                    data_recv = read_online(mul_vals, 2, mul_idx);
+                }
+
+                Ring a = _a[0];
+                Ring b = _b[0];
+                Ring c = _c[0];
+
+                auto xa = data_recv[0];
+                auto yb = data_recv[1];
+
+                if (f->binary)
+                    wires[f->out_idx][0] = (xa & yb) * (id) ^ (xa & b) ^ (yb & a) ^ c;
+                else
+                    wires[f->out_idx][0] = (xa * yb * (id)) - (xa * b) - (yb * a) + c;
+                break;
+            }
+
+            case MulSIMD: {
                 wires[f->out_idx].resize(f->size);
                 std::vector<Ring> _a, _b, _c;
                 data->load_triples(_a, _b, _c, f->mult_idx, f->size);
@@ -497,24 +565,43 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
             }
 
             case Permute: {
+                auto begin_comm = std::chrono::high_resolution_clock::now();
                 wires[f->out_idx].resize(size);
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) wires[f->out_idx][wires[f->in2_idx][i]] = wires[f->in1_idx][i];
                 update_wires(f->in1_idx, f->in2_idx);
+                auto end_comm = std::chrono::high_resolution_clock::now();
+                auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end_comm - begin_comm);
+                time_permute += time.count();
                 break;
             }
 
             case ReversePermute: {
+                auto begin_comm = std::chrono::high_resolution_clock::now();
                 wires[f->out_idx].resize(size);
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) {
                     wires[f->out_idx][i] = wires[f->in1_idx][wires[f->in2_idx][i]];
                 }
                 update_wires(f->in1_idx, f->in2_idx);
+                auto end_comm = std::chrono::high_resolution_clock::now();
+                auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end_comm - begin_comm);
+                time_permute += time.count();
                 break;
             }
 
             case AddConst: {
+                wires[f->out_idx].resize(1);
+                if (id == P0) {
+                    wires[f->out_idx][0] = wires[f->in1_idx][0] + f->val;
+                } else {
+                    wires[f->out_idx][0] = wires[f->in1_idx][0];
+                }
+                update_wire(f->in1_idx);
+                break;
+            }
+
+            case AddConstSIMD: {
                 wires[f->out_idx].resize(size);
 #pragma omp parallel for if (nodes > 10000)
                 for (size_t j = 0; j < size; ++j) {
@@ -528,11 +615,52 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
                 break;
             }
 
+            case MulConst: {
+                wires[f->out_idx].resize(1);
+                wires[f->out_idx][0] = wires[f->in1_idx][0] * f->val;
+                update_wire(f->in1_idx);
+                break;
+            }
+
+            case MulConstSIMD: {
+                wires[f->out_idx].resize(size);
+#pragma omp parallel for if (nodes > 10000)
+                for (size_t j = 0; j < size; ++j) {
+                    wires[f->out_idx][j] = wires[f->in1_idx][j] * f->val;
+                }
+                update_wire(f->in1_idx);
+                break;
+            }
+
             case Add: {
+                wires[f->out_idx].resize(1);
+                wires[f->out_idx][0] = wires[f->in1_idx][0] + wires[f->in2_idx][0];
+                update_wires(f->in1_idx, f->in2_idx);
+                break;
+            }
+
+            case AddSIMD: {
                 wires[f->out_idx].resize(size);
 #pragma omp parallel for if (size > 10000)
                 for (size_t i = 0; i < size; ++i) {
                     wires[f->out_idx][i] = wires[f->in1_idx][i] + wires[f->in2_idx][i];
+                }
+                update_wires(f->in1_idx, f->in2_idx);
+                break;
+            }
+
+            case Sub: {
+                wires[f->out_idx].resize(1);
+                wires[f->out_idx][0] = wires[f->in1_idx][0] - wires[f->in2_idx][0];
+                update_wires(f->in1_idx, f->in2_idx);
+                break;
+            }
+
+            case SubSIMD: {
+                wires[f->out_idx].resize(size);
+#pragma omp parallel for if (size > 10000)
+                for (size_t i = 0; i < size; ++i) {
+                    wires[f->out_idx][i] = wires[f->in1_idx][i] - wires[f->in2_idx][i];
                 }
                 update_wires(f->in1_idx, f->in2_idx);
                 break;
@@ -602,7 +730,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
                 break;
             }
 
-            case Sub: {
+            case DeduplicationSub: {
                 wires[f->out_idx].resize(size - 1);
                 for (size_t i = 1; i < size; ++i) {
                     wires[f->out_idx][i - 1] = wires[f->in1_idx][i] - wires[f->in1_idx][i - 1];
@@ -629,6 +757,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
                 }
                 break;
             }
+
             default:
                 break;
         }

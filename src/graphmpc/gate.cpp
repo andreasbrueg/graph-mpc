@@ -52,7 +52,7 @@ Gate::Gate(GType type, size_t g_id, size_t in1_idx, size_t out_idx)
       inverse(false),
       binary(false) {}
 
-/* Used by AddConst */
+/* Used by AddConst, AddConstSIMD, MulConst, MulConstSIMD */
 Gate::Gate(GType type, size_t g_id, size_t in1_idx, Ring val, size_t out_idx)
     : type(type),
       g_id(g_id),
@@ -72,7 +72,7 @@ Gate::Gate(GType type, size_t g_id, size_t in1_idx, Ring val, size_t out_idx)
 /* Used by Propagate-2, Shuffle, Unshuffle, Bit2A, Compaction, Add, Sub */
 Gate::Gate(GType type, size_t g_id, size_t param1, size_t param2, size_t param3)
     : type(type), g_id(g_id), val(0), size(0), layer(0), pi_idx(0), omega_idx(0), inverse(false), binary(false) {
-    if (type == Propagate2 || type == Permute || type == ReversePermute || type == Add) {
+    if (type == Propagate2 || type == Permute || type == ReversePermute || type == AddSIMD || type == SubSIMD || type == Add || type == Sub) {
         in1_idx = param1;
         in2_idx = param2;
         out_idx = param3;
@@ -147,5 +147,6 @@ Gate::Gate(GType type, size_t g_id, size_t in1_idx, size_t in2_idx, size_t out_i
       binary(binary) {}
 
 bool Gate::interactive() {
-    return type == Shuffle || type == MergedShuffle || type == Unshuffle || type == Compaction || type == Mul || type == EQZ || type == Bit2A || type == Reveal;
+    return type == Shuffle || type == MergedShuffle || type == Unshuffle || type == Compaction || type == Mul || type == EQZ || type == Bit2A ||
+           type == Reveal || type == MulSIMD;
 }

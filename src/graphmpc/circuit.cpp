@@ -5,7 +5,7 @@ void Circuit::build() {
     pre_mp();
     compute_sorts();
     prepare_shuffles();
-    size_t data_out;
+    SIMD_wire_id data_out;
     if (in.data_parallel.size() > 0) {
         for (size_t i = 0; i < in.data_parallel.size(); ++i) {
             in.data_parallel[i] = message_passing(in.data_parallel[i]);
@@ -80,9 +80,9 @@ void Circuit::level_order() {
 
 void Circuit::pre_mp() {}
 
-size_t Circuit::apply(size_t &data_old, size_t &data_new) { return data_new; }
+SIMD_wire_id Circuit::apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new) { return data_new; }
 
-size_t Circuit::post_mp(size_t &data) { return data; }
+SIMD_wire_id Circuit::post_mp(SIMD_wire_id &data) { return data; }
 
 void Circuit::compute_sorts() {
     ctx.src_order = sort(in.src_order_bits, bits + 1);
@@ -105,7 +105,7 @@ void Circuit::prepare_shuffles() {
     ctx.clear_shuffled_dst_order = reveal(dst_order_shuffled);
 }
 
-size_t Circuit::message_passing(size_t &data) {
+SIMD_wire_id Circuit::message_passing(SIMD_wire_id &data) {
     auto data_shuffled = shuffle(data, ctx.vtx_shuffle_idx);
     auto data_vtx = permute(data_shuffled, ctx.clear_shuffled_vtx_order);
 
@@ -115,7 +115,7 @@ size_t Circuit::message_passing(size_t &data) {
 
     for (size_t i = 0; i < depth; ++i) {
         auto data_old = data_vtx;
-        data_vtx = add_const(data_vtx, weights[weights.size() - 1 - i]);
+        data_vtx = add_const_SIMD(data_vtx, weights[weights.size() - 1 - i]);
 
         /* Propagate-1 */
         auto data_vtx_propagate = propagate_1(data_vtx);
@@ -153,15 +153,15 @@ size_t Circuit::message_passing(size_t &data) {
     return data_vtx;
 }
 
-size_t Circuit::sort(std::vector<size_t> &bit_keys, size_t bits) {
+SIMD_wire_id Circuit::sort(std::vector<SIMD_wire_id> &bit_keys, SIMD_wire_id bits) {
     auto perm = compaction(bit_keys[0]);
-    for (size_t bit = 1; bit < bits; ++bit) {
+    for (SIMD_wire_id bit = 1; bit < bits; ++bit) {
         perm = sort_iteration(perm, bit_keys[bit]);
     }
     return perm;
 }
 
-size_t Circuit::sort_iteration(size_t &perm, size_t &keys) {
+SIMD_wire_id Circuit::sort_iteration(SIMD_wire_id &perm, SIMD_wire_id &keys) {
     auto perm_shuffled = shuffle(perm, shuffle_idx);
     auto keys_shuffled = shuffle(keys, shuffle_idx);
 
@@ -178,168 +178,218 @@ size_t Circuit::sort_iteration(size_t &perm, size_t &keys) {
 
 /* ----- Single functions ----- */
 
-size_t Circuit::input() {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::input() {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Input, gates.size(), output));
     return output;
 }
 
-void Circuit::output(size_t &input) {
-    size_t output;
+void Circuit::output(SIMD_wire_id &input) {
+    SIMD_wire_id output;
     gates.push_back(std::make_shared<Gate>(Output, gates.size(), input, output));
 }
 
-size_t Circuit::propagate_1(size_t &input) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::propagate_1(SIMD_wire_id &input) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Propagate1, gates.size(), input, output));
     return output;
 }
 
-size_t Circuit::propagate_2(size_t &input1, size_t &input2) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::propagate_2(SIMD_wire_id &input1, SIMD_wire_id &input2) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Propagate2, gates.size(), input1, input2, output));
     return output;
 }
 
-size_t Circuit::gather_1(size_t &input) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::gather_1(SIMD_wire_id &input) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Gather1, gates.size(), input, output));
     return output;
 }
 
-size_t Circuit::gather_2(size_t &input) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::gather_2(SIMD_wire_id &input) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Gather2, gates.size(), input, output));
     return output;
 }
 
-size_t Circuit::shuffle(size_t &input, size_t shuffle_idx) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::shuffle(SIMD_wire_id &input, SIMD_wire_id shuffle_idx) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Shuffle, gates.size(), input, output, shuffle_idx));
     n_shuffles++;
     return output;
 }
 
-size_t Circuit::unshuffle(size_t &input, size_t shuffle_idx) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::unshuffle(SIMD_wire_id &input, SIMD_wire_id shuffle_idx) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Unshuffle, gates.size(), input, output, shuffle_idx));
     n_shuffles++;
     return output;
 }
 
-size_t Circuit::merged_shuffle(size_t &input, size_t shuffle_idx, size_t pi_idx, size_t omega_idx) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::merged_shuffle(SIMD_wire_id &input, SIMD_wire_id shuffle_idx, SIMD_wire_id pi_idx, SIMD_wire_id omega_idx) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(MergedShuffle, gates.size(), input, output, shuffle_idx, pi_idx, omega_idx));
     n_shuffles++;
     return output;
 }
 
-size_t Circuit::compaction(size_t &input) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::compaction(SIMD_wire_id &input) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Compaction, gates.size(), input, output, n_mults));
     n_mults++;
     return output;
 }
 
-size_t Circuit::reveal(size_t &input) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::reveal(SIMD_wire_id &input) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Reveal, gates.size(), input, output));
     return output;
 }
 
-size_t Circuit::permute(size_t &input, size_t &perm) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::permute(SIMD_wire_id &input, SIMD_wire_id &perm) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Permute, gates.size(), input, perm, output));
     return output;
 }
 
-size_t Circuit::reverse_permute(size_t &input, size_t &perm) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::reverse_permute(SIMD_wire_id &input, SIMD_wire_id &perm) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(ReversePermute, gates.size(), input, perm, output));
     return output;
 }
 
-size_t Circuit::equals_zero(size_t &input, size_t size, size_t layer) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::equals_zero(SIMD_wire_id &input, SIMD_wire_id size, SIMD_wire_id layer) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(EQZ, gates.size(), input, output, size, layer, n_mults));
     n_mults++;
     return output;
 }
 
-size_t Circuit::bit2A(size_t &input, size_t size) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::bit2A(SIMD_wire_id &input, SIMD_wire_id size) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Bit2A, gates.size(), input, output, size, n_mults));
     n_mults++;
     return output;
 }
 
-size_t Circuit::deduplication_sub(size_t &input1) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::deduplication_sub(SIMD_wire_id &input1) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
-    gates.push_back(std::make_shared<Gate>(Sub, gates.size(), input1, output));
+    gates.push_back(std::make_shared<Gate>(DeduplicationSub, gates.size(), input1, output));
     return output;
 }
 
-size_t Circuit::deduplication_insert(size_t &input1) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::deduplication_insert(SIMD_wire_id &input1) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Insert, gates.size(), input1, output));
     return output;
 }
 
-size_t Circuit::mul(size_t &x, size_t &y, bool binary) {
-    size_t output = n_wires;
+wire_id Circuit::mul(wire_id &x, wire_id &y, bool binary) {
+    wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Mul, gates.size(), x, y, output, n_mults, binary));
     n_mults++;
     return output;
 }
 
-size_t Circuit::mul(size_t &x, size_t &y, size_t size, bool binary) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::mul_SIMD(SIMD_wire_id &x, SIMD_wire_id &y, bool binary) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
-    gates.push_back(std::make_shared<Gate>(Mul, gates.size(), x, y, output, size, n_mults, binary));
+    gates.push_back(std::make_shared<Gate>(MulSIMD, gates.size(), x, y, output, n_mults, binary));
     n_mults++;
     return output;
 }
 
-size_t Circuit::flip(size_t &input) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::mul_SIMD(SIMD_wire_id &x, SIMD_wire_id &y, SIMD_wire_id size, bool binary) {
+    SIMD_wire_id output = n_wires;
+    n_wires++;
+    gates.push_back(std::make_shared<Gate>(MulSIMD, gates.size(), x, y, output, size, n_mults, binary));
+    n_mults++;
+    return output;
+}
+
+SIMD_wire_id Circuit::flip(SIMD_wire_id &input) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Flip, gates.size(), input, output));
     return output;
 }
 
-size_t Circuit::add(size_t &input1, size_t &input2) {
-    size_t output = n_wires;
+wire_id Circuit::add(wire_id &input1, wire_id &input2) {
+    wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(Add, gates.size(), input1, input2, output));
     return output;
 }
 
-size_t Circuit::add_const(size_t &data, Ring val) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::add_SIMD(SIMD_wire_id &input1, SIMD_wire_id &input2) {
+    SIMD_wire_id output = n_wires;
+    n_wires++;
+    gates.push_back(std::make_shared<Gate>(AddSIMD, gates.size(), input1, input2, output));
+    return output;
+}
+
+wire_id Circuit::sub(wire_id &input1, wire_id &input2) {
+    wire_id output = n_wires;
+    n_wires++;
+    gates.push_back(std::make_shared<Gate>(Sub, gates.size(), input1, input2, output));
+    return output;
+}
+
+SIMD_wire_id Circuit::sub_SIMD(SIMD_wire_id &input1, SIMD_wire_id &input2) {
+    SIMD_wire_id output = n_wires;
+    n_wires++;
+    gates.push_back(std::make_shared<Gate>(SubSIMD, gates.size(), input1, input2, output));
+    return output;
+}
+
+wire_id Circuit::add_const(wire_id &data, Ring val) {
+    wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(AddConst, gates.size(), data, val, output));
     return output;
 }
 
-size_t Circuit::construct_data(std::vector<size_t> &parallel_data) {
-    size_t output = n_wires;
+SIMD_wire_id Circuit::add_const_SIMD(SIMD_wire_id &data, Ring val) {
+    SIMD_wire_id output = n_wires;
+    n_wires++;
+    gates.push_back(std::make_shared<Gate>(AddConstSIMD, gates.size(), data, val, output));
+    return output;
+}
+
+wire_id Circuit::mul_const(wire_id &data, Ring val) {
+    wire_id output = n_wires;
+    n_wires++;
+    gates.push_back(std::make_shared<Gate>(MulConst, gates.size(), data, val, output));
+    return output;
+}
+
+SIMD_wire_id Circuit::mul_const_SIMD(SIMD_wire_id &data, Ring val) {
+    SIMD_wire_id output = n_wires;
+    n_wires++;
+    gates.push_back(std::make_shared<Gate>(MulConstSIMD, gates.size(), data, val, output));
+    return output;
+}
+
+SIMD_wire_id Circuit::construct_data(std::vector<SIMD_wire_id> &parallel_data) {
+    SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(ConstructData, gates.size(), parallel_data[parallel_data.size() - 1], output, parallel_data));
     return output;

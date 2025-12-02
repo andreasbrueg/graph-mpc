@@ -33,8 +33,8 @@ bpo::options_description clientProgramOptions();
 
 bpo::variables_map parseOptions(bpo::options_description &cmdline, bpo::options_description &prog_opts, int argc, char *argv[]);
 
-void setupClient(const bpo::variables_map &opts, int &id, size_t &start_idx, std::string &ip_0, std::string &ip_1, int &port_0, int &port_1,
-                 std::string &input_file, size_t &n_bits, std::string &password);
+void setupClient(const bpo::variables_map &opts, int &id, size_t &start_idx, std::string &ip_0, std::string &ip_1, std::string &ip_D, int &port_0, int &port_1,
+                 int &port_D, std::string &input_file, size_t &bits, std::string &password);
 
 void setupServer(const bpo::variables_map &opts, Graph &g);
 

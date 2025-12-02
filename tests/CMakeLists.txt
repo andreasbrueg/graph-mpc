@@ -17,9 +17,11 @@ endmacro()
 
 add_test(test_perm)
 add_test(test_disk)
+add_test(test_network)
 add_test(test_pi_k)
 add_test(test_pi_m)
 add_test(test_pi_r)
+add_test(test_pi_m_clients)
 
 add_custom_target(tests)
 add_dependencies(tests ${testbin})

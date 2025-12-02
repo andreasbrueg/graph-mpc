@@ -13,8 +13,8 @@ class Circuit {
     std::vector<std::vector<std::shared_ptr<Gate>>> get() { return circ; }
 
     virtual void pre_mp();
-    virtual size_t apply(size_t &data_old, size_t &data_new);
-    virtual size_t post_mp(size_t &data);
+    virtual SIMD_wire_id apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new);
+    virtual SIMD_wire_id post_mp(SIMD_wire_id &data);
     virtual void compute_sorts();  // Can be overwritten
 
     size_t n_shuffles;
@@ -42,57 +42,71 @@ class Circuit {
 
     void prepare_shuffles();
 
-    size_t message_passing(size_t &data);
+    SIMD_wire_id message_passing(SIMD_wire_id &data);
 
-    size_t sort(std::vector<size_t> &bit_keys, size_t bits);
+    SIMD_wire_id sort(std::vector<SIMD_wire_id> &bit_keys, SIMD_wire_id bits);
 
-    size_t sort_iteration(size_t &perm, size_t &keys);
+    SIMD_wire_id sort_iteration(SIMD_wire_id &perm, SIMD_wire_id &keys);
 
     /* ----- Single Functions ----- */
 
-    size_t input();
+    SIMD_wire_id input();
 
-    void output(size_t &input);
+    void output(SIMD_wire_id &input);
 
-    size_t propagate_1(size_t &input);
+    SIMD_wire_id propagate_1(SIMD_wire_id &input);
 
-    size_t propagate_2(size_t &input1, size_t &input2);
+    SIMD_wire_id propagate_2(SIMD_wire_id &input1, SIMD_wire_id &input2);
 
-    size_t gather_1(size_t &input);
+    SIMD_wire_id gather_1(SIMD_wire_id &input);
 
-    size_t gather_2(size_t &input);
+    SIMD_wire_id gather_2(SIMD_wire_id &input);
 
-    size_t shuffle(size_t &input, size_t shuffle_idx);
+    SIMD_wire_id shuffle(SIMD_wire_id &input, SIMD_wire_id shuffle_idx);
 
-    size_t unshuffle(size_t &input, size_t shuffle_idx);
+    SIMD_wire_id unshuffle(SIMD_wire_id &input, SIMD_wire_id shuffle_idx);
 
-    size_t merged_shuffle(size_t &input, size_t shuffle_idx, size_t pi_idx, size_t omega_idx);
+    SIMD_wire_id merged_shuffle(SIMD_wire_id &input, SIMD_wire_id shuffle_idx, SIMD_wire_id pi_idx, SIMD_wire_id omega_idx);
 
-    size_t compaction(size_t &input);
+    SIMD_wire_id compaction(SIMD_wire_id &input);
 
-    size_t reveal(size_t &input);
+    SIMD_wire_id reveal(SIMD_wire_id &input);
 
-    size_t permute(size_t &input, size_t &perm);
+    SIMD_wire_id permute(SIMD_wire_id &input, SIMD_wire_id &perm);
 
-    size_t reverse_permute(size_t &input, size_t &perm);
+    SIMD_wire_id reverse_permute(SIMD_wire_id &input, SIMD_wire_id &perm);
 
-    size_t equals_zero(size_t &input, size_t size, size_t layer);
+    SIMD_wire_id equals_zero(SIMD_wire_id &input, SIMD_wire_id size, SIMD_wire_id layer);
 
-    size_t bit2A(size_t &input, size_t size);
+    SIMD_wire_id bit2A(SIMD_wire_id &input, SIMD_wire_id size);
 
-    size_t deduplication_sub(size_t &input1);
+    SIMD_wire_id deduplication_sub(SIMD_wire_id &input1);
 
-    size_t deduplication_insert(size_t &input1);
+    SIMD_wire_id deduplication_insert(SIMD_wire_id &input1);
 
-    size_t mul(size_t &x, size_t &y, bool binary = false);
+    wire_id mul(wire_id &x, wire_id &y, bool binary = false);
 
-    size_t mul(size_t &x, size_t &y, size_t size, bool binary = false);
+    SIMD_wire_id mul_SIMD(SIMD_wire_id &x, SIMD_wire_id &y, bool binary = false);
 
-    size_t flip(size_t &input);
+    SIMD_wire_id mul_SIMD(SIMD_wire_id &x, SIMD_wire_id &y, SIMD_wire_id size, bool binary = false);
 
-    size_t add(size_t &input1, size_t &input2);
+    SIMD_wire_id flip(SIMD_wire_id &input);
 
-    size_t add_const(size_t &data, Ring val);
+    wire_id add(wire_id &input1, wire_id &input2);
 
-    size_t construct_data(std::vector<size_t> &parallel_data);
+    SIMD_wire_id add_SIMD(SIMD_wire_id &input1, SIMD_wire_id &input2);
+
+    wire_id sub(wire_id &input1, wire_id &input2);
+
+    SIMD_wire_id sub_SIMD(SIMD_wire_id &input1, SIMD_wire_id &input2);
+
+    wire_id add_const(wire_id &data, Ring val);
+
+    SIMD_wire_id add_const_SIMD(SIMD_wire_id &data, Ring val);
+
+    wire_id mul_const(wire_id &data, Ring val);
+
+    SIMD_wire_id mul_const_SIMD(SIMD_wire_id &data, Ring val);
+
+    SIMD_wire_id construct_data(std::vector<SIMD_wire_id> &parallel_data);
 };

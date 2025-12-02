@@ -12,7 +12,7 @@ class PiRCircuit : public Circuit {
 
     void pre_mp() override {}
 
-    size_t apply(size_t &data_old, size_t &data_new) override { return add(data_old, data_new); }
+    size_t apply(size_t &data_old, size_t &data_new) override { return add_SIMD(data_old, data_new); }
 
     size_t post_mp(size_t &data) override {
         size_t nodes = in.data_parallel.size();

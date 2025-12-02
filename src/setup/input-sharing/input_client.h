@@ -15,7 +15,7 @@ class InputClient {
         std::vector<Ring> entries;
     };
 
-    InputClient(size_t n_bits, std::string password) : n_bits(n_bits), connected(false), password(password) {
+    InputClient(size_t bits, std::string password) : bits(bits), connected(false), password(password) {
         auto PRINT_LOG = [](const std::string &strLogMsg) { std::cout << strLogMsg << std::endl; };
 
         m_pSSLTCPClient.reset(new CTCPSSLClient(PRINT_LOG));
@@ -35,13 +35,14 @@ class InputClient {
         Packet pkt;
         pkt.start = start;
         pkt.end = start + g.size;
-        pkt.entries = g.serialize(n_bits);
+        pkt.entries = g.serialize(bits);
 
         if (connected) {
             size_t password_size = password.size();
             send(password_size);
             send(password);
-            auto n_vertices = g.n_vertices;
+            std::cout << "Sent password: " << password << std::endl;
+            size_t n_vertices = g.nodes;
             send(n_vertices);
             send_packet(pkt);
             std::cout << "Graph sent successfully." << std::endl;
@@ -49,6 +50,10 @@ class InputClient {
             std::cout << "Could not send packet since client is not connected to server." << std::endl;
         }
     }
+
+    void send_nodes(size_t nodes) { send(nodes); }
+
+    void send_size(size_t size) { send(size); }
 
    private:
     void send(size_t &elem) { m_pSSLTCPClient->Send(reinterpret_cast<const char *>(&elem), sizeof(size_t)); }
@@ -63,7 +68,7 @@ class InputClient {
     }
 
    private:
-    size_t n_bits;
+    size_t bits;
     bool connected;
     std::string password;
     std::unique_ptr<CTCPSSLClient> m_pSSLTCPClient;

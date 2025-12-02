@@ -48,7 +48,7 @@ class PiKCircuit : public Circuit {
         deduplication_dst_dupl = equals_zero(deduplication_dst_dupl, size - 1, 3);
         deduplication_dst_dupl = equals_zero(deduplication_dst_dupl, size - 1, 4);
 
-        auto deduplication_duplicates = mul(deduplication_src_dupl, deduplication_dst_dupl, size - 1, true);
+        auto deduplication_duplicates = mul_SIMD(deduplication_src_dupl, deduplication_dst_dupl, size - 1, true);
         deduplication_duplicates = bit2A(deduplication_duplicates, size - 1);
         deduplication_duplicates = deduplication_insert(deduplication_duplicates);
 
@@ -58,8 +58,4 @@ class PiKCircuit : public Circuit {
         in.dst_order_bits.push_back(MSBs);
         shuffle_idx++;
     }
-
-    size_t apply(size_t &data_old, size_t &data_new) override { return data_new; }
-
-    size_t post_mp(size_t &data) override { return data; }
 };

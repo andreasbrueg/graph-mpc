@@ -67,6 +67,10 @@ class Evaluator {
     size_t shuffle_idx = 0;
     size_t reveal_idx = 0;
 
+    size_t time_comm = 0;
+    size_t time_unshuffle = 0;
+    size_t time_permute = 0;
+
     void evaluate_send(std::vector<std::shared_ptr<Gate>> &layer);
 
     void online_communication();

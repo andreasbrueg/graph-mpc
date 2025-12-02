@@ -4,6 +4,42 @@
 #include "../utils/sharing.h"
 #include "../utils/types.h"
 
+enum GType {
+    Input,
+    Output,
+    Shuffle,
+    Unshuffle,
+    MergedShuffle,
+    Compaction,
+    Reveal,
+    Permute,
+    ReversePermute,
+    AddConst,
+    AddConstSIMD,
+    MulConst,
+    MulConstSIMD,
+    Add,
+    AddSIMD,
+    Sub,
+    SubSIMD,
+    Mul,
+    MulSIMD,
+    And,
+    AndSIMD,
+    Xor,
+    XorSIMD,
+    DeduplicationSub,
+    Bit2A,
+    EQZ,
+    Gather1,
+    Gather2,
+    Propagate1,
+    Propagate2,
+    Flip,
+    Insert,
+    ConstructData
+};
+
 class Gate {
    public:
     /* Used by Input */

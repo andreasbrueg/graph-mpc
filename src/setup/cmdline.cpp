@@ -49,7 +49,7 @@ bpo::options_description setup::programOptions() {
         "ssd", bpo::bool_switch(), "Preprocessing values are stored on disk before they are sent.")(
         "input,i", bpo::value<std::string>(), "File specifying the graph.")("depth,d", bpo::value<size_t>()->default_value(0), "search depth parameter D")(
         "clients", bpo::value<size_t>()->default_value(0), "Number of clients participating in input-sharing.")(
-        "passwords", bpo::value<std::string>()->default_value(""), "Path to .txt file containing passwords used for authenticating clients.")(
+        "password", bpo::value<std::string>()->default_value(""), "Password used for authenticating clients.")(
         "input-port", bpo::value<int>()->default_value(4242), "Port used for receiving input shares from clients.")(
         "save-seeds", bpo::value<bool>()->default_value(false), "Toggle saving of PRG-seeds to a file. Needed if parties go offline after preprocessing.");
 
@@ -94,7 +94,7 @@ bpo::options_description setup::programOptionsBenchmark() {
         "ssd", bpo::bool_switch(), "Preprocessing values are stored on disk before they are sent.")(
         "input,i", bpo::value<std::string>(), "File specifying the graph.")("depth,d", bpo::value<size_t>()->default_value(0), "search depth parameter D")(
         "clients", bpo::value<size_t>()->default_value(0), "Number of clients participating in input-sharing.")(
-        "passwords", bpo::value<std::string>()->default_value(""), "Path to .txt file containing passwords used for authenticating clients.")(
+        "password", bpo::value<std::string>()->default_value(""), "Password used for authenticating clients.")(
         "input-port", bpo::value<int>()->default_value(4242), "Port used for receiving input shares from clients.")(
         "save-seeds", bpo::value<bool>()->default_value(false), "Toggle saving of PRG-seeds to a file. Needed if parties go offline after preprocessing.");
 
@@ -136,7 +136,7 @@ bpo::options_description setup::programOptionsTest() {
         "ssd", bpo::bool_switch(), "Preprocessing values are stored on disk before they are sent.")(
         "input,i", bpo::value<std::string>(), "File specifying the graph.")("clients", bpo::value<size_t>()->default_value(0),
                                                                             "Number of clients participating in input-sharing.")(
-        "passwords", bpo::value<std::string>()->default_value(""), "Path to .txt file containing passwords used for authenticating clients.")(
+        "password", bpo::value<std::string>()->default_value(""), "Password used for authenticating clients.")(
         "input-port", bpo::value<int>()->default_value(4242), "Port used for receiving input shares from clients.")(
         "size,s", bpo::value<size_t>()->default_value(10), "Number of graph entries.")(
         "nodes", bpo::value<size_t>()->default_value(0), "Number of nodes for benchmarking graph algorithms")("depth,d", bpo::value<size_t>()->default_value(0),
@@ -147,18 +147,15 @@ bpo::options_description setup::programOptionsTest() {
 }
 
 bpo::options_description setup::clientProgramOptions() {
-    bpo::options_description desc(
-        "Following options are supported by config file too. Regarding seeds, "
-        "all, 01, 02, and 12 need to be equal among the parties using them. "
-        "Other parties, e.g., party 2 for seed 01 can take any value and in "
-        "fact must not know the value that 0 and 1 use");
+    bpo::options_description desc("Following options are supported by config file too.");
 
     desc.add_options()("cid", bpo::value<int>()->default_value(0), "Client ID.")("start", bpo::value<size_t>()->default_value(0), "Start index of subgraph")(
         "input,i", bpo::value<std::string>(), "Input file from which subgraph is read.")("ip_0", bpo::value<std::string>(), "IP Address of P0.")(
-        "ip_1", bpo::value<std::string>(), "IP Address of P1.")("port_0", bpo::value<int>()->default_value(4242), "Port of P0.")(
-        "password", bpo::value<std::string>()->default_value(""), "Password used by client for authentication.")(
-        "port_1", bpo::value<int>()->default_value(4243), "Port of P1.")("n_bits", bpo::value<size_t>()->default_value(32),
-                                                                         "Number of bits used for representing ring elements.");
+        "ip_1", bpo::value<std::string>(), "IP Address of P1.")("ip_D", bpo::value<std::string>(), "IP Address of Dealer.")(
+        "port_0", bpo::value<int>()->default_value(4242), "Port of P0.")("password", bpo::value<std::string>()->default_value(""),
+                                                                         "Password used by client for authentication.")(
+        "port_1", bpo::value<int>()->default_value(4243), "Port of P1.")("port_D", bpo::value<int>()->default_value(4244), "Port of Dealer.")(
+        "bits", bpo::value<size_t>()->default_value(32), "Bits used.");
 
     return desc;
 }
@@ -199,42 +196,54 @@ bpo::variables_map setup::parseOptions(bpo::options_description &cmdline, bpo::o
     return opts;
 }
 
-void setup::setupClient(const bpo::variables_map &opts, int &id, size_t &start_idx, std::string &ip_0, std::string &ip_1, int &port_0, int &port_1,
-                        std::string &input_file, size_t &n_bits, std::string &password) {
+void setup::setupClient(const bpo::variables_map &opts, int &id, size_t &start_idx, std::string &ip_0, std::string &ip_1, std::string &ip_D, int &port_0,
+                        int &port_1, int &port_D, std::string &input_file, size_t &bits, std::string &password) {
     id = opts["cid"].as<int>();
     start_idx = opts["start"].as<size_t>();
     ip_0 = opts["ip_0"].as<std::string>();
     ip_1 = opts["ip_1"].as<std::string>();
+    ip_D = opts["ip_D"].as<std::string>();
     port_0 = opts["port_0"].as<int>();
     port_1 = opts["port_1"].as<int>();
+    port_D = opts["port_D"].as<int>();
     input_file = opts["input"].as<std::string>();
-    n_bits = opts["n_bits"].as<size_t>();
+    bits = opts["bits"].as<size_t>();
     password = opts["password"].as<std::string>();
 }
 
 void setup::setupServer(const bpo::variables_map &opts, Graph &g) {
     size_t id = opts["pid"].as<size_t>();
-    size_t nodes = opts["nodes"].as<size_t>();
-    size_t bits = std::ceil(std::log2(nodes + 2));
     int input_port = opts["input-port"].as<int>();
     if (id == 1 && input_port == 4242) {
         input_port++;
     }
+    if (id == 2 && input_port == 4242) {
+        input_port += 2;
+    }
     size_t clients = opts["clients"].as<size_t>();
 
-    std::string passwords_file;
-    if (opts.count("passwords") != 0) {
-        passwords_file = opts["passwords"].as<std::string>();
+    std::string password;
+    if (opts.count("password") != 0) {
+        password = opts["password"].as<std::string>();
     }
 
     if (clients > 0) {
         if (id != D) {
-            std::cout << "Using pwds from " << passwords_file << std::endl;
-            InputServer server(passwords_file, std::to_string(input_port), clients, bits);  // Server expecting two clients
-            std::cout << "Awaiting " << clients << " packets at " << "localhost:" << std::to_string(input_port) << std::endl;
+            std::cout << "Using password " << password << std::endl;
+            InputServer server(password, std::to_string(input_port), clients);  // Server expecting two clients
+            std::cout << "Awaiting " << clients << " packets at " << "localhost:" << std::to_string(input_port) << std::endl << std::endl;
             server.connect_clients();
             g = server.recv_graph();
-            g.print();
+            g.init_mp((Party)id);
+            std::cout << "Finished graph construction." << std::endl;
+        } else {
+            size_t nodes, size;
+            InputServer server(password, std::to_string(input_port), clients);  // Server expecting two clients
+            server.connect_clients();
+            server.recv_nodes(nodes);
+            server.recv_size(size);
+            g.nodes = nodes;
+            g.size = size;
         }
     }
 }

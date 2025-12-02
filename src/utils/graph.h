@@ -23,11 +23,11 @@ class Graph {
         size = src.size();
 
         for (size_t i = 0; i < isV.size(); ++i)
-            if (isV[i]) n_vertices++;
+            if (isV[i]) nodes++;
     }
 
     Graph(std::vector<Ring> &src, std::vector<Ring> &dst, std::vector<Ring> &isV, std::vector<Ring> &data, size_t n_vertices)
-        : src(src), dst(dst), isV(isV), data(data), is_shared(true), n_vertices(n_vertices) {
+        : src(src), dst(dst), isV(isV), data(data), is_shared(true), nodes(n_vertices) {
         assert(src.size() == dst.size());
         assert(dst.size() == isV.size());
         assert(isV.size() == data.size());
@@ -37,7 +37,7 @@ class Graph {
 
     Graph(std::vector<Ring> &src, std::vector<Ring> &dst, std::vector<Ring> &isV, std::vector<Ring> &data, std::vector<std::vector<Ring>> &src_bits,
           std::vector<std::vector<Ring>> &dst_bits, size_t n_vertices)
-        : src(src), dst(dst), isV(isV), data(data), is_shared(true), src_bits(src_bits), dst_bits(dst_bits), n_vertices(n_vertices) {
+        : src(src), dst(dst), isV(isV), data(data), is_shared(true), src_bits(src_bits), dst_bits(dst_bits), nodes(n_vertices) {
         assert(src.size() == dst.size());
         assert(dst.size() == isV.size());
         assert(isV.size() == data.size());
@@ -58,7 +58,7 @@ class Graph {
 
     std::vector<Ring> isV_inv;
     size_t size = 0;
-    size_t n_vertices = 0;
+    size_t nodes = 0;
 
     std::vector<std::vector<Ring>> data_parallel;
 
@@ -69,7 +69,7 @@ class Graph {
         data.push_back(_data);
         size++;
 
-        if (_isV) n_vertices++;
+        if (_isV) nodes++;
     }
 
     void add_list_entry(Ring src, Ring dst, Ring isV) { add_list_entry(src, dst, isV, 0); }
@@ -174,7 +174,7 @@ class Graph {
             }
         }
 
-        return {{src_0, dst_0, isV_0, data_0, src_bits_0, dst_bits_0, n_vertices}, {src_1, dst_1, isV_1, data_1, src_bits_1, dst_bits_1, n_vertices}};
+        return {{src_0, dst_0, isV_0, data_0, src_bits_0, dst_bits_0, nodes}, {src_1, dst_1, isV_1, data_1, src_bits_1, dst_bits_1, nodes}};
     }
 
     Graph secret_share_parties(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n_bits, Party sender) {
@@ -199,7 +199,7 @@ class Graph {
             _isV = isV;
             _data = data;
             _size = size;
-            _n_vertices = n_vertices;
+            _n_vertices = nodes;
             network->send(partner, &_size, sizeof(size_t));
             network->send(partner, &_n_vertices, sizeof(size_t));
             _src_bits = to_bits(_src, n_bits);
@@ -271,7 +271,7 @@ class Graph {
         std::vector<Ring> data_revealed = share::reveal_vec(id, network, data);
 
         Graph revealed(src_revealed, dst_revealed, isV_revealed, data_revealed);
-        revealed.n_vertices = n_vertices;
+        revealed.nodes = nodes;
 
         return revealed;
     }
@@ -292,7 +292,7 @@ class Graph {
         g.dst_bits.resize(n_bits);
 
         g.size = size + other.size;
-        g.n_vertices = n_vertices + other.n_vertices;
+        g.nodes = nodes + other.nodes;
 
         /* Add values of this graph */
         for (size_t i = 0; i < n_bits; ++i) {

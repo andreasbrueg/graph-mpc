@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
     bpo::variables_map opts = setup::parseOptions(cmdline, prog_opts, argc, argv);
 
     try {
-        Party id = (Party)opts["pid"].as<size_t>();
+        Party id = (Party)opts["pid"].as<int>();
         const size_t size = 17;
         const size_t nodes = 5;
         const size_t depth = 2;

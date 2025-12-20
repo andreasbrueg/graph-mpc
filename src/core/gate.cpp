@@ -1,7 +1,7 @@
 #include "gate.h"
 
 /* Used by Input */
-Gate::Gate(GType type, size_t g_id, size_t out_idx)
+Gate::Gate(GType type, size_t g_id, wire_id out_idx)
     : type(type),
       g_id(g_id),
       in1_idx(0),
@@ -18,7 +18,7 @@ Gate::Gate(GType type, size_t g_id, size_t out_idx)
       binary(false) {}
 
 /* Used by ConstructData */
-Gate::Gate(GType type, size_t g_id, size_t in1_idx, size_t out_idx, std::vector<size_t> &data_parallel)
+Gate::Gate(GType type, size_t g_id, wire_id in1_idx, wire_id out_idx, std::vector<size_t> &data_parallel)
     : type(type),
       g_id(g_id),
       in1_idx(in1_idx),
@@ -36,7 +36,7 @@ Gate::Gate(GType type, size_t g_id, size_t in1_idx, size_t out_idx, std::vector<
       data_parallel(data_parallel) {}
 
 /* Used by Output, Propagate-1, Gather-1, Gather-2, Reveal, Sub */
-Gate::Gate(GType type, size_t g_id, size_t in1_idx, size_t out_idx)
+Gate::Gate(GType type, size_t g_id, wire_id in1_idx, wire_id out_idx)
     : type(type),
       g_id(g_id),
       in1_idx(in1_idx),
@@ -53,7 +53,7 @@ Gate::Gate(GType type, size_t g_id, size_t in1_idx, size_t out_idx)
       binary(false) {}
 
 /* Used by AddConst, AddConstSIMD, MulConst, MulConstSIMD */
-Gate::Gate(GType type, size_t g_id, size_t in1_idx, Ring val, size_t out_idx)
+Gate::Gate(GType type, size_t g_id, wire_id in1_idx, Ring val, wire_id out_idx)
     : type(type),
       g_id(g_id),
       in1_idx(in1_idx),
@@ -107,7 +107,7 @@ Gate::Gate(GType type, size_t g_id, size_t param1, size_t param2, size_t param3,
 }
 
 /* Used by MergedShuffle and EQZ */
-Gate::Gate(GType type, size_t g_id, size_t in1_idx, size_t out_idx, size_t n1, size_t n2, size_t n3)
+Gate::Gate(GType type, size_t g_id, wire_id in1_idx, wire_id out_idx, size_t n1, size_t n2, size_t n3)
     : type(type), g_id(g_id), in1_idx(in1_idx), in2_idx(0), val(0), out_idx(out_idx) {
     if (type == MergedShuffle) {
         size = 0;
@@ -131,7 +131,7 @@ Gate::Gate(GType type, size_t g_id, size_t in1_idx, size_t out_idx, size_t n1, s
 }
 
 /* Used by Mul */
-Gate::Gate(GType type, size_t g_id, size_t in1_idx, size_t in2_idx, size_t out_idx, size_t size, size_t mult_idx, bool binary)
+Gate::Gate(GType type, size_t g_id, wire_id in1_idx, wire_id in2_idx, wire_id out_idx, size_t size, size_t mult_idx, bool binary)
     : type(type),
       g_id(g_id),
       in1_idx(in1_idx),

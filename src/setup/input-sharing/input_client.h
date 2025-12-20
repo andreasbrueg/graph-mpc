@@ -15,7 +15,7 @@ class InputClient {
         std::vector<Ring> entries;
     };
 
-    InputClient(std::shared_ptr<io::NetIOMP> client_network, size_t bits) : client_network(client_network), bits(bits) {};
+    InputClient(std::shared_ptr<io::NetIOMP> client_network, size_t bits) : network(client_network), bits(bits) {};
 
     ~InputClient() {};
 
@@ -41,14 +41,16 @@ class InputClient {
 
     void send_size(int dst, size_t size) { send(dst, size); }
 
-    std::vector<Ring> recv_result(size_t &size) {
+    std::vector<Ring> recv_result(size_t size) {
         std::vector<Ring> share_0, share_1, result;
         share_0.resize(size);
-        client_network->recv(P0, share_0.data(), sizeof(Ring) * size);
         share_1.resize(size);
-        client_network->recv(P1, share_1.data(), sizeof(Ring) * size);
-
         result.resize(size);
+
+        network->recv(P0, &share_0, sizeof(Ring) * size);
+        network->recv(P1, &share_1, sizeof(Ring) * size);
+        network->sync_clients();
+
         for (size_t i = 0; i < size; ++i) {
             result[i] = share_0[i] + share_1[i];
         }
@@ -56,17 +58,17 @@ class InputClient {
     }
 
    private:
-    void send(int dst, size_t &elem) { client_network->send(dst, &elem, sizeof(size_t)); }
+    void send(int dst, size_t &elem) { network->send(dst, &elem, sizeof(size_t)); }
 
-    void send(int dst, std::string &str) { client_network->send(dst, str.data(), str.size()); }
+    void send(int dst, std::string &str) { network->send(dst, str.data(), str.size()); }
 
     void send_packet(int dst, Packet &pkt) {
         std::array<size_t, 2> header{pkt.start, pkt.end};
-        client_network->send(dst, header.data(), sizeof(header));
-        client_network->send(dst, pkt.entries.data(), pkt.entries.size() * sizeof(Ring));
+        network->send(dst, header.data(), sizeof(header));
+        network->send(dst, pkt.entries.data(), pkt.entries.size() * sizeof(Ring));
     }
 
    private:
-    std::shared_ptr<io::NetIOMP> client_network;
+    std::shared_ptr<io::NetIOMP> network;
     size_t bits;
 };

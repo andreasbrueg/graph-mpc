@@ -198,48 +198,6 @@ std::shared_ptr<io::NetIOMP> setup::setupNetwork(const bpo::variables_map &opts)
     return std::make_shared<io::NetIOMP>(net_conf, force_connect);
 }
 
-std::shared_ptr<io::NetIOMP> setup::setupClientNetwork(const bpo::variables_map &opts) {
-    bool is_client = opts["isclient"].as<bool>();
-    size_t clients = opts["clients"].as<size_t>();
-    int port = opts["port"].as<int>();
-    auto certificate_path = opts["certificate_path"].as<std::string>();
-    auto private_key_path = opts["private_key_path"].as<std::string>();
-    auto trusted_cert_path = opts["trusted_cert_path"].as<std::string>();
-    size_t BLOCK_SIZE = opts["BLOCK_SIZE"].as<size_t>();
-    int id;
-
-    if (is_client) {
-        id = opts["cid"].as<int>(); /* Client id's from 1 ... n */
-    } else {
-        id = 0;
-        port += 100;
-    }
-
-    std::vector<std::string> IP;
-    bool localhost;
-    if (opts["localhost"].as<bool>()) {
-        localhost = true;
-    } else {
-        std::ifstream fnet(opts["net-config"].as<std::string>());
-        if (!fnet.good()) {
-            fnet.close();
-            throw std::runtime_error("Could not open network config file");
-        }
-        json netdata;
-        fnet >> netdata;
-        fnet.close();
-
-        IP.resize(3);
-        for (size_t i = 0; i < 3; ++i) {
-            IP[i] = netdata[i].get<std::string>();
-        }
-        localhost = false;
-    }
-
-    NetworkConfig net_conf = {id, 3, clients, BLOCK_SIZE, port, IP, certificate_path, private_key_path, trusted_cert_path, localhost};
-    return std::make_shared<io::NetIOMP>(net_conf, true);
-}
-
 void setup::setupClient(const bpo::variables_map &opts, size_t &start_idx, size_t &bits, std::string &input_file) {
     start_idx = opts["start"].as<size_t>();
     input_file = opts["input"].as<std::string>();

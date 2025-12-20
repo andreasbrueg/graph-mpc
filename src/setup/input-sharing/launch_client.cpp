@@ -5,7 +5,7 @@
 #include "../cmdline.h"
 #include "input_client.h"
 
-void launch_client(std::shared_ptr<io::NetIOMP> client_network, emp::PRG rng, size_t start_idx, size_t bits, std::string input_file = "") {
+void launch_client(std::shared_ptr<io::NetIOMP> network, emp::PRG rng, size_t start_idx, size_t bits, std::string input_file = "") {
     Graph g;
     if (input_file != "") {
         g = Graph::parse(input_file);
@@ -14,9 +14,10 @@ void launch_client(std::shared_ptr<io::NetIOMP> client_network, emp::PRG rng, si
     }
 
     /* Send shares*/
-    InputClient client(client_network, bits);
+    InputClient client(network, bits);
     client.send_graph(rng, g, start_idx);
-    auto result = client.recv_result(g.size);
+    // auto result = client.recv_result(g.size); // Some network bug that needs to be fixed
+    // setup::print_vec(result);
 }
 
 int main(int argc, char **argv) {
@@ -33,7 +34,7 @@ int main(int argc, char **argv) {
     size_t start_idx, bits;
     std::string input_file;
 
-    auto client_network = setup::setupNetwork(opts);
+    auto network = setup::setupNetwork(opts);
     setup::setupClient(opts, start_idx, bits, input_file);
 
     /* Dummy PRG */
@@ -41,5 +42,5 @@ int main(int argc, char **argv) {
     auto seed_block = emp::makeBlock(14132, 68436);
     rng.reseed(&seed_block, 0);
 
-    launch_client(client_network, rng, start_idx, bits, input_file);
+    launch_client(network, rng, start_idx, bits, input_file);
 }

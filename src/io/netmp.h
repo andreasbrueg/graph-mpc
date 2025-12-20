@@ -56,6 +56,8 @@ class NetIOMP {
     std::condition_variable cv;
     bool connection_established;
     size_t BLOCK_SIZE;
+    std::vector<size_t> start_idx;
+    std::vector<size_t> end_idx;
 
     NetIOMP(NetworkConfig &conf, bool force_init = false)
         : party(conf.id),
@@ -63,6 +65,8 @@ class NetIOMP {
           n_total(conf.n_parties + conf.n_clients),
           connection_established(false),
           BLOCK_SIZE(conf.BLOCK_SIZE),
+          start_idx(conf.n_clients),
+          end_idx(conf.n_parties),
           conf(conf),
           ios(conf.n_parties + conf.n_clients),
           ios2(conf.n_parties + conf.n_clients),
@@ -279,6 +283,35 @@ class NetIOMP {
                 }
             }
         }
+    }
+
+    void sync_clients() {
+        {
+            std::unique_lock<std::mutex> lock(mtx);
+            cv.wait(lock, [this] { return connection_established; });
+        }
+        for (int i = 0; i < n_total; ++i) {
+            for (int j = 0; j < n_total; ++j) {
+                if (i < j) {
+                    if (i <= 2 || j <= 2) {
+                        if (i == party) {
+                            ios[j]->sync();
+                            ios2[j]->sync();
+                        } else if (j == party) {
+                            ios[i]->sync();
+                            ios2[i]->sync();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void send_result(int client_id, std::vector<Ring> &result) {
+        size_t start = start_idx[client_id];
+        size_t end = end_idx[client_id];
+        auto share = std::vector<Ring>({result.begin() + start, result.begin() + end});
+        send(client_id + 3, &share, share.size() * sizeof(Ring));
     }
 
    private:

@@ -14,7 +14,7 @@ class InputServer {
         std::vector<Ring> entries;
     };
 
-    InputServer(std::shared_ptr<io::NetIOMP> client_network, size_t n_clients) : client_network(client_network), n_clients(n_clients) {};
+    InputServer(std::shared_ptr<io::NetIOMP> client_network, size_t n_clients) : network(client_network), n_clients(n_clients) {};
 
     ~InputServer() = default;
 
@@ -79,7 +79,7 @@ class InputServer {
         size_t nodes_total = 0;
         for (size_t client = 3; client < n_clients + 3; ++client) {
             size_t nodes;
-            client_network->recv(client, &nodes, sizeof(size_t));
+            network->recv(client, &nodes, sizeof(size_t));
             nodes_total += nodes;
         }
         std::cout << "Received nodes: " << nodes_total << std::endl;
@@ -90,13 +90,13 @@ class InputServer {
         size_total = 0;
         for (size_t client = 3; client < n_clients + 3; ++client) {
             size_t size;
-            client_network->recv(client, &size, sizeof(size_t));
+            network->recv(client, &size, sizeof(size_t));
             size_total += size;
         }
         std::cout << "Received nodes: " << size_total << std::endl;
     }
 
-    void send_result(std::vector<Ring> &data, int client_id) { client_network->send(client_id, &data, sizeof(Ring) * data.size()); }
+    void send_result(std::vector<Ring> &data, int client_id) { network->send(client_id, &data, sizeof(Ring) * data.size()); }
 
    private:
     std::vector<Packet> recv_packets() {
@@ -104,6 +104,8 @@ class InputServer {
         for (size_t client = 3; client < n_clients + 3; ++client) {
             auto packet = recv_packet(client);
             packets.push_back(packet);
+            network->start_idx[client - 3] = packet.start;
+            network->end_idx[client - 3] = packet.end;
         }
         return packets;
     }
@@ -112,7 +114,7 @@ class InputServer {
         Packet pkt;
 
         std::array<size_t, 2> header{};
-        client_network->recv(client, header.data(), sizeof(header));
+        network->recv(client, header.data(), sizeof(header));
 
         pkt.start = header[0];
         pkt.end = header[1];
@@ -130,12 +132,12 @@ class InputServer {
             return pkt;  // nothing else to receive
         }
 
-        client_network->recv(client, pkt.entries.data(), bytes_to_recv);
+        network->recv(client, pkt.entries.data(), bytes_to_recv);
 
         return pkt;
     }
 
-    std::shared_ptr<io::NetIOMP> client_network;
+    std::shared_ptr<io::NetIOMP> network;
     size_t bits = 0;
     size_t n_clients;
 };

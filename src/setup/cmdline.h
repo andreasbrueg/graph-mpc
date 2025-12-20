@@ -39,8 +39,6 @@ RandomGenerators setupRNGs(const bpo::variables_map &opts);
 
 std::shared_ptr<io::NetIOMP> setupNetwork(const bpo::variables_map &opts);
 
-std::shared_ptr<io::NetIOMP> setupClientNetwork(const bpo::variables_map &opts);
-
 ProtocolConfig setupProtocol(const bpo::variables_map &opts, std::shared_ptr<io::NetIOMP> network);
 
 BenchmarkConfig setupBenchmark(const bpo::variables_map &opts);

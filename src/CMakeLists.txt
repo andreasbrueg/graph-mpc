@@ -11,11 +11,11 @@ target_sources(GraphMPC_lib
     utils/types.h
     io/disk.h
     io/netmp.h
-    graphmpc/storage.cpp
-    graphmpc/preprocessor.cpp
-    graphmpc/evaluator.cpp
-    graphmpc/circuit.cpp
-    graphmpc/gate.cpp
+    core/storage.cpp
+    core/preprocessor.cpp
+    core/evaluator.cpp
+    core/circuit.cpp
+    core/gate.cpp
     setup/cmdline.cpp
     setup/configs.h
     setup/input-sharing/input_client.h

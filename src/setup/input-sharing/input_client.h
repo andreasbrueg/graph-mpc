@@ -1,7 +1,6 @@
 #pragma once
 
 #include <emp-tool/emp-tool.h>
-#include <socket/TCPSSLClient.h>
 
 #include <future>
 

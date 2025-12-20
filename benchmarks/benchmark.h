@@ -2,9 +2,9 @@
 
 #include <nlohmann/json.hpp>
 
-#include "../src/graphmpc/circuit.h"
-#include "../src/graphmpc/evaluator.h"
-#include "../src/graphmpc/preprocessor.h"
+#include "../src/core/circuit.h"
+#include "../src/core/evaluator.h"
+#include "../src/core/preprocessor.h"
 #include "../src/setup/cmdline.h"
 #include "../src/utils/stats.h"
 

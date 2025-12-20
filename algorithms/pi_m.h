@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../src/graphmpc/circuit.h"
+#include "../src/core/circuit.h"
 
 class PiMCircuit : public Circuit {
    public:

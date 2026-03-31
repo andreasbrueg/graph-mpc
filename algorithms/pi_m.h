@@ -13,8 +13,6 @@ class PiMCircuit : public Circuit {
         build();
     }
 
-    void pre_mp() override {}
-
     SIMD_wire_id pre_propagate(SIMD_wire_id &data, size_t i) override {
         return add_const_SIMD(data, weights[weights.size() - 1 - i]);
     }
@@ -22,6 +20,4 @@ class PiMCircuit : public Circuit {
     SIMD_wire_id apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t i) override {
         return data_new;
     }
-
-    SIMD_wire_id post_mp(SIMD_wire_id &data) override { return data; }
 };

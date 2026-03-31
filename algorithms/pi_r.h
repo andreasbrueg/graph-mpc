@@ -9,7 +9,9 @@ class PiRCircuit : public Circuit {
         build();
     }
 
-    SIMD_wire_id apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t i) override { return add_SIMD(data_old, data_new); }
+    SIMD_wire_id apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t i) override {
+        return add_SIMD(data_old, data_new);
+    }
 
     SIMD_wire_id post_mp(SIMD_wire_id &data) override {
         SIMD_wire_id nodes = in.data_parallel.size();

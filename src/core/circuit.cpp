@@ -84,7 +84,7 @@ void Circuit::pre_mp() {}
 SIMD_wire_id Circuit::pre_propagate(SIMD_wire_id &data, size_t i) { return data; }
 
 SIMD_wire_id Circuit::apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t i) {
-    return data_new;
+    throw std::runtime_error("apply() is not specified.");
 }
 
 SIMD_wire_id Circuit::post_mp(SIMD_wire_id &data) { return data; }

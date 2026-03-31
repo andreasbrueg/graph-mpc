@@ -15,13 +15,13 @@ class Circuit {
           size(conf.size),
           nodes(conf.nodes),
           bits(conf.bits),
-          depth(conf.depth),
-          weights(conf.weights) {}
+          depth(conf.depth) {}
 
     std::vector<std::vector<std::shared_ptr<Gate>>> get() { return circ; }
 
     virtual void pre_mp();
-    virtual SIMD_wire_id apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new);
+    virtual SIMD_wire_id pre_propagate(SIMD_wire_id &data, size_t i);
+    virtual SIMD_wire_id apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t i);
     virtual SIMD_wire_id post_mp(SIMD_wire_id &data);
     virtual void compute_sorts();  // Can be overwritten
 
@@ -41,7 +41,6 @@ class Circuit {
     size_t nodes;
     size_t bits;
     size_t depth;
-    std::vector<Ring> weights;
 
     void build();
 

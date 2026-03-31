@@ -133,9 +133,8 @@ int main(int argc, char **argv) {
         const size_t bits = std::ceil(std::log2(nodes + 2));
         auto rngs = setup::setupRNGs(opts);
         bool ssd = true;
-        std::vector<Ring> weights(depth);
 
-        ProtocolConfig conf = {id, size, nodes, depth, bits, rngs, ssd, weights};
+        ProtocolConfig conf = {id, size, nodes, depth, bits, rngs, ssd};
         auto network = setup::setupNetwork(opts);
 
         auto test = TestPiR(conf, network);

@@ -10,7 +10,8 @@ class TestPiM : public Test {
     TestPiM(ProtocolConfig &conf, std::shared_ptr<io::NetIOMP> network) : Test(conf, network) {}
 
     Circuit *create_circuit() override {
-        auto circ = new PiMCircuit(conf);
+        std::vector<Ring> weights = {10000000, 100000, 1000, 1};
+        auto circ = new PiMCircuit(conf, weights);
         return circ;
     }
 
@@ -108,9 +109,8 @@ int main(int argc, char **argv) {
         const size_t bits = std::ceil(std::log2(nodes + 2));
         auto rngs = setup::setupRNGs(opts);
         bool ssd = false;
-        std::vector<Ring> weights = {10000000, 100000, 1000, 1};
 
-        ProtocolConfig conf = {id, size, nodes, depth, bits, rngs, ssd, weights};
+        ProtocolConfig conf = {id, size, nodes, depth, bits, rngs, ssd};
         auto network = setup::setupNetwork(opts);
 
         std::cout << "----- Test Configuration -----" << std::endl;

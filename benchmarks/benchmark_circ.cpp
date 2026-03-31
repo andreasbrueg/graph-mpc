@@ -16,7 +16,8 @@ int main(int argc, char **argv) {
         auto conf = setup::setupProtocol(opts, network);
         auto b_conf = setup::setupBenchmark(opts);
 
-        auto circuit = PiMCircuit(conf);
+        std::vector<Ring> weights = {10000000, 100000, 1000, 1};
+        auto circuit = PiMCircuit(conf, weights);
 
         Graph g;
 

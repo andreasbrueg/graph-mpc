@@ -4,11 +4,24 @@
 
 class PiMCircuit : public Circuit {
    public:
-    PiMCircuit(ProtocolConfig &conf) : Circuit(conf) { build(); }
+
+    std::vector<Ring> weights;
+
+    PiMCircuit(ProtocolConfig &conf, std::vector<Ring> &weights) : Circuit(conf), weights(weights) {
+        if (weights.size() != conf.depth)
+            throw std::runtime_error("Number of provided weights must match depth!");
+        build();
+    }
 
     void pre_mp() override {}
 
-    size_t apply(size_t &data_old, size_t &data_new) override { return data_new; }
+    SIMD_wire_id pre_propagate(SIMD_wire_id &data, size_t i) override {
+        return add_const_SIMD(data, weights[weights.size() - 1 - i]);
+    }
 
-    size_t post_mp(size_t &data) override { return data; }
+    SIMD_wire_id apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t i) override {
+        return data_new;
+    }
+
+    SIMD_wire_id post_mp(SIMD_wire_id &data) override { return data; }
 };

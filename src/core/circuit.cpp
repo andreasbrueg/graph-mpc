@@ -81,7 +81,11 @@ void Circuit::level_order() {
 
 void Circuit::pre_mp() {}
 
-SIMD_wire_id Circuit::apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new) { return data_new; }
+SIMD_wire_id Circuit::pre_propagate(SIMD_wire_id &data, size_t i) { return data; }
+
+SIMD_wire_id Circuit::apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t i) {
+    return data_new;
+}
 
 SIMD_wire_id Circuit::post_mp(SIMD_wire_id &data) { return data; }
 
@@ -116,7 +120,7 @@ SIMD_wire_id Circuit::message_passing(SIMD_wire_id &data) {
 
     for (size_t i = 0; i < depth; ++i) {
         auto data_old = data_vtx;
-        data_vtx = add_const_SIMD(data_vtx, weights[weights.size() - 1 - i]);
+        data_vtx = pre_propagate(data_vtx, i);
 
         /* Propagate-1 */
         auto data_vtx_propagate = propagate_1(data_vtx);
@@ -149,7 +153,7 @@ SIMD_wire_id Circuit::message_passing(SIMD_wire_id &data) {
         /* Gather-2 */
         data_vtx = gather_2(data_vtx);
 
-        data_vtx = apply(data_old, data_vtx);
+        data_vtx = apply(data_old, data_vtx, i);
     }
     return data_vtx;
 }

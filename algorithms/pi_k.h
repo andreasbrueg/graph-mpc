@@ -4,7 +4,12 @@
 
 class PiKCircuit : public Circuit {
    public:
-    PiKCircuit(ProtocolConfig &conf) : Circuit(conf) { build(); }
+
+    std::vector<Ring> weights;
+
+    PiKCircuit(ProtocolConfig &conf, std::vector<Ring> &weights) : Circuit(conf), weights(weights) {
+        build();
+    }
 
     void compute_sorts() override {
         ctx.src_order = sort(in.src_order_bits, bits + 2);  // Sorting src_order_bits + appended deduplication_bits
@@ -45,5 +50,9 @@ class PiKCircuit : public Circuit {
         in.src_order_bits.push_back(MSBs);
         in.dst_order_bits.push_back(MSBs);
         shuffle_idx++;
+    }
+
+    SIMD_wire_id pre_propagate(SIMD_wire_id &data, size_t i) override {
+        return add_const_SIMD(data, weights[weights.size() - 1 - i]);
     }
 };

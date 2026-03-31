@@ -301,9 +301,7 @@ ProtocolConfig setup::setupProtocol(const bpo::variables_map &opts, std::shared_
     ssd = opts["ssd"].as<bool>();
     bits = std::ceil(std::log2(nodes + 2));
 
-    std::vector<Ring> weights(depth);
-
-    return {(Party)pid, size, nodes, depth, bits, rngs, ssd, weights};
+    return {(Party)pid, size, nodes, depth, bits, rngs, ssd};
 }
 
 BenchmarkConfig setup::setupBenchmark(const bpo::variables_map &opts) {

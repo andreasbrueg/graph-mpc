@@ -16,7 +16,8 @@ int main(int argc, char **argv) {
         auto conf = setup::setupProtocol(opts, network);
         auto b_conf = setup::setupBenchmark(opts);
 
-        auto circuit = PiKCircuit(conf);
+        std::vector<Ring> weights = {10000000, 100000, 1000, 1};
+        auto circuit = PiKCircuit(conf, weights);
 
         Graph g = Graph::benchmark_graph(conf, network);
 

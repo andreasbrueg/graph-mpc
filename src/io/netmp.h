@@ -42,7 +42,13 @@
 
 #include "../setup/configs.h"
 #include "disk.h"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wvla-cxx-extension"
 #include "emp-tool/emp-tool.h"
+#pragma GCC diagnostic pop
+
 #include "tls_net_io_channel.h"
 
 namespace io {

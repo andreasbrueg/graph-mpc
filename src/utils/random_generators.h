@@ -1,6 +1,10 @@
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wvla-cxx-extension"
 #include <emp-tool/emp-tool.h>
+#pragma GCC diagnostic pop
 
 #include <cstdint>
 #include <random>

@@ -9,12 +9,11 @@ class PiRCircuit : public Circuit {
         build();
     }
 
-    SIMD_wire_id apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t i) override {
+    SIMD_wire_id apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t /*i*/) override {
         return add_SIMD(data_old, data_new);
     }
 
-    SIMD_wire_id post_mp(SIMD_wire_id &data) override {
-        SIMD_wire_id nodes = in.data_parallel.size();
+    SIMD_wire_id post_mp(SIMD_wire_id &/*data*/) override {
         for (size_t i = 0; i < in.data_parallel.size(); ++i) {
             in.data_parallel[i] = clip(in.data_parallel[i]);
         }

@@ -81,9 +81,9 @@ void Circuit::level_order() {
 
 void Circuit::pre_mp() {}
 
-SIMD_wire_id Circuit::pre_propagate(SIMD_wire_id &data, size_t i) { return data; }
+SIMD_wire_id Circuit::pre_propagate(SIMD_wire_id &data, size_t /*i*/) { return data; }
 
-SIMD_wire_id Circuit::apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t i) {
+SIMD_wire_id Circuit::apply(SIMD_wire_id &/*data_old*/, SIMD_wire_id &/*data_new*/, size_t /*i*/) {
     throw std::runtime_error("apply() is not specified.");
 }
 

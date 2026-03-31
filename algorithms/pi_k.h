@@ -56,7 +56,7 @@ class PiKCircuit : public Circuit {
         return add_const_SIMD(data, weights[weights.size() - 1 - i]);
     }
 
-    SIMD_wire_id apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t i) override {
+    SIMD_wire_id apply(SIMD_wire_id &/*data_old*/, SIMD_wire_id &data_new, size_t /*i*/) override {
         return data_new;
     }
 };

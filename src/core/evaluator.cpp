@@ -104,23 +104,20 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Gate>> &layer) {
 
                 /* Sampling 1: R_0 / R_1 */
                 for (size_t i = 0; i < size; ++i) {
-                    if (id == P0)
-                        rngs->rng_D0_send().random_data(&R[i], sizeof(Ring));
-                    else if (id == P1)
-                        rngs->rng_D1_send().random_data(&R[i], sizeof(Ring));
+                    rngs->rng_with_D_send().random_data(&R[i], sizeof(Ring));
                 }
 
                 /* Sampling 2: pi_0_p / pi_1 */
                 if (id == P0) {
                     if (data->pi_0_p[f->shuffle_idx].size() == 0) {
-                        perm = Permutation::random(size, rngs->rng_D0_send());
+                        perm = Permutation::random(size, rngs->rng_with_D_send());
                         data->pi_0_p[f->shuffle_idx] = perm;
                     } else {
                         perm = data->pi_0_p[f->shuffle_idx];
                     }
                 } else {
                     if (data->pi_1[f->shuffle_idx].size() == 0) {
-                        perm = Permutation::random(size, rngs->rng_D1_send());
+                        perm = Permutation::random(size, rngs->rng_with_D_send());
                         data->pi_1[f->shuffle_idx] = perm;
                     } else {
                         perm = data->pi_1[f->shuffle_idx];
@@ -143,11 +140,7 @@ void Evaluator::evaluate_send(std::vector<std::shared_ptr<Gate>> &layer) {
                 std::vector<Ring> R(size);
 
                 /* Sampling 1: R_0 / R_1 */
-                if (id == P0) {
-                    for (size_t i = 0; i < size; ++i) rngs->rng_D0_send().random_data(&R[i], sizeof(Ring));
-                } else {
-                    for (size_t i = 0; i < size; ++i) rngs->rng_D1_send().random_data(&R[i], sizeof(Ring));
-                }
+                for (size_t i = 0; i < size; ++i) rngs->rng_with_D_send().random_data(&R[i], sizeof(Ring));
 
                 Permutation perm = id == P0 ? data->pi_0[f->shuffle_idx] : data->pi_1_p[f->shuffle_idx];
 
@@ -367,14 +360,14 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
                 Permutation perm;
                 if (id == P0) {
                     if (data->pi_0[f->shuffle_idx].size() == 0) {
-                        perm = Permutation::random(size, rngs->rng_D0_recv());
+                        perm = Permutation::random(size, rngs->rng_with_D_recv());
                         data->pi_0[f->shuffle_idx] = perm;
                     } else {
                         perm = data->pi_0[f->shuffle_idx];
                     }
                 } else {
                     if (data->pi_1_p[f->shuffle_idx].size() == 0) {
-                        perm = Permutation::random(size, rngs->rng_D1_recv());
+                        perm = Permutation::random(size, rngs->rng_with_D_recv());
                         data->pi_1_p[f->shuffle_idx] = perm;
                     } else {
                         perm = data->pi_1_p[f->shuffle_idx];

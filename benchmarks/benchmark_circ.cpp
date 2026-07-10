@@ -2,6 +2,7 @@
 #include "benchmark.h"
 
 int main(int argc, char **argv) {
+    // TODO to be removed? What is this doing?
     auto prog_opts(setup::programOptionsBenchmark());
 
     bpo::options_description cmdline("Benchmark the secure computation of the reach score.");

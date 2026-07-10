@@ -15,7 +15,7 @@ class TestPiM : public Test {
         return circ;
     }
 
-    Graph create_graph() override {
+    Graph create_graph(RandomGenerators &rngs) override {
         /*
             Graph instance:
             v1 - v2
@@ -59,7 +59,7 @@ class TestPiM : public Test {
         g.add_list_entry(2, 4, 0);
         g.add_list_entry(4, 2, 0);
 
-        Graph g_shared = g.secret_share_parties(conf.id, conf.rngs, network, conf.bits, P0);
+        Graph g_shared = g.secret_share_parties(conf.id, rngs, network, conf.bits, P0);
         g_shared.init_mp(conf.id);
         return g_shared;
     }
@@ -68,12 +68,16 @@ class TestPiM : public Test {
         if (conf.id == D) {
             size_t expected_pre = 4 * (16 * conf.size * conf.bits + 27 * conf.size + 8 * conf.size * conf.depth) +
                                   2 * sizeof(size_t);  // one element per party always sent to synchronize vector sizes
+            expected_pre += 2 * (sizeof(size_t) + 3 * 2 * sizeof(uint64_t)); // initial PRF seed distribution (to 2 parties, #seeds and 3 seeds, each consisting of 2 uint64_t)
             size_t expected_eval = 0;
 
             assert(bytes_sent_pre == expected_pre);
             assert(bytes_sent_eval == expected_eval);
         } else {
             size_t expected_pre = 0;
+            if (conf.id == P0) {
+                expected_pre += 2 * sizeof(uint64_t); // initial PRF seed distribution, 1 seed to P1
+            }
             size_t expected_eval = 4 * (12 * conf.size * conf.bits + 17 * conf.size + 4 * conf.size * conf.depth);
             assert(bytes_sent_pre == expected_pre);
             assert(bytes_sent_eval == expected_eval);
@@ -106,11 +110,10 @@ int main(int argc, char **argv) {
         const size_t size = 16;
         const size_t nodes = 4;
         const size_t depth = 4;
-        const size_t bits = std::ceil(std::log2(nodes + 2));
-        auto rngs = setup::setupRNGs(opts);
+        const size_t bits = std::ceil(std::log2(nodes + 2)); // TODO should likely be changed for weirder node ids
         bool ssd = false;
 
-        ProtocolConfig conf = {id, size, nodes, depth, bits, rngs, ssd};
+        ProtocolConfig conf = {id, size, nodes, depth, bits, ssd};
         auto network = setup::setupNetwork(opts);
 
         std::cout << "----- Test Configuration -----" << std::endl;

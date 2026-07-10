@@ -17,11 +17,9 @@ class Test {
 
     void run() {
         circ = create_circuit();
-        g = create_graph();
 
         auto io = Storage(conf, circ);
         preproc = new Preprocessor(conf, &io, network);
-        eval = new Evaluator(conf, &io, network, g);
 
         network->sync();
         size_t bytes_sent_pre = 0;
@@ -40,6 +38,10 @@ class Test {
         }
         std::cout << "preprocessing time: " << rbench_pre["time"] << " ms" << std::endl;
         std::cout << "preprocessing sent: " << bytes_sent_pre << " bytes" << std::endl;
+
+        /* Create input graph and evaluator */
+        g = create_graph(io.random_generators);
+        eval = new Evaluator(conf, &io, network, g);
 
         /* Network Sync */
         network->sync();
@@ -86,7 +88,7 @@ class Test {
 
     virtual Circuit *create_circuit() = 0;
 
-    virtual Graph create_graph() = 0;
+    virtual Graph create_graph(RandomGenerators &rngs) = 0;
 
     virtual void run_assertions(std::vector<Ring> &result, size_t &bytes_sent_pre, size_t &bytes_sent_eval) = 0;
 

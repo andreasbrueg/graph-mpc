@@ -15,7 +15,7 @@ class TestPiMClients : public Test {
         return circ;
     }
 
-    Graph create_graph() override { return g; }
+    Graph create_graph(RandomGenerators &) override { return g; }
 
     void run_assertions(std::vector<Ring> &result, size_t &bytes_sent_pre, size_t &bytes_sent_eval) override {
         if (conf.id == D) {
@@ -69,10 +69,9 @@ int main(int argc, char **argv) {
         const size_t nodes = graph.nodes;
         const size_t depth = 4;
         const size_t bits = std::ceil(std::log2(nodes + 2));
-        auto rngs = setup::setupRNGs(opts);
         bool ssd = true;
 
-        ProtocolConfig conf = {id, size, nodes, depth, bits, rngs, ssd};
+        ProtocolConfig conf = {id, size, nodes, depth, bits, ssd};
 
         auto g_rev = graph.reveal(id, network);
         g_rev.print();

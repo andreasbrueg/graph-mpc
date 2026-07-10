@@ -35,6 +35,8 @@ class Storage {
 
     size_t read_idx = 0;
 
+    RandomGenerators random_generators;
+
    private:
     Party id;
     size_t size;

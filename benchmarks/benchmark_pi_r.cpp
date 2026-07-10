@@ -18,10 +18,31 @@ int main(int argc, char **argv) {
 
         auto circuit = PiRCircuit(conf);
 
-        Graph g = Graph::benchmark_graph_PiR(conf, network);
+        auto graph_generator = [](ProtocolConfig &conf, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network) {
+            return Graph::benchmark_graph_PiR(conf, rngs, network);
+        };
 
-        auto benchmark = Benchmark(conf, b_conf, &circuit, network, g);
-        benchmark.run();
+        auto benchmark = Benchmark(conf, b_conf, &circuit, network, graph_generator);
+        size_t assert_comm_pre, assert_comm_eval;
+        if (conf.id == D) {
+            assert_comm_pre = 4 * (16 * conf.size * conf.bits + 6 * conf.nodes * conf.nodes + 8 * conf.size * conf.nodes * conf.depth +
+                                       2 * conf.size * conf.nodes + 25 * conf.size) +
+                                  2 * sizeof(size_t);  // one element per party always sent to synchronize vector sizes
+            assert_comm_pre += 2 * (sizeof(size_t) + 3 * 2 * sizeof(uint64_t)); // initial PRF seed distribution (to 2 parties, #seeds and 3 seeds, each consisting of 2 uint64_t)
+            if (conf.depth == 0) {
+                // Lazy evaluation: double-shuffles are not set up if we use no iteration, each is 8t setup, so we expect 24t setup less
+                assert_comm_pre -= 24 * conf.size;
+            }
+            assert_comm_eval = 0;
+        } else {
+            assert_comm_pre = 0;
+            if (conf.id == P0) {
+                assert_comm_pre += 2 * sizeof(uint64_t); // initial PRF seed distribution, 1 seed to P1
+            }
+            assert_comm_eval = 4 * (12 * conf.size * conf.bits + 12 * conf.nodes * conf.nodes + 4 * conf.size * conf.nodes * conf.depth +
+                                        conf.size * conf.nodes + 16 * conf.size);
+        }
+        benchmark.run(assert_comm_pre, assert_comm_eval);
 
     } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\nFatal error" << std::endl;

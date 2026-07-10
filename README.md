@@ -13,3 +13,9 @@ In order to successfully build the source code, the following external libraries
 
 ## Compiling
 ``mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && make -j8``
+
+
+
+./test_pi_m_clients für 3 Server
+setup/input_sharing/launch_client.cpp
+in /config auch die Arguments

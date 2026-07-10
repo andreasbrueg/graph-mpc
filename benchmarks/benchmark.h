@@ -1,5 +1,8 @@
 #pragma once
 
+#include <functional>
+#include <optional>
+
 #include <nlohmann/json.hpp>
 
 #include "../src/core/circuit.h"
@@ -12,10 +15,8 @@ using json = nlohmann::json;
 
 class Benchmark {
    public:
-    Benchmark(ProtocolConfig &conf, BenchmarkConfig &b_conf, Circuit *circ, std::shared_ptr<io::NetIOMP> network, Graph &g)
-        : conf(conf), circ(circ), data(conf, circ), g(g), network(network) {
-        preproc = new Preprocessor(conf, &data, network);
-        eval = new Evaluator(conf, &data, network, g);
+    Benchmark(ProtocolConfig &conf, BenchmarkConfig &b_conf, Circuit *circ, std::shared_ptr<io::NetIOMP> network, std::function<Graph(ProtocolConfig&, RandomGenerators&, std::shared_ptr<io::NetIOMP> network)> graph_generator)
+        : conf(conf), circ(circ), data(conf, circ), graph_generator(graph_generator), network(network) {
 
         input_file = b_conf.input_file;
         save_file = b_conf.save_file;
@@ -44,6 +45,7 @@ class Benchmark {
     Storage data;
 
     Graph g;
+    std::function<Graph(ProtocolConfig&, RandomGenerators&, std::shared_ptr<io::NetIOMP> network)> graph_generator;
 
     std::shared_ptr<io::NetIOMP> network;
     std::string input_file, save_file;
@@ -51,11 +53,15 @@ class Benchmark {
     bool save_output;
     json output_data;
 
-    void run() {
+    // Set params to expected outgoing communication in bytes to check via assertions (if compiled
+    // for debug), if set to -1 (default), no check is executed.
+    void run(std::optional<size_t> assert_comm_pre = std::nullopt, std::optional<size_t> assert_comm_eval = std::nullopt) {
         print();
         network->sync();
         for (size_t r = 0; r < repeat; ++r) {
             std::cout << "--- Repetition " << r + 1 << " ---" << std::endl;
+
+            preproc = new Preprocessor(conf, &data, network);
 
             size_t bytes_sent_pre = 0;
             size_t bytes_sent_eval = 0;
@@ -64,6 +70,9 @@ class Benchmark {
             StatsPoint start_pre(*network);
             preproc->run(circ);
             StatsPoint end_pre(*network);
+
+            g = graph_generator(conf, data.random_generators, network);
+            eval = new Evaluator(conf, &data, network, g);
 
             /* Network Sync */
             network->sync();
@@ -93,6 +102,16 @@ class Benchmark {
             }
             std::cout << "online time: " << rbench["time"] << " ms" << std::endl;
             std::cout << "online sent: " << bytes_sent_eval << " bytes" << std::endl << std::endl;
+
+            if (assert_comm_pre.has_value()) {
+                assert(bytes_sent_pre == assert_comm_pre.value());
+            }
+            if (assert_comm_eval.has_value()) {
+                assert(bytes_sent_eval == assert_comm_eval.value());
+            }
+
+            delete eval;
+            delete preproc;
         }
         output_data["stats"] = {{"peak_virtual_memory", peakVirtualMemory()}, {"peak_resident_set_size", peakResidentSetSize()}};
 

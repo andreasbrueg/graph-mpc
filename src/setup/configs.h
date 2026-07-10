@@ -2,13 +2,11 @@
 
 #include <cassert>
 
-#include "../utils/random_generators.h"
 #include "../utils/types.h"
 
 struct ProtocolConfig {
     Party id;
     size_t size, nodes, depth, bits;
-    RandomGenerators rngs;
     bool ssd;
 };
 

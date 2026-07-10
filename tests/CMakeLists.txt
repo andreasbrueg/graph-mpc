@@ -21,7 +21,7 @@ add_test(test_perm)
 add_test(test_pi_k)
 add_test(test_pi_m)
 add_test(test_pi_r)
-add_test(test_pi_m_clients)
+add_test(test_pi_m_clients) # TODO to be tested and fixed
 
 add_custom_target(tests)
 add_dependencies(tests ${testbin})

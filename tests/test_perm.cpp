@@ -5,9 +5,6 @@
 #include "../src/utils/permutation.h"
 #include "../src/utils/types.h"
 
-RandomGenerators rngs(std::vector<uint64_t>({123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789}),
-                      std::vector<uint64_t>({123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789, 123456789}));
-
 bool contains_duplicates(Permutation p) {
     for (size_t i = 0; i < p.size(); ++i) {
         for (size_t j = 0; j < p.size(); ++j) {
@@ -33,11 +30,11 @@ void test_plausibility() {
     assert((res2 == std::vector<Ring>({1, 0, 0, 0, 1, 0, 1, 1, 1, 0})));
 }
 
-void test_associativity() {
+void test_associativity(RandomGenerators &rngs) {
     const int n_elems = 100;
-    Permutation pi_0 = Permutation::random(n_elems, rngs.rng_D0_recv());
-    Permutation pi_1 = Permutation::random(n_elems, rngs.rng_D1_recv());
-    Permutation pi_2 = Permutation::random(n_elems, rngs.rng_D1_recv());
+    Permutation pi_0 = Permutation::random(n_elems, rngs.rng_with_P0_recv());
+    Permutation pi_1 = Permutation::random(n_elems, rngs.rng_with_P1_recv());
+    Permutation pi_2 = Permutation::random(n_elems, rngs.rng_with_P1_recv());
 
     std::vector<Ring> test_table = std::vector<Ring>(n_elems);
     std::iota(test_table.begin(), test_table.end(), 0);
@@ -48,7 +45,7 @@ void test_associativity() {
     assert((res1 == res2));
 }
 
-void test_inverse() {
+void test_inverse(RandomGenerators &rngs) {
     const int n_elems = 100;
     Permutation perm = Permutation::random(n_elems, rngs.rng_self());
     Permutation inv = perm.inverse();
@@ -59,17 +56,17 @@ void test_inverse() {
     assert(((perm * inv)(test_vec) == test_vec));
 }
 
-void test_pi_1_p() {
+void test_pi_1_p(RandomGenerators &rngs) {
     const int n_elems = 100;
-    Permutation pi_0 = Permutation::random(n_elems, rngs.rng_D0_recv());
-    Permutation pi_1 = Permutation::random(n_elems, rngs.rng_D1_recv());
-    Permutation pi_0_p = Permutation::random(n_elems, rngs.rng_D0_recv());
+    Permutation pi_0 = Permutation::random(n_elems, rngs.rng_with_P0_recv());
+    Permutation pi_1 = Permutation::random(n_elems, rngs.rng_with_P1_recv());
+    Permutation pi_0_p = Permutation::random(n_elems, rngs.rng_with_P0_recv());
 
     Permutation pi_1_p = pi_0_p.inverse() * (pi_0 * pi_1);
     assert((pi_0_p * pi_1_p == pi_0 * pi_1));
 }
 
-void test_fact_2_3() {
+void test_fact_2_3(RandomGenerators &rngs) {
     const int n_elems = 100;
     Permutation pi = Permutation::random(n_elems, rngs.rng_self());
     Permutation sigma = Permutation::random(n_elems, rngs.rng_self());
@@ -88,7 +85,7 @@ void test_fact_2_3() {
     assert(left_two == right_two);
 }
 
-void test_observation_2_4() {
+void test_observation_2_4(RandomGenerators &rngs) {
     const int n_elems = 100;
     Permutation pi = Permutation::random(n_elems, rngs.rng_self());
     Permutation sigma = Permutation::random(n_elems, rngs.rng_self());
@@ -103,22 +100,25 @@ void test_observation_2_4() {
 }
 
 int main() {
+    RandomGenerators rngs;
+    rngs.dealer_create_rngs();
+
     test_plausibility();
     std::cout << "Passed plausibility." << std::endl;
 
-    test_associativity();
+    test_associativity(rngs);
     std::cout << "Passed associativity." << std::endl;
 
-    test_inverse();
+    test_inverse(rngs);
     std::cout << "Passed inverse." << std::endl;
 
-    test_pi_1_p();
+    test_pi_1_p(rngs);
     std::cout << "Passed pi_1_p." << std::endl;
 
-    test_fact_2_3();
+    test_fact_2_3(rngs);
     std::cout << "Passed fact_2_3." << std::endl;
 
-    test_observation_2_4();
+    test_observation_2_4(rngs);
     std::cout << "Passed observation_2_4." << std::endl;
     return 0;
 }

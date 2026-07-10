@@ -178,4 +178,6 @@ void Storage::reset() {
     for (size_t i = 0; i < preprocessed.size(); ++i) {
         preprocessed[i] = false;
     }
+
+    random_generators.reset();
 }

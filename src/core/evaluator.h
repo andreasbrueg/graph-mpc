@@ -8,7 +8,7 @@
 class Evaluator {
    public:
     Evaluator(ProtocolConfig &conf, Storage *data, std::shared_ptr<io::NetIOMP> network, Graph &g)
-        : data(data), initialized(false), id(conf.id), size(conf.size), nodes(conf.nodes), rngs(&conf.rngs), network(network) {
+        : data(data), initialized(false), id(conf.id), size(conf.size), nodes(conf.nodes), rngs(&data->random_generators), network(network) {
         if (id != D) {
             size_t idx = 0;
 

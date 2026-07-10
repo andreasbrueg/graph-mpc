@@ -14,7 +14,7 @@ class TestPiR : public Test {
         return circ;
     }
 
-    Graph create_graph() override {
+    Graph create_graph(RandomGenerators &rngs) override {
         /*
          Graph instance:
          v1 - v2
@@ -76,10 +76,10 @@ class TestPiR : public Test {
 
         for (size_t i = 0; i < conf.nodes; ++i) {
             if (id == P1) data_parallel[i].resize(conf.size);
-            data_parallel[i] = share::random_share_secret_vec_2P(id, conf.rngs, data_parallel[i]);
+            data_parallel[i] = share::random_share_secret_vec_2P(id, rngs, data_parallel[i]);
         }
 
-        Graph g_shared = g.secret_share_parties(conf.id, conf.rngs, network, conf.bits, P0);
+        Graph g_shared = g.secret_share_parties(conf.id, rngs, network, conf.bits, P0);
         g_shared.init_mp(conf.id);
         g_shared.data_parallel = data_parallel;
 
@@ -91,11 +91,15 @@ class TestPiR : public Test {
             size_t expected_pre = 4 * (16 * conf.size * conf.bits + 6 * conf.nodes * conf.nodes + 8 * conf.size * conf.nodes * conf.depth +
                                        2 * conf.size * conf.nodes + 25 * conf.size) +
                                   2 * sizeof(size_t);  // one element per party always sent to synchronize vector sizes
+            expected_pre += 2 * (sizeof(size_t) + 3 * 2 * sizeof(uint64_t)); // initial PRF seed distribution (to 2 parties, #seeds and 3 seeds, each consisting of 2 uint64_t)
             size_t expected_eval = 0;
             assert(bytes_sent_pre == expected_pre);
             assert(bytes_sent_eval == expected_eval);
         } else {
             size_t expected_pre = 0;
+            if (conf.id == P0) {
+                expected_pre += 2 * sizeof(uint64_t); // initial PRF seed distribution, 1 seed to P1
+            }
             size_t expected_eval = 4 * (12 * conf.size * conf.bits + 12 * conf.nodes * conf.nodes + 4 * conf.size * conf.nodes * conf.depth +
                                         conf.size * conf.nodes + 16 * conf.size);
             assert(bytes_sent_pre == expected_pre);
@@ -131,11 +135,10 @@ int main(int argc, char **argv) {
         const size_t nodes = 5;
         const size_t depth = 2;
         const size_t bits = std::ceil(std::log2(nodes + 2));
-        auto rngs = setup::setupRNGs(opts);
         bool ssd = true;
 
-        ProtocolConfig conf = {id, size, nodes, depth, bits, rngs, ssd};
         auto network = setup::setupNetwork(opts);
+        ProtocolConfig conf = {id, size, nodes, depth, bits, ssd};
 
         auto test = TestPiR(conf, network);
         test.run();

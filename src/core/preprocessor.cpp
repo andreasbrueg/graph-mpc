@@ -1,7 +1,30 @@
 #include "preprocessor.h"
 
 void Preprocessor::run(Circuit *circ) {
+    std::vector<uint64_t> seeds_hi_P0, seeds_lo_P0, seeds_hi_P1, seeds_lo_P1;
     if (id != D) {
+        // First, receive shared seeds from dealer
+        size_t seeds_to_receive;
+        std::vector<uint64_t> seeds_hi, seeds_lo;
+        network->recv(D, &seeds_to_receive, sizeof(size_t));
+        seeds_hi.resize(seeds_to_receive);
+        seeds_lo.resize(seeds_to_receive);
+        network->recv(D, seeds_hi.data(), seeds_to_receive * sizeof(uint64_t));
+        network->recv(D, seeds_lo.data(), seeds_to_receive * sizeof(uint64_t));
+        data->random_generators.party_create_rngs(seeds_hi, seeds_lo);
+
+        // Also, establish own seed
+        if (id == P0) {
+            auto [seed_hi, seed_lo] = data->random_generators.p0_create_rng_01();
+            network->send(P1, &seed_hi, sizeof(uint64_t));
+            network->send(P1, &seed_lo, sizeof(uint64_t));
+        } else {
+            uint64_t seed_hi, seed_lo;
+            network->recv(P0, &seed_hi, sizeof(uint64_t));
+            network->recv(P0, &seed_lo, sizeof(uint64_t));
+            data->random_generators.p1_create_rng01(seed_hi, seed_lo);
+        }
+
         size_t n_recv;
         network->recv(D, &n_recv, sizeof(size_t));
         if (ssd) {
@@ -9,11 +32,27 @@ void Preprocessor::run(Circuit *circ) {
         } else {
             network->recv_vec(D, data->preproc[id], n_recv);
         }
+    } else {
+        // Set up seeds
+        std::tie(seeds_hi_P0, seeds_lo_P0, seeds_hi_P1, seeds_lo_P1) = data->random_generators.dealer_create_rngs();
     }
 
     preprocess(circ);
 
     if (id == D) {
+        // Share seeds with the corresponding parties
+        size_t seeds_per_party = seeds_hi_P0.size();
+        assert(seeds_hi_P0.size() == seeds_lo_P0.size());
+        assert(seeds_hi_P1.size() == seeds_lo_P1.size());
+        assert(seeds_hi_P0.size() == seeds_hi_P1.size());
+        network->send(P0, &seeds_per_party, sizeof(size_t));
+        network->send(P0, seeds_hi_P0.data(), seeds_hi_P0.size() * sizeof(uint64_t));
+        network->send(P0, seeds_lo_P0.data(), seeds_lo_P0.size() * sizeof(uint64_t));
+        assert(seeds_hi_P1.size() == seeds_lo_P1.size());
+        network->send(P1, &seeds_per_party, sizeof(size_t));
+        network->send(P1, seeds_hi_P1.data(), seeds_hi_P1.size() * sizeof(uint64_t));
+        network->send(P1, seeds_lo_P1.data(), seeds_lo_P1.size() * sizeof(uint64_t));
+
         for (auto &party : {P0, P1}) {
             if (ssd) {
                 auto &pre_disk = data->preproc_disk[party];
@@ -60,10 +99,10 @@ std::vector<Ring> Preprocessor::random_share_secret_vec_3P(std::vector<Ring> &se
         std::vector<Ring> share_1(n);
 
         if (recv == P1) {
-            for (size_t i = 0; i < share_0.size(); ++i) rngs->rng_D0_prep().random_data(&share_0[i], sizeof(Ring));
+            for (size_t i = 0; i < share_0.size(); ++i) rngs->rng_with_P0_prep().random_data(&share_0[i], sizeof(Ring));
         }
         if (recv == P0) {
-            for (size_t i = 0; i < share_0.size(); ++i) rngs->rng_D1_prep().random_data(&share_0[i], sizeof(Ring));
+            for (size_t i = 0; i < share_0.size(); ++i) rngs->rng_with_P1_prep().random_data(&share_0[i], sizeof(Ring));
         }
 
         if (binary) {
@@ -79,12 +118,8 @@ std::vector<Ring> Preprocessor::random_share_secret_vec_3P(std::vector<Ring> &se
         return share;
     } else {
         std::vector<Ring> share(secret.size());
-        if (id == P0) {
-            for (size_t i = 0; i < share.size(); ++i) rngs->rng_D0_prep().random_data(&share[i], sizeof(Ring));
-        }
-        if (id == P1) {
-            for (size_t i = 0; i < share.size(); ++i) rngs->rng_D1_prep().random_data(&share[i], sizeof(Ring));
-        }
+        assert(id == P0 || id == P1);
+        for (size_t i = 0; i < share.size(); ++i) rngs->rng_with_D_prep().random_data(&share[i], sizeof(Ring));
         return share;
     }
 }
@@ -100,9 +135,9 @@ void Preprocessor::preprocess(Circuit *circ) {
                             std::vector<Ring> R_0(size);
                             std::vector<Ring> R_1(size);
 
-                            for (size_t i = 0; i < size; ++i) rngs->rng_D0_send().random_data(&R_0[i], sizeof(Ring));
+                            for (size_t i = 0; i < size; ++i) rngs->rng_with_P0_send().random_data(&R_0[i], sizeof(Ring));
 
-                            for (size_t i = 0; i < size; ++i) rngs->rng_D1_send().random_data(&R_1[i], sizeof(Ring));
+                            for (size_t i = 0; i < size; ++i) rngs->rng_with_P1_send().random_data(&R_1[i], sizeof(Ring));
 
                             if (data->pi_0[f->shuffle_idx].size() == 0) {
                                 Permutation pi_0;
@@ -112,16 +147,16 @@ void Preprocessor::preprocess(Circuit *circ) {
 
                                 /* Sampling 2: pi_0_p, pi_0, pi_1*/
                                 if (recv == P1) {
-                                    pi_0_p = Permutation::random(size, rngs->rng_D0_send());
-                                    pi_0 = Permutation::random(size, rngs->rng_D0_recv());
-                                    pi_1 = Permutation::random(size, rngs->rng_D1_send());
+                                    pi_0_p = Permutation::random(size, rngs->rng_with_P0_send());
+                                    pi_0 = Permutation::random(size, rngs->rng_with_P0_recv());
+                                    pi_1 = Permutation::random(size, rngs->rng_with_P1_send());
 
                                     Permutation pi_0_p_inv = pi_0_p.inverse();
                                     pi_1_p = (pi_0 * pi_1 * pi_0_p_inv);
                                 } else {
-                                    pi_1 = Permutation::random(size, rngs->rng_D1_send());
-                                    pi_1_p = Permutation::random(size, rngs->rng_D1_recv());
-                                    pi_0 = Permutation::random(size, rngs->rng_D0_recv());
+                                    pi_1 = Permutation::random(size, rngs->rng_with_P1_send());
+                                    pi_1_p = Permutation::random(size, rngs->rng_with_P1_recv());
+                                    pi_0 = Permutation::random(size, rngs->rng_with_P0_recv());
 
                                     Permutation pi_1_p_inv = pi_1_p.inverse();
                                     pi_0_p = (pi_1_p_inv * pi_0 * pi_1);
@@ -189,9 +224,9 @@ void Preprocessor::preprocess(Circuit *circ) {
                             std::vector<Ring> R_1(size);
 
                             /* Sampling 1: R_0 / R_1 */
-                            for (size_t i = 0; i < size; ++i) rngs->rng_D0_send().random_data(&R_0[i], sizeof(Ring));
+                            for (size_t i = 0; i < size; ++i) rngs->rng_with_P0_send().random_data(&R_0[i], sizeof(Ring));
 
-                            for (size_t i = 0; i < size; ++i) rngs->rng_D1_send().random_data(&R_1[i], sizeof(Ring));
+                            for (size_t i = 0; i < size; ++i) rngs->rng_with_P1_send().random_data(&R_1[i], sizeof(Ring));
 
                             if (data->pi_0[f->shuffle_idx].size() == 0) {
                                 /* Computing / Sampling merged permutation */
@@ -203,8 +238,8 @@ void Preprocessor::preprocess(Circuit *circ) {
 
                                 Permutation merged = pi(omega.perm_vec);
 
-                                Permutation sigma_0 = Permutation::random(size, rngs->rng_D0_recv());
-                                Permutation sigma_1_p = Permutation::random(size, rngs->rng_D1_recv());
+                                Permutation sigma_0 = Permutation::random(size, rngs->rng_with_P0_recv());
+                                Permutation sigma_1_p = Permutation::random(size, rngs->rng_with_P1_recv());
 
                                 Permutation sigma_0_p = sigma_1_p.inverse() * merged;
                                 Permutation sigma_1 = sigma_0.inverse() * merged;
@@ -268,9 +303,9 @@ void Preprocessor::preprocess(Circuit *circ) {
                         std::vector<Ring> R_0(size);
                         std::vector<Ring> R_1(size);
 
-                        for (size_t i = 0; i < size; ++i) rngs->rng_D0_send().random_data(&R_0[i], sizeof(Ring));
+                        for (size_t i = 0; i < size; ++i) rngs->rng_with_P0_send().random_data(&R_0[i], sizeof(Ring));
 
-                        for (size_t i = 0; i < size; ++i) rngs->rng_D1_send().random_data(&R_1[i], sizeof(Ring));
+                        for (size_t i = 0; i < size; ++i) rngs->rng_with_P1_send().random_data(&R_1[i], sizeof(Ring));
 
                         /* Compute B_0, B_1 */
                         Ring R;

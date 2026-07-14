@@ -7,8 +7,8 @@
 
 class Evaluator {
    public:
-    Evaluator(ProtocolConfig &conf, Storage *data, std::shared_ptr<io::NetIOMP> network, Graph &g)
-        : data(data), initialized(false), id(conf.id), size(conf.size), nodes(conf.nodes), rngs(&data->random_generators), network(network) {
+    Evaluator(Circuit *circ, ProtocolConfig &conf, Storage *data, std::shared_ptr<io::NetIOMP> network, Graph &g)
+        :  circ(circ), output(0), data(data), initialized(false), id(conf.id), size(conf.size), nodes(conf.nodes), rngs(&data->random_generators), network(network) {
         if (id != D) {
             size_t idx = 0;
 
@@ -25,19 +25,21 @@ class Evaluator {
             idx++;
             input_to_val[idx] = g.dst;
             idx++;
-            input_to_val[idx] = g.isV_inv;
+            input_to_val[idx] = g.isV;
             idx++;
             input_to_val[idx] = g.data;
             idx++;
 
-            for (size_t i = 0; i < g.data_parallel.size(); ++i) {
-                input_to_val[idx] = g.data_parallel[i];
-                idx++;
+            if (circ->columns > 1) {
+                for (size_t i = 0; i < circ->columns; ++i) {
+                    input_to_val[idx] = g.data;
+                    idx++;
+                }
             }
         }
     }
 
-    void run(Circuit *circ);
+    void run();
 
     const std::vector<Ring> result();
 
@@ -47,6 +49,8 @@ class Evaluator {
     std::vector<Ring> and_vals;
     std::vector<Ring> shuffle_vals;
     std::vector<Ring> reveal_vals;
+
+    Circuit *circ;
 
     std::unordered_map<size_t, std::vector<Ring>> input_to_val;
     std::vector<Ring> output;

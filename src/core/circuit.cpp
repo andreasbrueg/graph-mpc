@@ -1,41 +1,80 @@
 #include "circuit.h"
 
+void Circuit::use_reverse_message_passing() {
+    if (!can_enable_reverse_passing)
+        throw std::runtime_error("reverse_message_passing must be activated before building the circuit!");
+    reverse_passing = true;
+}
+
 void Circuit::build() {
+    can_enable_reverse_passing = false;
     set_inputs();
     pre_mp();
     compute_sorts();
     prepare_shuffles();
     SIMD_wire_id data_out;
-    if (in.data_parallel.size() > 0) {
-        for (size_t i = 0; i < in.data_parallel.size(); ++i) {
-            in.data_parallel[i] = message_passing(in.data_parallel[i]);
+    if (columns > 1) {
+        for (size_t i = 0; i < columns; ++i) {
+            in.data_parallel[i] = message_passing(in.data_parallel[i], i);
         }
     } else {
-        data_out = message_passing(in.data);
+        data_out = message_passing(in.data, 0);
     }
     shuffle_idx += 3;
-    auto data_post_mp = post_mp(data_out);
-    output(data_post_mp);
+    if (columns > 1) {
+        for (size_t i = 0; i < columns; ++i) {
+            in.data_parallel[i] = post_mp(in.data_parallel[i], i);
+        }
+        auto maybe_aggregation = post_mp_aggregate(in.data_parallel);
+        if (maybe_aggregation.has_value()) {
+            output(maybe_aggregation.value());
+        } else {
+            for (size_t i = 0; i < columns; ++i) {
+                output(in.data_parallel[i]);
+            }
+        }
+    } else {
+        data_out = post_mp(data_out, 0);
+        output(data_out);
+    }
     level_order();
 }
 
 void Circuit::set_inputs() {
     in.src_order_bits.resize(bits + 1);
     in.dst_order_bits.resize(bits + 1);
-    for (size_t i = 0; i < bits + 1; ++i) {
-        in.src_order_bits[i] = input();
+    for (size_t i = 1; i < bits + 1; ++i) {
+        if (reverse_passing)
+            in.dst_order_bits[i] = input();
+        else
+            in.src_order_bits[i] = input();
     }
-    for (size_t i = 0; i < bits + 1; ++i) {
-        in.dst_order_bits[i] = input();
+    for (size_t i = 1; i < bits + 1; ++i) {
+        if (reverse_passing)
+            in.src_order_bits[i] = input();
+        else
+            in.dst_order_bits[i] = input();
     }
-    in.src = input();
-    in.dst = input();
-    in.isV_inv = input();
+    if (reverse_passing) {
+        in.dst = input();
+        in.src = input();
+    } else {
+        in.src = input();
+        in.dst = input();
+    }
+    in.isV = input();
     in.data = input();
 
     for (size_t i = 0; i < in.data_parallel.size(); ++i) {
         in.data_parallel[i] = input();
     }
+
+    /* Set src_bits to { 1-isV, src_bits[0], src_bits[1], ..., src_bits[n_bits - 1] } */
+    auto isV_inv = flip(in.isV);
+    in.src_order_bits[0] = isV_inv;
+
+    /* Set dst_bits to { isV, dst_bits[0], dst_bits[1], ..., dst_bits[n_bits - 1] } */
+    in.dst_order_bits[0] = in.isV;
 }
 
 void Circuit::level_order() {
@@ -81,18 +120,27 @@ void Circuit::level_order() {
 
 void Circuit::pre_mp() {}
 
-SIMD_wire_id Circuit::pre_propagate(SIMD_wire_id &data, size_t /*i*/) { return data; }
+std::optional<SIMD_wire_id> Circuit::init_node_data(size_t /*column*/) {
+    return std::nullopt;
+}
 
-SIMD_wire_id Circuit::apply(SIMD_wire_id &/*data_old*/, SIMD_wire_id &/*data_new*/, size_t /*i*/) {
+SIMD_wire_id Circuit::pre_propagate(SIMD_wire_id &data, size_t /*i*/, size_t /*column*/) { return data; }
+
+SIMD_wire_id Circuit::apply(SIMD_wire_id &/*data_old*/, SIMD_wire_id &/*data_new*/, size_t /*i*/, size_t /*column*/) {
     throw std::runtime_error("apply() is not specified.");
 }
 
-SIMD_wire_id Circuit::post_mp(SIMD_wire_id &data) { return data; }
+SIMD_wire_id Circuit::post_mp(SIMD_wire_id &data, size_t /*column*/) { return data; }
+
+std::optional<SIMD_wire_id> Circuit::post_mp_aggregate(std::vector<SIMD_wire_id> &/*data*/) {
+    return std::nullopt;
+}
 
 void Circuit::compute_sorts() {
     ctx.src_order = sort(in.src_order_bits, bits + 1);
     ctx.dst_order = sort(in.dst_order_bits, bits + 1);
-    ctx.vtx_order = sort_iteration(ctx.src_order, in.isV_inv);
+    auto isV_inv = flip(in.isV);
+    ctx.vtx_order = sort_iteration(ctx.src_order, isV_inv);
 }
 
 void Circuit::prepare_shuffles() {
@@ -110,7 +158,7 @@ void Circuit::prepare_shuffles() {
     ctx.clear_shuffled_dst_order = reveal(dst_order_shuffled);
 }
 
-SIMD_wire_id Circuit::message_passing(SIMD_wire_id &data) {
+SIMD_wire_id Circuit::message_passing(SIMD_wire_id &data, size_t column) {
     auto data_shuffled = shuffle(data, ctx.vtx_shuffle_idx);
     auto data_vtx = permute(data_shuffled, ctx.clear_shuffled_vtx_order);
 
@@ -118,9 +166,11 @@ SIMD_wire_id Circuit::message_passing(SIMD_wire_id &data) {
     size_t src_dst_idx = shuffle_idx + 2;
     size_t dst_vtx_idx = shuffle_idx + 3;
 
+    data_vtx = init_node_data(column).value_or(data_vtx);
+
     for (size_t i = 0; i < depth; ++i) {
         auto data_old = data_vtx;
-        data_vtx = pre_propagate(data_vtx, i);
+        data_vtx = pre_propagate(data_vtx, i, column);
 
         /* Propagate-1 */
         auto data_vtx_propagate = propagate_1(data_vtx);
@@ -153,7 +203,7 @@ SIMD_wire_id Circuit::message_passing(SIMD_wire_id &data) {
         /* Gather-2 */
         data_vtx = gather_2(data_vtx);
 
-        data_vtx = apply(data_old, data_vtx, i);
+        data_vtx = apply(data_old, data_vtx, i, column);
     }
     return data_vtx;
 }
@@ -402,10 +452,10 @@ SIMD_wire_id Circuit::mul_const_SIMD(SIMD_wire_id &data, Ring val) {
     return output;
 }
 
-SIMD_wire_id Circuit::construct_data(std::vector<SIMD_wire_id> &parallel_data) {
+SIMD_wire_id Circuit::column_sums_to_nodes(std::vector<SIMD_wire_id> &parallel_data) {
     SIMD_wire_id output = n_wires;
     n_wires++;
-    gates.push_back(std::make_shared<Gate>(ConstructData, gates.size(), parallel_data[parallel_data.size() - 1], output, parallel_data));
+    gates.push_back(std::make_shared<Gate>(ColumnSumsToNodes, gates.size(), parallel_data[parallel_data.size() - 1], output, parallel_data));
     return output;
 }
 
@@ -413,4 +463,11 @@ SIMD_wire_id Circuit::clip(SIMD_wire_id &data) {
     data = equals_zero(data, nodes);
     data = bit2A(data, nodes);
     return flip(data);
+}
+
+SIMD_wire_id Circuit::set_const_vec_SIMD(std::vector<Ring> &vals) {
+    SIMD_wire_id output = n_wires;
+    n_wires++;
+    gates.push_back(std::make_shared<Gate>(SetConstVecSIMD, gates.size(), vals, output));
+    return output;
 }

@@ -17,7 +17,7 @@ Gate::Gate(GType type, size_t g_id, wire_id out_idx)
       inverse(false),
       binary(false) {}
 
-/* Used by ConstructData */
+/* Used by ColumnSumsToNodes */
 Gate::Gate(GType type, size_t g_id, wire_id in1_idx, wire_id out_idx, std::vector<size_t> &data_parallel)
     : type(type),
       g_id(g_id),
@@ -59,6 +59,24 @@ Gate::Gate(GType type, size_t g_id, wire_id in1_idx, Ring val, wire_id out_idx)
       in1_idx(in1_idx),
       in2_idx(0),
       val(val),
+      out_idx(out_idx),
+      size(0),
+      layer(0),
+      shuffle_idx(0),
+      pi_idx(0),
+      omega_idx(0),
+      mult_idx(0),
+      inverse(false),
+      binary(false) {}
+
+/* Used by SetConstVecSIMD */
+Gate::Gate(GType type, size_t g_id, std::vector<Ring> vals, wire_id out_idx)
+    : type(type),
+      g_id(g_id),
+      in1_idx(0),
+      in2_idx(0),
+      val(0),
+      vals(vals),
       out_idx(out_idx),
       size(0),
       layer(0),

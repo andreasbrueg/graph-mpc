@@ -15,7 +15,7 @@ std::vector<Ring> Evaluator::read_online(std::vector<Ring> &buffer, size_t n_ele
     }
 }
 
-void Evaluator::run(Circuit *circ) {
+void Evaluator::run() {
     if (id == D) return;
 
     if (!initialized) {
@@ -346,10 +346,11 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
                 break;
             }
             case Output: {
-                output.resize(size);
-#pragma omp parallel for if (size > 10000)
-                for (size_t i = 0; i < size; ++i) {
-                    output[i] = wires[f->in1_idx][i];
+                size_t prior_output_size = output.size();
+                output.resize(prior_output_size + nodes);
+#pragma omp parallel for if (nodes > 10000)
+                for (size_t i = 0; i < nodes; ++i) {
+                    output[prior_output_size + i] = wires[f->in1_idx][i];
                 }
                 update_wire(f->in1_idx);
                 break;
@@ -659,6 +660,15 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
                 break;
             }
 
+            case SetConstVecSIMD: {
+                wires[f->out_idx].resize(size);
+                if (f->vals.size() < size) {
+                    f->vals.resize(size, 0);
+                }
+                wires[f->out_idx] = share::random_share_secret_vec_2P(id, *rngs, f->vals, P0);
+                break;
+            }
+
             case Flip: {
                 wires[f->out_idx].resize(size);
 #pragma omp parallel for if (size > 10000)
@@ -739,7 +749,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
                 break;
             }
 
-            case ConstructData: {
+            case ColumnSumsToNodes: {
                 wires[f->out_idx].resize(size);
                 for (size_t i = 0; i < nodes; ++i) {
                     auto sum = wires[f->data_parallel[i]][0];

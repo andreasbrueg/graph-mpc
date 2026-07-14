@@ -72,7 +72,7 @@ class Benchmark {
             StatsPoint end_pre(*network);
 
             g = graph_generator(conf, data.random_generators, network);
-            eval = new Evaluator(conf, &data, network, g);
+            eval = new Evaluator(circ, conf, &data, network, g);
 
             /* Network Sync */
             network->sync();
@@ -88,7 +88,7 @@ class Benchmark {
 
             /* Evaluation */
             StatsPoint start_online(*network);
-            eval->run(circ);
+            eval->run();
             StatsPoint end_online(*network);
 
             auto rbench = end_online - start_online;

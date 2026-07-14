@@ -60,11 +60,8 @@ class Graph {
     std::vector<std::vector<Ring>> src_bits;
     std::vector<std::vector<Ring>> dst_bits;
 
-    std::vector<Ring> isV_inv;
     size_t size = 0;
     size_t nodes = 0;
-
-    std::vector<std::vector<Ring>> data_parallel;
 
     void add_list_entry(Ring _src, Ring _dst, Ring _isV, Ring _data) {
         src.push_back(_src);
@@ -248,24 +245,6 @@ class Graph {
         return {src_shared, dst_shared, isV_shared, data_shared, src_bits_shared, dst_bits_shared, _n_vertices};
     }
 
-    Graph share_subgraphs(Party id, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network, size_t n_bits) {
-        if (id == P0) {
-            auto g1 = secret_share_parties(id, rngs, network, n_bits, id);
-            auto g2 = secret_share_parties(id, rngs, network, n_bits, P1);
-
-            auto concat = g1 + g2;
-            return concat;
-        }
-        if (id == P1) {
-            auto g1 = secret_share_parties(id, rngs, network, n_bits, P0);
-            auto g2 = secret_share_parties(id, rngs, network, n_bits, id);
-            auto concat = g1 + g2;
-            return concat;
-        }
-
-        return {};
-    }
-
     Graph reveal(Party id, std::shared_ptr<io::NetIOMP> network) {
         if (id == D) return {};
 
@@ -352,21 +331,6 @@ class Graph {
         return entries;
     }
 
-    void init_mp(Party id) {
-        /* Generate vector containing { 1-isV[0], 1-isV[1], ... 1-isV[n-1]} */
-        isV_inv.resize(isV.size());
-        for (size_t i = 0; i < isV_inv.size(); ++i) {
-            isV_inv[i] = -isV[i];
-            if (id == P0) isV_inv[i] += 1;
-        }
-
-        /* Generate vector containing { 1-isV, src_bits[0], src_bits[1], ..., src_bits[n_bits - 1] } */
-        src_bits.insert(src_bits.begin(), isV_inv);
-
-        /* Generate vector containing { isV, dst_bits[0], dst_bits[1], ..., dst_bits[n_bits - 1] } */
-        dst_bits.insert(dst_bits.begin(), isV);
-    }
-
     static Graph benchmark_graph(ProtocolConfig &conf, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network) {
         Graph g;
         if (conf.id == P0) {
@@ -380,31 +344,6 @@ class Graph {
         auto g_P0 = g.secret_share_parties(conf.id, rngs, network, conf.bits, P0);
         auto g_P1 = g.secret_share_parties(conf.id, rngs, network, conf.bits, P1);
         auto g_shared = g_P0 + g_P1;
-        g_shared.init_mp(conf.id);
-        return g_shared;
-    }
-
-    static Graph benchmark_graph_PiR(ProtocolConfig &conf, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network) {
-        Graph g;
-        if (conf.id == P0) {
-            for (size_t i = 0; i < conf.nodes / 2; i++) g.add_list_entry(i + 1, i + 1, 1);
-            for (size_t i = 0; i < (conf.size - conf.nodes) / 2; i++) g.add_list_entry(1, 2, 0);
-        }
-        if (conf.id == P1) {
-            for (size_t i = conf.nodes / 2; i < conf.nodes; i++) g.add_list_entry(i + 1, i + 1, 1);
-            for (size_t i = (conf.size - conf.nodes) / 2; i < conf.size - conf.nodes; i++) g.add_list_entry(1, 2, 0);
-        }
-
-        auto g_shared = g.share_subgraphs(conf.id, rngs, network, conf.bits);
-        g_shared.init_mp(conf.id);
-
-        for (size_t i = 0; i < conf.nodes; ++i) {
-            std::vector<Ring> data(conf.size);
-            data[i] = 1;
-            auto data_shared = share::random_share_secret_vec_2P(conf.id, rngs, data);
-            g_shared.data_parallel.push_back(data_shared);
-        }
-
         return g_shared;
     }
 };

@@ -8,6 +8,9 @@ class PiKCircuit : public Circuit {
     std::vector<Ring> weights;
 
     PiKCircuit(ProtocolConfig &conf, std::vector<Ring> &weights) : Circuit(conf), weights(weights) {
+        if (weights.size() != conf.depth)
+            throw std::runtime_error("Number of provided weights must match depth!");
+        use_reverse_message_passing();
         build();
     }
 
@@ -15,7 +18,8 @@ class PiKCircuit : public Circuit {
         ctx.src_order = sort(in.src_order_bits, bits + 2);  // Sorting src_order_bits + appended deduplication_bits
         ctx.dst_order = sort_iteration(
             ctx.dst_order, in.dst_order_bits[in.dst_order_bits.size() - 1]);  // Only one extra sort iteration for appended deduplication bits needed
-        ctx.vtx_order = sort_iteration(ctx.src_order, in.isV_inv);            // One iteration from src_order to vtx_order
+        auto isV_inv = flip(in.isV);
+        ctx.vtx_order = sort_iteration(ctx.src_order, isV_inv);            // One iteration from src_order to vtx_order
     }
 
     void pre_mp() override { /* Deduplication */
@@ -52,11 +56,16 @@ class PiKCircuit : public Circuit {
         shuffle_idx++;
     }
 
-    SIMD_wire_id pre_propagate(SIMD_wire_id &data, size_t i) override {
+    std::optional<SIMD_wire_id> init_node_data(size_t /*column*/) override {
+        std::vector<Ring> all_zero(nodes, 0);
+        return set_const_vec_SIMD(all_zero);
+    }
+
+    SIMD_wire_id pre_propagate(SIMD_wire_id &data, size_t i, size_t /*column*/) override {
         return add_const_SIMD(data, weights[weights.size() - 1 - i]);
     }
 
-    SIMD_wire_id apply(SIMD_wire_id &/*data_old*/, SIMD_wire_id &data_new, size_t /*i*/) override {
+    SIMD_wire_id apply(SIMD_wire_id &/*data_old*/, SIMD_wire_id &data_new, size_t /*i*/, size_t /*column*/) override {
         return data_new;
     }
 };

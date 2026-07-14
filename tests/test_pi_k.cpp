@@ -18,21 +18,22 @@ class TestPiK : public Test {
     Graph create_graph(RandomGenerators &rngs) override {
         /*
             Graph instance:
-            v1 - v2
-            || / ||
-            v3   v4
+
+            v1 --> v2
+            |^    ^^^
+            ||  /  ||
+            vv v   vv
+            v3     v4
 
             Which in list form is (kind of random order here for testing):
             (1,1,1)
             (2,2,1)
             (1,2,0)
-            (2,1,0)
             (1,3,0)
             (1,3,0)
             (3,1,0)
             (4,4,1)
             (3,3,1)
-            (3,1,0)
             (3,2,0)
             (2,3,0)
             (2,4,0)
@@ -45,13 +46,11 @@ class TestPiK : public Test {
         g.add_list_entry(1, 1, 1);
         g.add_list_entry(2, 2, 1);
         g.add_list_entry(1, 2, 0);
-        g.add_list_entry(2, 1, 0);
         g.add_list_entry(1, 3, 0);
         g.add_list_entry(1, 3, 0);
         g.add_list_entry(3, 1, 0);
         g.add_list_entry(4, 4, 1);
         g.add_list_entry(3, 3, 1);
-        g.add_list_entry(3, 1, 0);
         g.add_list_entry(3, 2, 0);
         g.add_list_entry(2, 3, 0);
         g.add_list_entry(2, 4, 0);
@@ -60,7 +59,6 @@ class TestPiK : public Test {
         g.add_list_entry(4, 2, 0);
 
         Graph g_shared = g.secret_share_parties(conf.id, rngs, network, conf.bits, P0);
-        g_shared.init_mp(conf.id);
         return g_shared;
     }
 
@@ -85,10 +83,10 @@ class TestPiK : public Test {
 
             print_vec(result);
 
-            assert(result[0] == 20510023);  // 2 of length 1, 5 of length 2, 10 of length 3, 23 of length 4
-            assert(result[1] == 30513025);  // 3 of length 1, 5 of length 2, 13 of length 3, 25 of length 4
-            assert(result[2] == 20510023);  // 2 of length 1, 5 of length 2, 10 of length 3, 23 of length 4
-            assert(result[3] == 10305013);  // 1 of length 1, 3 of length 2,  5 of length 3, 13 of length 4
+            assert(result[0] == 20407013);  // 2 of length 1, 4 of length 2, 7 of length 3, 13 of length 4
+            assert(result[1] == 20306010);  // 2 of length 1, 3 of length 2, 6 of length 3, 10 of length 4
+            assert(result[2] == 20407013);  // 2 of length 1, 4 of length 2, 7 of length 3, 13 of length 4
+            assert(result[3] == 10203006);  // 1 of length 1, 2 of length 2, 3 of length 3,  6 of length 4
 
             std::cout << "test_pi_k passed." << std::endl;
         }
@@ -107,7 +105,7 @@ int main(int argc, char **argv) {
 
     try {
         Party id = (Party)opts["pid"].as<int>();
-        const size_t size = 16;
+        const size_t size = 14;
         const size_t nodes = 4;
         const size_t depth = 4;
         const size_t bits = std::ceil(std::log2(nodes + 2));

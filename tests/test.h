@@ -41,14 +41,14 @@ class Test {
 
         /* Create input graph and evaluator */
         g = create_graph(io.random_generators);
-        eval = new Evaluator(conf, &io, network, g);
+        eval = new Evaluator(circ, conf, &io, network, g);
 
         /* Network Sync */
         network->sync();
 
         /* Evaluation */
         StatsPoint start_online(*network);
-        eval->run(circ);
+        eval->run();
         StatsPoint end_online(*network);
 
         auto rbench = end_online - start_online;

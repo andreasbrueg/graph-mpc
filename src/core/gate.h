@@ -18,6 +18,7 @@ enum GType {
     AddConstSIMD,
     MulConst,
     MulConstSIMD,
+    SetConstVecSIMD,
     Add,
     AddSIMD,
     Sub,
@@ -37,7 +38,7 @@ enum GType {
     Propagate2,
     Flip,
     Insert,
-    ConstructData
+    ColumnSumsToNodes
 };
 
 class Gate {
@@ -45,7 +46,7 @@ class Gate {
     /* Used by Input */
     Gate(GType type, size_t g_id, wire_id out_idx);
 
-    /* Used by ConstructData */
+    /* Used by ColumnSumsToNodes */
     Gate(GType type, size_t g_id, wire_id in1_idx, wire_id out_idx, std::vector<wire_id> &data_parallel);
 
     /* Used by Output, Propagate-1, Gather-1, Gather-2, Reveal, Sub */
@@ -66,6 +67,9 @@ class Gate {
     /* Used by Mul */
     Gate(GType type, size_t g_id, wire_id in1_idx, wire_id in2_idx, wire_id out_idx, size_t size, size_t mult_idx, bool binary);
 
+    /* Used by SetConstVecSIMD */
+    Gate(GType type, size_t g_id, std::vector<Ring> vals, wire_id out_idx);
+
     bool interactive();
 
     GType type;
@@ -73,6 +77,7 @@ class Gate {
     wire_id in1_idx;
     wire_id in2_idx;
     Ring val;
+    std::vector<Ring> vals;
     wire_id out_idx;
 
     size_t size;

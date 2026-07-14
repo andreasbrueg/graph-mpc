@@ -25,7 +25,7 @@ struct Inputs {
     std::vector<size_t> dst_order_bits;
     size_t src;
     size_t dst;
-    size_t isV_inv;
+    size_t isV;
     size_t data;
     std::vector<size_t> data_parallel;
 };

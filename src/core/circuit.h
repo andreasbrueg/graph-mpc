@@ -1,34 +1,42 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 
 #include "../utils/structs.h"
 #include "gate.h"
 
 class Circuit {
    public:
-    Circuit(ProtocolConfig &conf)
+    Circuit(ProtocolConfig &conf, size_t columns = 1)
         : n_shuffles(0),
           n_mults(0),
           n_wires(0),
           shuffle_idx(0),
+          columns(columns),
           size(conf.size),
           nodes(conf.nodes),
           bits(conf.bits),
-          depth(conf.depth) {}
+          depth(conf.depth) {
+            if (columns > 1) in.data_parallel.resize(columns);
+          }
 
     std::vector<std::vector<std::shared_ptr<Gate>>> get() { return circ; }
 
     virtual void pre_mp();
-    virtual SIMD_wire_id pre_propagate(SIMD_wire_id &data, size_t i);
-    virtual SIMD_wire_id apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t i);
-    virtual SIMD_wire_id post_mp(SIMD_wire_id &data);
+    virtual std::optional<SIMD_wire_id> init_node_data(size_t column);
+    virtual SIMD_wire_id pre_propagate(SIMD_wire_id &data, size_t i, size_t column);
+    virtual SIMD_wire_id apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t i, size_t column);
+    virtual SIMD_wire_id post_mp(SIMD_wire_id &data, size_t column);
+    virtual std::optional<SIMD_wire_id> post_mp_aggregate(std::vector<SIMD_wire_id> &data);
     virtual void compute_sorts();  // Can be overwritten
 
     size_t n_shuffles;
     size_t n_mults;
     size_t n_wires;
     size_t shuffle_idx;
+
+    size_t columns;
 
    protected:
     std::vector<std::vector<std::shared_ptr<Gate>>> circ;
@@ -42,6 +50,11 @@ class Circuit {
     size_t bits;
     size_t depth;
 
+    bool reverse_passing = false;
+    bool can_enable_reverse_passing = true;
+
+    void use_reverse_message_passing();
+
     void build();
 
     void level_order();
@@ -50,7 +63,7 @@ class Circuit {
 
     void prepare_shuffles();
 
-    SIMD_wire_id message_passing(SIMD_wire_id &data);
+    SIMD_wire_id message_passing(SIMD_wire_id &data, size_t column);
 
     SIMD_wire_id sort(std::vector<SIMD_wire_id> &bit_keys, SIMD_wire_id bits);
 
@@ -118,7 +131,9 @@ class Circuit {
 
     SIMD_wire_id mul_const_SIMD(SIMD_wire_id &data, Ring val);
 
-    SIMD_wire_id construct_data(std::vector<SIMD_wire_id> &parallel_data);
+    SIMD_wire_id column_sums_to_nodes(std::vector<SIMD_wire_id> &parallel_data);
 
     SIMD_wire_id clip(SIMD_wire_id &data);
+
+    SIMD_wire_id set_const_vec_SIMD(std::vector<Ring> &vals);
 };

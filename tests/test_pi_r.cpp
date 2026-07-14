@@ -42,7 +42,6 @@ class TestPiR : public Test {
          */
 
         Graph g;
-        std::vector<std::vector<Ring>> data_parallel(conf.nodes);
 
         if (id == P0) {
             g.add_list_entry(1, 1, 1);
@@ -62,26 +61,9 @@ class TestPiR : public Test {
             g.add_list_entry(2, 4, 0);
             g.add_list_entry(5, 4, 0);
             g.add_list_entry(4, 2, 0);
-
-            size_t idx = 0;
-            for (size_t i = 0; i < g.size; ++i) {
-                if (g.isV[i]) {
-                    std::vector<Ring> data(g.size);
-                    data[i] = 1;
-                    data_parallel[idx] = data;
-                    idx++;
-                }
-            }
-        }
-
-        for (size_t i = 0; i < conf.nodes; ++i) {
-            if (id == P1) data_parallel[i].resize(conf.size);
-            data_parallel[i] = share::random_share_secret_vec_2P(id, rngs, data_parallel[i]);
         }
 
         Graph g_shared = g.secret_share_parties(conf.id, rngs, network, conf.bits, P0);
-        g_shared.init_mp(conf.id);
-        g_shared.data_parallel = data_parallel;
 
         return g_shared;
     }

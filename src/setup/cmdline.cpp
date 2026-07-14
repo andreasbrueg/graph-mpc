@@ -199,7 +199,7 @@ void setup::setupServer(const bpo::variables_map &opts, Graph &g, std::shared_pt
             InputServer server(network, clients);
             std::cout << "Awaiting " << clients << " packets" << std::endl << std::endl;
             g = server.recv_graph();
-            g.init_mp((Party)id);
+            // g.init_mp((Party)id); // TODO remove
             std::cout << "Finished graph construction." << std::endl;
         } else {
             size_t nodes, size;

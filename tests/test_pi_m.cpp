@@ -18,21 +18,22 @@ class TestPiM : public Test {
     Graph create_graph(RandomGenerators &rngs) override {
         /*
             Graph instance:
-            v1 - v2
-            || / ||
-            v3   v4
+
+            v1 --> v2
+            |^    ^^^
+            ||  /  ||
+            vv v   vv
+            v3     v4
 
             Which in list form is (kind of random order here for testing):
             (1,1,1)
             (2,2,1)
             (1,2,0)
-            (2,1,0)
             (1,3,0)
             (1,3,0)
             (3,1,0)
             (4,4,1)
             (3,3,1)
-            (3,1,0)
             (3,2,0)
             (2,3,0)
             (2,4,0)
@@ -45,13 +46,11 @@ class TestPiM : public Test {
         g.add_list_entry(1, 1, 1);
         g.add_list_entry(2, 2, 1);
         g.add_list_entry(1, 2, 0);
-        g.add_list_entry(2, 1, 0);
         g.add_list_entry(1, 3, 0);
         g.add_list_entry(1, 3, 0);
         g.add_list_entry(3, 1, 0);
         g.add_list_entry(4, 4, 1);
         g.add_list_entry(3, 3, 1);
-        g.add_list_entry(3, 1, 0);
         g.add_list_entry(3, 2, 0);
         g.add_list_entry(2, 3, 0);
         g.add_list_entry(2, 4, 0);
@@ -60,7 +59,6 @@ class TestPiM : public Test {
         g.add_list_entry(4, 2, 0);
 
         Graph g_shared = g.secret_share_parties(conf.id, rngs, network, conf.bits, P0);
-        g_shared.init_mp(conf.id);
         return g_shared;
     }
 
@@ -85,10 +83,10 @@ class TestPiM : public Test {
             result = share::reveal_vec(id, network, result);
             print_vec(result);
 
-            assert(result[0] == 31030096);  // 3 of length 1, 10 of length 2, 30 of length 3,  96 of length 4
-            assert(result[1] == 41036100);  // 4 of length 1, 10 of length 2, 36 of length 3, 100 of length 4
-            assert(result[2] == 31030096);  // 3 of length 1, 10 of length 2, 30 of length 3,  96 of length 4
-            assert(result[3] == 20820072);  // 2 of length 1,  8 of length 2, 20 of length 3,  72 of length 4
+            assert(result[0] == 30718044);  // 3 of length 1, 7 of length 2, 18 of length 3, 44 of length 4
+            assert(result[1] == 30618037);  // 3 of length 1, 6 of length 2, 18 of length 3, 37 of length 4
+            assert(result[2] == 20613036);  // 2 of length 1, 6 of length 2, 13 of length 3, 36 of length 4
+            assert(result[3] == 20612036);  // 2 of length 1, 6 of length 2, 12 of length 3, 36 of length 4
 
             std::cout << "test_pi_m passed." << std::endl;
         }
@@ -107,7 +105,7 @@ int main(int argc, char **argv) {
 
     try {
         Party id = (Party)opts["pid"].as<int>();
-        const size_t size = 16;
+        const size_t size = 14;
         const size_t nodes = 4;
         const size_t depth = 4;
         const size_t bits = std::ceil(std::log2(nodes + 2)); // TODO should likely be changed for weirder node ids

@@ -52,8 +52,11 @@ class Circuit {
 
     bool reverse_passing = false;
     bool can_enable_reverse_passing = true;
+    bool deduplication = false;
+    bool can_enable_deduplication = true;
 
     void use_reverse_message_passing();
+    void use_edge_deduplication();
 
     void build();
 

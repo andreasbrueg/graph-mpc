@@ -11,7 +11,6 @@ class PiMCircuit : public Circuit {
         if (weights.size() != conf.depth)
             throw std::runtime_error("Number of provided weights must match depth!");
         use_reverse_message_passing();
-        build();
     }
 
     std::optional<SIMD_wire_id> init_node_data(size_t /*column*/) override {

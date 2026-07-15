@@ -11,6 +11,7 @@ class TestBFS : public Test {
 
     Circuit *create_circuit() override {
         auto circ = new BFSCircuit(conf);
+        circ->build();
         return circ;
     }
 

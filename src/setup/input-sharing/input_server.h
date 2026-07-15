@@ -96,7 +96,7 @@ class InputServer {
         std::cout << "Received nodes: " << size_total << std::endl;
     }
 
-    void send_result(std::vector<Ring> &data, int client_id) { network->send(client_id, &data, sizeof(Ring) * data.size()); }
+    void send_result(std::vector<Ring> &data, int client_id) { network->send(client_id, data.data(), sizeof(Ring) * data.size()); }
 
    private:
     std::vector<Packet> recv_packets() {

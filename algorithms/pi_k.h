@@ -12,7 +12,6 @@ class PiKCircuit : public Circuit {
             throw std::runtime_error("Number of provided weights must match depth!");
         use_reverse_message_passing();
         use_edge_deduplication();
-        build();
     }
 
     std::optional<SIMD_wire_id> init_node_data(size_t /*column*/) override {

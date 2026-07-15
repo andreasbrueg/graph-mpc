@@ -87,7 +87,7 @@ Gate::Gate(GType type, size_t g_id, std::vector<Ring> vals, wire_id out_idx)
       inverse(false),
       binary(false) {}
 
-/* Used by Propagate-2, Shuffle, Unshuffle, Bit2A, Compaction, Add, Sub */
+/* Used by Propagate-2, Shuffle, Unshuffle, RemoveEdgeData, Compaction, Add, Sub */
 Gate::Gate(GType type, size_t g_id, size_t param1, size_t param2, size_t param3)
     : type(type), g_id(g_id), val(0), size(0), layer(0), pi_idx(0), omega_idx(0), inverse(false), binary(false) {
     if (type == Propagate2 || type == Permute || type == ReversePermute || type == AddSIMD || type == SubSIMD || type == Add || type == Sub) {
@@ -108,6 +108,13 @@ Gate::Gate(GType type, size_t g_id, size_t param1, size_t param2, size_t param3)
         out_idx = param2;
         shuffle_idx = param3;
         mult_idx = param3;
+    } else if (type == RemoveEdgeData) {
+        in1_idx = param1;
+        in2_idx = 0;
+        out_idx = param2;
+        size = param3;
+        shuffle_idx = 0;
+        mult_idx = 0;
     }
 }
 

@@ -75,7 +75,7 @@ bpo::options_description setup::programOptionsTest() {
         "BLOCK_SIZE", bpo::value<size_t>()->default_value(100000), "BLOCK_SIZE for sending messages over the network.")( // TODO add better doc
         "ssd", bpo::bool_switch(), "Preprocessing values are stored on disk before they are sent.")( // TODO better doc
         "input,i", bpo::value<std::string>(), "File specifying the graph.")( // TODO investigate
-        "clients", bpo::value<size_t>()->default_value(0), "Number of clients participating in input-sharing.")(
+        "clients", bpo::value<size_t>()->default_value(0), "Number of clients participating in input-sharing.")( // TODO zero leads to errors!!
         "size,s", bpo::value<size_t>()->default_value(10), "Number of graph entries.")( // TODO why default?
         "nodes", bpo::value<size_t>()->default_value(0), "Number of nodes for benchmarking graph algorithms")( // TODO why default?
         "depth,d", bpo::value<size_t>()->default_value(0), "search depth parameter D"); // TODO why default?

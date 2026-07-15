@@ -295,7 +295,7 @@ class NetIOMP {
         size_t start = start_idx[client_id];
         size_t end = end_idx[client_id];
         auto share = std::vector<Ring>({result.begin() + start, result.begin() + end});
-        send(client_id + 3, &share, share.size() * sizeof(Ring));
+        send(client_id + 3, share.data(), share.size() * sizeof(Ring));
     }
 
    private:

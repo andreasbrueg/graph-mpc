@@ -38,7 +38,8 @@ enum GType {
     Propagate2,
     Flip,
     Insert,
-    ColumnSumsToNodes
+    ColumnSumsToNodes,
+    RemoveEdgeData
 };
 
 class Gate {
@@ -55,7 +56,7 @@ class Gate {
     /* Used by AddConst, AddConstSIMD, MulConst, MulConstSIMD */
     Gate(GType type, size_t g_id, wire_id in1_idx, Ring val, wire_id out_idx);
 
-    /* Used by Propagate-2, Shuffle, Unshuffle, Bit2A, Compaction, Add, Sub */
+    /* Used by Propagate-2, Shuffle, Unshuffle, RemoveEdgeData, Compaction, Add, Sub */
     Gate(GType type, size_t g_id, size_t param1, size_t param2, size_t param3);
 
     /* Used by Bit2A */

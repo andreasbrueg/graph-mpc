@@ -12,6 +12,7 @@ class TestPiK : public Test {
     Circuit *create_circuit() override {
         std::vector<Ring> weights = {10000000, 100000, 1000, 1};
         auto circ = new PiKCircuit(conf, weights);
+        circ->build();
         return circ;
     }
 

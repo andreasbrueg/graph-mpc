@@ -1,5 +1,11 @@
 #include "circuit.h"
 
+void Circuit::provide_outputs_in_input_order() {
+    if (!can_enable_outputs_in_input_order)
+        throw std::runtime_error("outputs_in_input_order must be activated before building the circuit!");
+    outputs_in_input_order = true;
+}
+
 void Circuit::use_reverse_message_passing() {
     if (!can_enable_reverse_passing)
         throw std::runtime_error("reverse_message_passing must be activated before building the circuit!");
@@ -13,6 +19,7 @@ void Circuit::use_edge_deduplication() {
 }
 
 void Circuit::build() {
+    can_enable_outputs_in_input_order = false;
     can_enable_reverse_passing = false;
     can_enable_deduplication = false;
     set_inputs();
@@ -34,15 +41,15 @@ void Circuit::build() {
         }
         auto maybe_aggregation = post_mp_aggregate(in.data_parallel);
         if (maybe_aggregation.has_value()) {
-            output(maybe_aggregation.value());
+            output_data(maybe_aggregation.value());
         } else {
             for (size_t i = 0; i < columns; ++i) {
-                output(in.data_parallel[i]);
+                output_data(in.data_parallel[i]);
             }
         }
     } else {
         data_out = post_mp(data_out, 0);
-        output(data_out);
+        output_data(data_out);
     }
     level_order();
 }
@@ -297,6 +304,20 @@ SIMD_wire_id Circuit::input() {
 void Circuit::output(SIMD_wire_id &input) {
     SIMD_wire_id output;
     gates.push_back(std::make_shared<Gate>(Output, gates.size(), input, output));
+}
+
+void Circuit::output_data(SIMD_wire_id &input) {
+    SIMD_wire_id without_edge_data = n_wires;
+    n_wires++;
+    gates.push_back(std::make_shared<Gate>(RemoveEdgeData, gates.size(), input, without_edge_data, nodes));
+
+    if (outputs_in_input_order) {
+        auto temp = reverse_permute(without_edge_data, ctx.clear_shuffled_vtx_order);
+        temp = unshuffle(temp, ctx.vtx_shuffle_idx);
+        output(temp);
+    } else {
+        output(without_edge_data);
+    }
 }
 
 SIMD_wire_id Circuit::propagate_1(SIMD_wire_id &input) {

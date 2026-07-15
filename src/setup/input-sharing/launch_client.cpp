@@ -12,6 +12,7 @@ void launch_client(std::shared_ptr<io::NetIOMP> network, emp::PRG rng, size_t st
     } else {
         /* Optionally define graph here */
     }
+    g.print();
 
     /* Send shares*/
     InputClient client(network, bits);

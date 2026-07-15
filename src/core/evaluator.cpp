@@ -347,9 +347,9 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
             }
             case Output: {
                 size_t prior_output_size = output.size();
-                output.resize(prior_output_size + nodes);
-#pragma omp parallel for if (nodes > 10000)
-                for (size_t i = 0; i < nodes; ++i) {
+                output.resize(prior_output_size + size);
+#pragma omp parallel for if (size > 10000)
+                for (size_t i = 0; i < size; ++i) {
                     output[prior_output_size + i] = wires[f->in1_idx][i];
                 }
                 update_wire(f->in1_idx);
@@ -476,7 +476,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
             }
 
             case MulSIMD: {
-                wires[f->out_idx].resize(f->size);
+                wires[f->out_idx].resize(size);
                 std::vector<Ring> _a, _b, _c;
                 data->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
@@ -505,7 +505,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
             }
 
             case EQZ: {
-                wires[f->out_idx].resize(f->size);
+                wires[f->out_idx].resize(size);
                 std::vector<Ring> _a, _b, _c;
                 data->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
@@ -533,7 +533,7 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
             }
 
             case Bit2A: {
-                wires[f->out_idx].resize(f->size);
+                wires[f->out_idx].resize(size);
                 std::vector<Ring> _a, _b, _c;
                 data->load_triples(_a, _b, _c, f->mult_idx, f->size);
 
@@ -678,6 +678,20 @@ void Evaluator::evaluate_recv(std::vector<std::shared_ptr<Gate>> &layer) {
                     } else if (id == P1) {
                         wires[f->out_idx][i] = -wires[f->in1_idx][i];
                     }
+                }
+                update_wire(f->in1_idx);
+                break;
+            }
+
+            case RemoveEdgeData: {
+                wires[f->out_idx].resize(size);
+#pragma omp parallel for if (size > 10000)
+                for (size_t i = 0; i < f->size; ++i) {
+                    wires[f->out_idx][i] = wires[f->in1_idx][i];
+                }
+#pragma omp parallel for if (size > 10000)
+                for (size_t i = f->size; i < size; ++i) {
+                    wires[f->out_idx][i] = 0;
                 }
                 update_wire(f->in1_idx);
                 break;

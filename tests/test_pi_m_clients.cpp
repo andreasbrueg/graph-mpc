@@ -12,6 +12,8 @@ class TestPiMClients : public Test {
     Circuit *create_circuit() override {
         std::vector<Ring> weights = {10000000, 100000, 1000, 1};
         auto circ = new PiMCircuit(conf, weights);
+        circ->provide_outputs_in_input_order();
+        circ->build();
         return circ;
     }
 
@@ -21,17 +23,23 @@ class TestPiMClients : public Test {
         if (conf.id == D) {
             size_t expected_pre = 4 * (16 * conf.size * conf.bits + 27 * conf.size + 8 * conf.size * conf.depth) +
                                   2 * sizeof(size_t);  // one element per party always sent to synchronize vector sizes
+            expected_pre += 4 * 2 * conf.size; // final shuffle to switch back to input order
+            expected_pre += 2 * (sizeof(size_t) + 3 * 2 * sizeof(uint64_t)); // initial PRF seed distribution (to 2 parties, #seeds and 3 seeds, each consisting of 2 uint64_t)
             size_t expected_eval = 0;
 
             assert(bytes_sent_pre == expected_pre);
             assert(bytes_sent_eval == expected_eval);
         } else {
             size_t expected_pre = 0;
+            if (conf.id == P0) {
+                expected_pre += 2 * sizeof(uint64_t); // initial PRF seed distribution, 1 seed to P1
+            }
             size_t expected_eval = 4 * (12 * conf.size * conf.bits + 17 * conf.size + 4 * conf.size * conf.depth);
+            expected_eval += 4 * 1 * conf.size; // final shuffle to switch back to input order
             assert(bytes_sent_pre == expected_pre);
             assert(bytes_sent_eval == expected_eval);
 
-            /* Sending the result to the clients --> Has some bug regarding NetIOMP */
+            /* Sending the result to the clients --> Has some bug regarding NetIOMP */ // TODO check!
             for (int i = 0; i < (network->n_total - network->nP); ++i) {
                 network->send_result(i, result);
             }
@@ -41,10 +49,12 @@ class TestPiMClients : public Test {
 
             assert(result[0] == 31030096);  // 3 of length 1, 10 of length 2, 30 of length 3,  96 of length 4
             assert(result[1] == 41036100);  // 4 of length 1, 10 of length 2, 36 of length 3, 100 of length 4
-            assert(result[2] == 31030096);  // 3 of length 1, 10 of length 2, 30 of length 3,  96 of length 4
-            assert(result[3] == 20820072);  // 2 of length 1,  8 of length 2, 20 of length 3,  72 of length 4
+            assert(result[8] == 31030096);  // 3 of length 1, 10 of length 2, 30 of length 3,  96 of length 4
+            assert(result[7] == 20820072);  // 2 of length 1,  8 of length 2, 20 of length 3,  72 of length 4
 
-            std::cout << "test_pi_m passed." << std::endl;
+            // TODO client test should also run assertions!
+            // TODO do the anti overwrite check!
+            std::cout << "test_pi_m_clients passed." << std::endl;
         }
     }
 };
@@ -73,8 +83,8 @@ int main(int argc, char **argv) {
 
         ProtocolConfig conf = {id, size, nodes, depth, bits, ssd};
 
-        auto g_rev = graph.reveal(id, network);
-        g_rev.print();
+        // auto g_rev = graph.reveal(id, network);
+        // g_rev.print();
 
         std::cout << "----- Test Configuration -----" << std::endl;
         std::cout << "Party: " << id << std::endl;

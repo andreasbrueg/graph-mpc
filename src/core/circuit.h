@@ -38,6 +38,10 @@ class Circuit {
 
     size_t columns;
 
+    void provide_outputs_in_input_order();
+
+    void build();
+
    protected:
     std::vector<std::vector<std::shared_ptr<Gate>>> circ;
     std::vector<std::shared_ptr<Gate>> gates;
@@ -50,6 +54,9 @@ class Circuit {
     size_t bits;
     size_t depth;
 
+    bool outputs_in_input_order = false;
+    bool can_enable_outputs_in_input_order = true;
+
     bool reverse_passing = false;
     bool can_enable_reverse_passing = true;
     bool deduplication = false;
@@ -57,8 +64,6 @@ class Circuit {
 
     void use_reverse_message_passing();
     void use_edge_deduplication();
-
-    void build();
 
     void level_order();
 
@@ -77,6 +82,8 @@ class Circuit {
     SIMD_wire_id input();
 
     void output(SIMD_wire_id &input);
+
+    void output_data(SIMD_wire_id &input);
 
     SIMD_wire_id propagate_1(SIMD_wire_id &input);
 

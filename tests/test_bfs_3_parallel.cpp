@@ -11,6 +11,7 @@ class TestBFS3Parallel : public Test {
 
     Circuit *create_circuit() override {
         auto circ = new BFS3ParallelCircuit(conf);
+        circ->build();
         return circ;
     }
 
@@ -103,23 +104,23 @@ class TestBFS3Parallel : public Test {
             assert(result[6] == 1);
             assert(result[7] == 0);
             // v2:
-            assert(result[8] == 1);
-            assert(result[9] == 1);
-            assert(result[10] == 1);
-            assert(result[11] == 1);
-            assert(result[12] == 1);
-            assert(result[13] == 0);
-            assert(result[14] == 0);
-            assert(result[15] == 0);
+            assert(result[1 * 18 + 0] == 1); // TODO looks ugly
+            assert(result[1 * 18 + 1] == 1);
+            assert(result[1 * 18 + 2] == 1);
+            assert(result[1 * 18 + 3] == 1);
+            assert(result[1 * 18 + 4] == 1);
+            assert(result[1 * 18 + 5] == 0);
+            assert(result[1 * 18 + 6] == 0);
+            assert(result[1 * 18 + 7] == 0);
             // v3:
-            assert(result[16] == 1);
-            assert(result[17] == 1);
-            assert(result[18] == 1);
-            assert(result[19] == 1);
-            assert(result[20] == 1);
-            assert(result[21] == 0);
-            assert(result[22] == 1);
-            assert(result[23] == 1);
+            assert(result[2 * 18 + 0] == 1);
+            assert(result[2 * 18 + 1] == 1);
+            assert(result[2 * 18 + 2] == 1);
+            assert(result[2 * 18 + 3] == 1);
+            assert(result[2 * 18 + 4] == 1);
+            assert(result[2 * 18 + 5] == 0);
+            assert(result[2 * 18 + 6] == 1);
+            assert(result[2 * 18 + 7] == 1);
 
             std::cout << "test_bfs_3_parallel passed." << std::endl;
         }

@@ -8,7 +8,6 @@ class BFS3ParallelCircuit : public Circuit {
     BFS3ParallelCircuit(ProtocolConfig &conf) : Circuit(conf, 3) {
         if (conf.nodes < 3)
             throw std::runtime_error("Not enough nodes (expects at least 3)!");
-        build();
     }
 
     std::optional<SIMD_wire_id> init_node_data(size_t column) override {

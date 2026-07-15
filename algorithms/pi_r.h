@@ -4,9 +4,7 @@
 
 class PiRCircuit : public Circuit {
    public:
-    PiRCircuit(ProtocolConfig &conf) : Circuit(conf, conf.nodes) {
-        build();
-    }
+    PiRCircuit(ProtocolConfig &conf) : Circuit(conf, conf.nodes) {}
 
     std::optional<SIMD_wire_id> init_node_data(size_t column) override {
         std::vector<Ring> ohv_column(nodes, 0);

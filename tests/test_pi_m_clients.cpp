@@ -53,7 +53,6 @@ class TestPiMClients : public Test {
             assert(result[7] == 20820072);  // 2 of length 1,  8 of length 2, 20 of length 3,  72 of length 4
 
             // TODO client test should also run assertions!
-            // TODO do the anti overwrite check!
             std::cout << "test_pi_m_clients passed." << std::endl;
         }
     }

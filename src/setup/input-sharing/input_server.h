@@ -48,15 +48,25 @@ class InputServer {
         std::vector<std::vector<Ring>> src_bits(bits, std::vector<Ring>(total_size));
         std::vector<std::vector<Ring>> dst_bits(bits, std::vector<Ring>(total_size));
 
+        std::vector<bool> isProvided(total_size, false);
+
         for (auto &pkt : pkts) {
             size_t pkt_size = pkt.end - pkt.start;
             size_t pkt_idx = 0;
+
+            if (pkt.end > total_size)
+                throw std::runtime_error("Client trying to write graph entry out-of-bounds");
 
             for (size_t i = pkt.start; i < pkt.start + pkt_size; ++i) {
                 src[i] = pkt.entries[pkt_idx++];
                 dst[i] = pkt.entries[pkt_idx++];
                 isV[i] = pkt.entries[pkt_idx++];
                 data[i] = pkt.entries[pkt_idx++];
+                if (isProvided[i]) {
+                    std::cout << "Client overwrites DAG list entry " << i << " which has already been provided by another client" << std::endl;
+                    throw std::runtime_error("Conflicting overlapping client inputs");
+                }
+                isProvided[i] = true;
             }
 
             for (size_t i = 0; i < bits; ++i) {
@@ -71,6 +81,16 @@ class InputServer {
                 }
             }
         }
+
+        bool error = false;
+        for (size_t i = 0; i < total_size; ++i) {
+            if (!isProvided[i]) {
+                std::cout << "DAG list entry at position " << i << " missing!" << std::endl;
+                error = true;
+            }
+        }
+        if (error)
+            throw std::runtime_error("At least one DAG list entry was not provided by the clients");
 
         return {src, dst, isV, data, src_bits, dst_bits, nodes_total};
     }

@@ -35,7 +35,7 @@ void setupClient(const bpo::variables_map &opts, size_t &start_idx, size_t &bits
 
 void setupServer(const bpo::variables_map &opts, Graph &g, std::shared_ptr<io::NetIOMP> network);
 
-std::shared_ptr<io::NetIOMP> setupNetwork(const bpo::variables_map &opts);
+std::shared_ptr<io::NetIOMP> setupNetwork(const bpo::variables_map &opts, size_t overwrite_num_clients = 0);
 
 ProtocolConfig setupProtocol(const bpo::variables_map &opts, std::shared_ptr<io::NetIOMP> network);
 

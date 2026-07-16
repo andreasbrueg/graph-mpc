@@ -67,28 +67,39 @@ int main(int argc, char **argv) {
                                                                                                                                     "produce help message");
 
     bpo::variables_map opts = setup::parseOptions(cmdline, prog_opts, argc, argv);
+    size_t clients = 2;
 
     try {
-        Graph graph;
-        auto network = setup::setupNetwork(opts);
-        setup::setupServer(opts, graph, network);
-
         Party id = (Party)opts["pid"].as<int>();
-        const size_t size = graph.size;
-        const size_t nodes = graph.nodes;
+
+        Graph graph;
+        auto network = setup::setupNetwork(opts, clients);
+        if (id != D) {
+            InputServer server(network, clients);
+            std::cout << "Awaiting " << clients << " packets" << std::endl << std::endl;
+            graph = server.recv_graph();
+            std::cout << "Finished graph construction." << std::endl;
+        } else {
+            size_t nodes, size;
+            InputServer server(network, clients);
+            nodes = server.recv_nodes();
+            server.recv_size(size);
+            graph.nodes = nodes;
+            graph.size = size;
+        }
         const size_t depth = 4;
-        const size_t bits = std::ceil(std::log2(nodes + 2));
+        const size_t bits = 3;
         bool ssd = true;
 
-        ProtocolConfig conf = {id, size, nodes, depth, bits, ssd};
+        ProtocolConfig conf = {id, graph.size, graph.nodes, depth, bits, ssd};
 
         // auto g_rev = graph.reveal(id, network);
         // g_rev.print();
 
         std::cout << "----- Test Configuration -----" << std::endl;
         std::cout << "Party: " << id << std::endl;
-        std::cout << "Size: " << size << std::endl;
-        std::cout << "Nodes: " << nodes << std::endl;
+        std::cout << "Size: " << graph.size << std::endl;
+        std::cout << "Nodes: " << graph.nodes << std::endl;
         std::cout << "Bits: " << bits << std::endl;
         std::cout << "SSD: " << ssd << std::endl;
 

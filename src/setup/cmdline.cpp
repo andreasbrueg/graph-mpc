@@ -137,7 +137,7 @@ bpo::variables_map setup::parseOptions(bpo::options_description &cmdline, bpo::o
     return opts;
 }
 
-std::shared_ptr<io::NetIOMP> setup::setupNetwork(const bpo::variables_map &opts) {
+std::shared_ptr<io::NetIOMP> setup::setupNetwork(const bpo::variables_map &opts, size_t overwrite_num_clients) {
     bool is_client = opts["isclient"].as<bool>();
     size_t parties;
     int id;
@@ -152,6 +152,7 @@ std::shared_ptr<io::NetIOMP> setup::setupNetwork(const bpo::variables_map &opts)
     }
 
     size_t clients = opts["clients"].as<size_t>();
+    if (overwrite_num_clients > 0) clients = overwrite_num_clients;
     int port = opts["port"].as<int>();
     auto certificate_path = opts["certificate_path"].as<std::string>();
     auto private_key_path = opts["private_key_path"].as<std::string>();

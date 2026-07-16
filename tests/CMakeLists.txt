@@ -24,7 +24,8 @@ add_test(test_bfs_3_parallel)
 add_test(test_pi_k)
 add_test(test_pi_m)
 add_test(test_pi_r)
-add_test(test_pi_m_clients) # TODO to be tested and fixed
+add_test(test_pi_m_clients)
+add_test(test_pi_m_clients_client)
 
 add_custom_target(tests)
 add_dependencies(tests ${testbin})
@@ -32,4 +33,5 @@ add_dependencies(tests ${testbin})
 
 file(COPY ../certs DESTINATION ${PROJECT_BINARY_DIR}/tests)
 file(COPY ../config DESTINATION ${PROJECT_BINARY_DIR}/tests)
-file(COPY ../example_graphs DESTINATION ${PROJECT_BINARY_DIR}/tests)
+file(COPY subgraph_0.data DESTINATION ${PROJECT_BINARY_DIR}/tests)
+file(COPY subgraph_1.data DESTINATION ${PROJECT_BINARY_DIR}/tests)

@@ -17,6 +17,7 @@ int main(int argc, char **argv) {
         auto b_conf = setup::setupBenchmark(opts);
 
         auto circuit = PiRCircuit(conf);
+        circuit.build();
 
         auto graph_generator = [](ProtocolConfig &conf, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network) {
             return Graph::benchmark_graph(conf, rngs, network);

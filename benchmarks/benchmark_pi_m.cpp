@@ -19,6 +19,7 @@ int main(int argc, char **argv) {
         std::vector<Ring> weights;
         weights.resize(conf.depth);
         auto circuit = PiMCircuit(conf, weights);
+        circuit.build();
 
         auto graph_generator = [](ProtocolConfig &conf, RandomGenerators &rngs, std::shared_ptr<io::NetIOMP> network) {
             return Graph::benchmark_graph(conf, rngs, network);

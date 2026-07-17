@@ -19,6 +19,7 @@ int main(int argc, char **argv) {
 
         std::vector<Ring> weights = {10000000, 100000, 1000, 1};
         auto circuit = PiMCircuit(conf, weights);
+        circuit.build();
 
         Graph g;
 

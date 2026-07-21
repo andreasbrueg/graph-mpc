@@ -1,23 +1,5 @@
 #include "circuit.h"
 
-void Circuit::provide_outputs_in_input_order() {
-    if (!can_enable_outputs_in_input_order)
-        throw std::runtime_error("outputs_in_input_order must be activated before building the circuit!");
-    outputs_in_input_order = true;
-}
-
-void Circuit::use_reverse_message_passing() {
-    if (!can_enable_reverse_passing)
-        throw std::runtime_error("reverse_message_passing must be activated before building the circuit!");
-    reverse_passing = true;
-}
-
-void Circuit::use_edge_deduplication() {
-    if (!can_enable_deduplication)
-        throw std::runtime_error("edge_deduplication must be activated before building the circuit!");
-    deduplication = true;
-}
-
 void Circuit::build() {
     can_enable_outputs_in_input_order = false;
     can_enable_reverse_passing = false;
@@ -54,41 +36,108 @@ void Circuit::build() {
     level_order();
 }
 
-void Circuit::set_inputs() {
-    in.src_order_bits.resize(bits + 1);
-    in.dst_order_bits.resize(bits + 1);
-    for (size_t i = 1; i < bits + 1; ++i) {
-        if (reverse_passing)
-            in.dst_order_bits[i] = input();
-        else
-            in.src_order_bits[i] = input();
-    }
-    for (size_t i = 1; i < bits + 1; ++i) {
-        if (reverse_passing)
-            in.src_order_bits[i] = input();
-        else
-            in.dst_order_bits[i] = input();
-    }
-    if (reverse_passing) {
-        in.dst = input();
-        in.src = input();
+void Circuit::provide_outputs_in_input_order() {
+    if (!can_enable_outputs_in_input_order)
+        throw std::runtime_error("outputs_in_input_order must be activated before building the circuit!");
+    outputs_in_input_order = true;
+}
+
+void Circuit::use_reverse_message_passing() {
+    if (!can_enable_reverse_passing)
+        throw std::runtime_error("reverse_message_passing must be activated before building the circuit!");
+    reverse_passing = true;
+}
+
+void Circuit::use_edge_deduplication() {
+    if (!can_enable_deduplication)
+        throw std::runtime_error("edge_deduplication must be activated before building the circuit!");
+    deduplication = true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// (Abstract) PPGA-paradigm methods defining the graph algorithm: //////////////////////////////////
+// These need to be implemented (or, if available, the default implementation will be used) in  ////
+// order to define a custom graph algorithm.                                                    ////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+std::optional<mp_val> Circuit::init_nodes(size_t /*column*/) {
+    return std::nullopt;
+}
+
+mp_val Circuit::prepare(mp_val &state, size_t /*i*/, size_t /*column*/) { return state; }
+
+mp_val Circuit::apply(mp_val &/*state*/, mp_val &/*update*/, size_t /*i*/, size_t /*column*/) {
+    throw std::runtime_error("apply() is not specified.");
+}
+
+mp_val Circuit::post_mp(mp_val &state, size_t /*column*/) { return state; }
+
+std::optional<mp_val> Circuit::post_mp_aggregate(std::vector<mp_val> &/*states*/) {
+    return std::nullopt;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Libary of operations that can be utilized to implement the PPGA-paradigm methods:            ////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Methods utilized by the PPGA core, not relevant when implementing custom graph algorithms: //////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Circuit::pre_mp() {
+    if (deduplication) {
+        ctx.dst_order = sort(in.dst_order_bits, bits + 1);
+        auto deduplication_perm = ctx.dst_order;
+
+        for (size_t i = 1; i < bits + 1; ++i) {
+            deduplication_perm = sort_iteration(deduplication_perm, in.src_order_bits[i]);
+        }
+
+        deduplication_perm = shuffle(deduplication_perm, shuffle_idx);
+        deduplication_perm = reveal(deduplication_perm);
+
+        auto deduplication_src = shuffle(in.src, shuffle_idx);
+        auto deduplication_dst = shuffle(in.dst, shuffle_idx);
+
+        deduplication_src = permute(deduplication_src, deduplication_perm);
+        deduplication_dst = permute(deduplication_dst, deduplication_perm);
+
+        auto deduplication_src_dupl = deduplication_sub(deduplication_src);
+        auto deduplication_dst_dupl = deduplication_sub(deduplication_dst);
+
+        deduplication_src_dupl = equals_zero(deduplication_src_dupl, size - 1);
+        deduplication_dst_dupl = equals_zero(deduplication_dst_dupl, size - 1);
+
+        auto deduplication_duplicates = mul_SIMD(deduplication_src_dupl, deduplication_dst_dupl, size - 1, true);
+        deduplication_duplicates = bit2A(deduplication_duplicates, size - 1);
+        deduplication_duplicates = deduplication_insert(deduplication_duplicates);
+
+        deduplication_duplicates = reverse_permute(deduplication_duplicates, deduplication_perm);
+        auto MSBs = unshuffle(deduplication_duplicates, shuffle_idx);
+        in.src_order_bits.push_back(MSBs);
+        in.dst_order_bits.push_back(MSBs);
+        shuffle_idx++;
     } else {
-        in.src = input();
-        in.dst = input();
+        // No preparation needed
     }
-    in.isV = input();
-    in.data = input();
+}
 
-    for (size_t i = 0; i < in.data_parallel.size(); ++i) {
-        in.data_parallel[i] = input();
+void Circuit::compute_sorts() {
+    if (deduplication) {
+        // Some sorting already required for deduplication in pre_mp
+        // ==> Build on top of that instead of sorting from scratch for better efficiency!
+        ctx.src_order = sort(in.src_order_bits, bits + 2);  // Sorting src_order_bits + appended deduplication_bits
+        ctx.dst_order = sort_iteration(
+            ctx.dst_order, in.dst_order_bits[in.dst_order_bits.size() - 1]);  // Only one extra sort iteration for appended deduplication bits needed
+        auto isV_inv = flip_SIMD(in.isV);
+        ctx.vtx_order = sort_iteration(ctx.src_order, isV_inv);            // One iteration from src_order to vtx_order
+    } else {
+        // Standard sorting
+        ctx.src_order = sort(in.src_order_bits, bits + 1);
+        ctx.dst_order = sort(in.dst_order_bits, bits + 1);
+        auto isV_inv = flip_SIMD(in.isV);
+        ctx.vtx_order = sort_iteration(ctx.src_order, isV_inv);
     }
-
-    /* Set src_bits to { 1-isV, src_bits[0], src_bits[1], ..., src_bits[n_bits - 1] } */
-    auto isV_inv = flip(in.isV);
-    in.src_order_bits[0] = isV_inv;
-
-    /* Set dst_bits to { isV, dst_bits[0], dst_bits[1], ..., dst_bits[n_bits - 1] } */
-    in.dst_order_bits[0] = in.isV;
 }
 
 void Circuit::level_order() {
@@ -132,76 +181,41 @@ void Circuit::level_order() {
     gates.clear();
 }
 
-void Circuit::pre_mp() {
-    if (deduplication) {
-        ctx.dst_order = sort(in.dst_order_bits, bits + 1);
-        auto deduplication_perm = ctx.dst_order;
-
-        for (size_t i = 1; i < bits + 1; ++i) {
-            deduplication_perm = sort_iteration(deduplication_perm, in.src_order_bits[i]);
-        }
-
-        deduplication_perm = shuffle(deduplication_perm, shuffle_idx);
-        deduplication_perm = reveal(deduplication_perm);
-
-        auto deduplication_src = shuffle(in.src, shuffle_idx);
-        auto deduplication_dst = shuffle(in.dst, shuffle_idx);
-
-        deduplication_src = permute(deduplication_src, deduplication_perm);
-        deduplication_dst = permute(deduplication_dst, deduplication_perm);
-
-        auto deduplication_src_dupl = deduplication_sub(deduplication_src);
-        auto deduplication_dst_dupl = deduplication_sub(deduplication_dst);
-
-        deduplication_src_dupl = equals_zero(deduplication_src_dupl, size - 1);
-        deduplication_dst_dupl = equals_zero(deduplication_dst_dupl, size - 1);
-
-        auto deduplication_duplicates = mul_SIMD(deduplication_src_dupl, deduplication_dst_dupl, size - 1, true);
-        deduplication_duplicates = bit2A(deduplication_duplicates, size - 1);
-        deduplication_duplicates = deduplication_insert(deduplication_duplicates);
-
-        deduplication_duplicates = reverse_permute(deduplication_duplicates, deduplication_perm);
-        auto MSBs = unshuffle(deduplication_duplicates, shuffle_idx);
-        in.src_order_bits.push_back(MSBs);
-        in.dst_order_bits.push_back(MSBs);
-        shuffle_idx++;
-    } else {
-        // No preparation needed
+void Circuit::set_inputs() {
+    in.src_order_bits.resize(bits + 1);
+    in.dst_order_bits.resize(bits + 1);
+    for (size_t i = 1; i < bits + 1; ++i) {
+        if (reverse_passing)
+            in.dst_order_bits[i] = input();
+        else
+            in.src_order_bits[i] = input();
     }
-}
-
-std::optional<SIMD_wire_id> Circuit::init_node_data(size_t /*column*/) {
-    return std::nullopt;
-}
-
-SIMD_wire_id Circuit::pre_propagate(SIMD_wire_id &data, size_t /*i*/, size_t /*column*/) { return data; }
-
-SIMD_wire_id Circuit::apply(SIMD_wire_id &/*data_old*/, SIMD_wire_id &/*data_new*/, size_t /*i*/, size_t /*column*/) {
-    throw std::runtime_error("apply() is not specified.");
-}
-
-SIMD_wire_id Circuit::post_mp(SIMD_wire_id &data, size_t /*column*/) { return data; }
-
-std::optional<SIMD_wire_id> Circuit::post_mp_aggregate(std::vector<SIMD_wire_id> &/*data*/) {
-    return std::nullopt;
-}
-
-void Circuit::compute_sorts() {
-    if (deduplication) {
-        // Some sorting already required for deduplication in pre_mp
-        // ==> Build on top of that instead of sorting from scratch for better efficiency!
-        ctx.src_order = sort(in.src_order_bits, bits + 2);  // Sorting src_order_bits + appended deduplication_bits
-        ctx.dst_order = sort_iteration(
-            ctx.dst_order, in.dst_order_bits[in.dst_order_bits.size() - 1]);  // Only one extra sort iteration for appended deduplication bits needed
-        auto isV_inv = flip(in.isV);
-        ctx.vtx_order = sort_iteration(ctx.src_order, isV_inv);            // One iteration from src_order to vtx_order
-    } else {
-        // Standard sorting
-        ctx.src_order = sort(in.src_order_bits, bits + 1);
-        ctx.dst_order = sort(in.dst_order_bits, bits + 1);
-        auto isV_inv = flip(in.isV);
-        ctx.vtx_order = sort_iteration(ctx.src_order, isV_inv);
+    for (size_t i = 1; i < bits + 1; ++i) {
+        if (reverse_passing)
+            in.src_order_bits[i] = input();
+        else
+            in.dst_order_bits[i] = input();
     }
+    if (reverse_passing) {
+        in.dst = input();
+        in.src = input();
+    } else {
+        in.src = input();
+        in.dst = input();
+    }
+    in.isV = input();
+    in.data = input();
+
+    for (size_t i = 0; i < in.data_parallel.size(); ++i) {
+        in.data_parallel[i] = input();
+    }
+
+    /* Set src_bits to { 1-isV, src_bits[0], src_bits[1], ..., src_bits[n_bits - 1] } */
+    auto isV_inv = flip_SIMD(in.isV);
+    in.src_order_bits[0] = isV_inv;
+
+    /* Set dst_bits to { isV, dst_bits[0], dst_bits[1], ..., dst_bits[n_bits - 1] } */
+    in.dst_order_bits[0] = in.isV;
 }
 
 void Circuit::prepare_shuffles() {
@@ -227,11 +241,11 @@ SIMD_wire_id Circuit::message_passing(SIMD_wire_id &data, size_t column) {
     size_t src_dst_idx = shuffle_idx + 2;
     size_t dst_vtx_idx = shuffle_idx + 3;
 
-    data_vtx = init_node_data(column).value_or(data_vtx);
+    data_vtx = init_nodes(column).value_or(data_vtx);
 
     for (size_t i = 0; i < depth; ++i) {
         auto data_old = data_vtx;
-        data_vtx = pre_propagate(data_vtx, i, column);
+        data_vtx = prepare(data_vtx, i, column);
 
         /* Propagate-1 */
         auto data_vtx_propagate = propagate_1(data_vtx);
@@ -292,7 +306,8 @@ SIMD_wire_id Circuit::sort_iteration(SIMD_wire_id &perm, SIMD_wire_id &keys) {
     return perm_next;
 }
 
-/* ----- Single functions ----- */
+// Primitives:
+// (each may have SIMD input wires and may have a SIMD output wire, in which case it's returned)
 
 SIMD_wire_id Circuit::input() {
     SIMD_wire_id output = n_wires;
@@ -401,14 +416,6 @@ SIMD_wire_id Circuit::reverse_permute(SIMD_wire_id &input, SIMD_wire_id &perm) {
     return output;
 }
 
-SIMD_wire_id Circuit::_equals_zero(SIMD_wire_id &input, SIMD_wire_id size, SIMD_wire_id layer) {
-    SIMD_wire_id output = n_wires;
-    n_wires++;
-    gates.push_back(std::make_shared<Gate>(EQZ, gates.size(), input, output, size, layer, n_mults));
-    n_mults++;
-    return output;
-}
-
 SIMD_wire_id Circuit::equals_zero(SIMD_wire_id &input, SIMD_wire_id size) {
     input = _equals_zero(input, size, 0);
     input = _equals_zero(input, size, 1);
@@ -416,6 +423,14 @@ SIMD_wire_id Circuit::equals_zero(SIMD_wire_id &input, SIMD_wire_id size) {
     input = _equals_zero(input, size, 3);
     input = _equals_zero(input, size, 4);
     return input;
+}
+
+SIMD_wire_id Circuit::_equals_zero(SIMD_wire_id &input, SIMD_wire_id size, SIMD_wire_id layer) {
+    SIMD_wire_id output = n_wires;
+    n_wires++;
+    gates.push_back(std::make_shared<Gate>(EQZ, gates.size(), input, output, size, layer, n_mults));
+    n_mults++;
+    return output;
 }
 
 SIMD_wire_id Circuit::bit2A(SIMD_wire_id &input, SIMD_wire_id size) {
@@ -440,14 +455,6 @@ SIMD_wire_id Circuit::deduplication_insert(SIMD_wire_id &input1) {
     return output;
 }
 
-wire_id Circuit::mul(wire_id &x, wire_id &y, bool binary) {
-    wire_id output = n_wires;
-    n_wires++;
-    gates.push_back(std::make_shared<Gate>(Mul, gates.size(), x, y, output, n_mults, binary));
-    n_mults++;
-    return output;
-}
-
 SIMD_wire_id Circuit::mul_SIMD(SIMD_wire_id &x, SIMD_wire_id &y, bool binary) {
     SIMD_wire_id output = n_wires;
     n_wires++;
@@ -464,17 +471,10 @@ SIMD_wire_id Circuit::mul_SIMD(SIMD_wire_id &x, SIMD_wire_id &y, SIMD_wire_id si
     return output;
 }
 
-SIMD_wire_id Circuit::flip(SIMD_wire_id &input) {
+SIMD_wire_id Circuit::mul_const_SIMD(SIMD_wire_id &data, Ring val) {
     SIMD_wire_id output = n_wires;
     n_wires++;
-    gates.push_back(std::make_shared<Gate>(Flip, gates.size(), input, output));
-    return output;
-}
-
-wire_id Circuit::add(wire_id &input1, wire_id &input2) {
-    wire_id output = n_wires;
-    n_wires++;
-    gates.push_back(std::make_shared<Gate>(Add, gates.size(), input1, input2, output));
+    gates.push_back(std::make_shared<Gate>(MulConstSIMD, gates.size(), data, val, output));
     return output;
 }
 
@@ -485,24 +485,10 @@ SIMD_wire_id Circuit::add_SIMD(SIMD_wire_id &input1, SIMD_wire_id &input2) {
     return output;
 }
 
-wire_id Circuit::sub(wire_id &input1, wire_id &input2) {
-    wire_id output = n_wires;
-    n_wires++;
-    gates.push_back(std::make_shared<Gate>(Sub, gates.size(), input1, input2, output));
-    return output;
-}
-
 SIMD_wire_id Circuit::sub_SIMD(SIMD_wire_id &input1, SIMD_wire_id &input2) {
     SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(SubSIMD, gates.size(), input1, input2, output));
-    return output;
-}
-
-wire_id Circuit::add_const(wire_id &data, Ring val) {
-    wire_id output = n_wires;
-    n_wires++;
-    gates.push_back(std::make_shared<Gate>(AddConst, gates.size(), data, val, output));
     return output;
 }
 
@@ -513,36 +499,29 @@ SIMD_wire_id Circuit::add_const_SIMD(SIMD_wire_id &data, Ring val) {
     return output;
 }
 
-wire_id Circuit::mul_const(wire_id &data, Ring val) {
-    wire_id output = n_wires;
-    n_wires++;
-    gates.push_back(std::make_shared<Gate>(MulConst, gates.size(), data, val, output));
-    return output;
-}
-
-SIMD_wire_id Circuit::mul_const_SIMD(SIMD_wire_id &data, Ring val) {
+SIMD_wire_id Circuit::flip_SIMD(SIMD_wire_id &input) {
     SIMD_wire_id output = n_wires;
     n_wires++;
-    gates.push_back(std::make_shared<Gate>(MulConstSIMD, gates.size(), data, val, output));
+    gates.push_back(std::make_shared<Gate>(Flip, gates.size(), input, output));
     return output;
 }
 
-SIMD_wire_id Circuit::column_sums_to_nodes(std::vector<SIMD_wire_id> &parallel_data) {
-    SIMD_wire_id output = n_wires;
-    n_wires++;
-    gates.push_back(std::make_shared<Gate>(ColumnSumsToNodes, gates.size(), parallel_data[parallel_data.size() - 1], output, parallel_data));
-    return output;
-}
-
-SIMD_wire_id Circuit::clip(SIMD_wire_id &data) {
+SIMD_wire_id Circuit::clip_SIMD(SIMD_wire_id &data) {
     data = equals_zero(data, nodes);
     data = bit2A(data, nodes);
-    return flip(data);
+    return flip_SIMD(data);
 }
 
 SIMD_wire_id Circuit::set_const_vec_SIMD(std::vector<Ring> &vals) {
     SIMD_wire_id output = n_wires;
     n_wires++;
     gates.push_back(std::make_shared<Gate>(SetConstVecSIMD, gates.size(), vals, output));
+    return output;
+}
+
+SIMD_wire_id Circuit::column_sums_to_nodes_internal(std::vector<SIMD_wire_id> &parallel_data) {
+    SIMD_wire_id output = n_wires;
+    n_wires++;
+    gates.push_back(std::make_shared<Gate>(ColumnSumsToNodes, gates.size(), parallel_data[parallel_data.size() - 1], output, parallel_data));
     return output;
 }

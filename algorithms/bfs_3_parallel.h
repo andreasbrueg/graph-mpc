@@ -1,26 +1,26 @@
 #pragma once
-
 #include "../src/core/circuit.h"
 
 class BFS3ParallelCircuit : public Circuit {
    public:
-
     BFS3ParallelCircuit(ProtocolConfig &conf) : Circuit(conf, 3) {
-        if (conf.nodes < 3)
-            throw std::runtime_error("Not enough nodes (expects at least 3)!");
+        if (conf.nodes < 3) throw std::runtime_error("Not enough nodes (expects at least 3)!");
     }
 
-    std::optional<SIMD_wire_id> init_node_data(size_t column) override {
+   protected:
+    std::optional<mp_val> init_nodes(size_t column) override {
         std::vector<Ring> ohv_column(nodes, 0);
         ohv_column[column] = 1;
-        return set_const_vec_SIMD(ohv_column);
+        return set_const_vector(ohv_column);
     }
 
-    SIMD_wire_id apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t /*i*/, size_t /*column*/) override {
-        return add_SIMD(data_old, data_new);
+    mp_val apply(mp_val &state, mp_val &update, size_t /*i*/, size_t /*column*/) override {
+        return add(state, update);
     }
 
-    SIMD_wire_id post_mp(SIMD_wire_id &data, size_t /*column*/) override {
+    mp_val post_mp(mp_val &data, size_t /*column*/) override {
         return clip(data);
     }
+
+    // others default to: setting message=state
 };

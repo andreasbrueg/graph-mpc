@@ -1,10 +1,8 @@
 #pragma once
-
 #include "../src/core/circuit.h"
 
 class PiKCircuit : public Circuit {
    public:
-
     std::vector<Ring> weights;
 
     PiKCircuit(ProtocolConfig &conf, std::vector<Ring> &weights) : Circuit(conf), weights(weights) {
@@ -14,16 +12,19 @@ class PiKCircuit : public Circuit {
         use_edge_deduplication();
     }
 
-    std::optional<SIMD_wire_id> init_node_data(size_t /*column*/) override {
+   protected:
+    std::optional<mp_val> init_nodes(size_t /*column*/) override {
         std::vector<Ring> all_zero(nodes, 0);
-        return set_const_vec_SIMD(all_zero);
+        return set_const_vector(all_zero);
     }
 
-    SIMD_wire_id pre_propagate(SIMD_wire_id &data, size_t i, size_t /*column*/) override {
-        return add_const_SIMD(data, weights[weights.size() - 1 - i]);
+    mp_val prepare(mp_val &state, size_t i, size_t /*column*/) override {
+        return add_constant(state, weights[weights.size() - 1 - i]);
     }
 
-    SIMD_wire_id apply(SIMD_wire_id &/*data_old*/, SIMD_wire_id &data_new, size_t /*i*/, size_t /*column*/) override {
-        return data_new;
+    mp_val apply(mp_val &/*state*/, mp_val &update, size_t /*i*/, size_t /*column*/) override {
+        return update;
     }
+
+    // others default to: no postprocessing of states
 };

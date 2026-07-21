@@ -1,17 +1,18 @@
 #pragma once
-
 #include "../src/core/circuit.h"
 
 class BFSCircuit : public Circuit {
    public:
-
     BFSCircuit(ProtocolConfig &conf) : Circuit(conf) {}
 
-    SIMD_wire_id apply(SIMD_wire_id &data_old, SIMD_wire_id &data_new, size_t /*i*/, size_t /*column*/) override {
-        return add_SIMD(data_old, data_new);
+   protected:
+    mp_val apply(mp_val &state, mp_val &update, size_t /*i*/, size_t /*column*/) override {
+        return add(state, update);
     }
 
-    SIMD_wire_id post_mp(SIMD_wire_id &data, size_t /*column*/) override {
-        return clip(data);
+    mp_val post_mp(mp_val &state, size_t /*column*/) override {
+        return clip(state);
     }
+
+    // others default to: initializing states from inputs and setting message=state
 };

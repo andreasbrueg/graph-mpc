@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(GraphMPC VERSION 0.1 LANGUAGES C CXX)
+project(PPGA-Graph-MPC VERSION 0.1 LANGUAGES C CXX)
+
+if(POLICY CMP0167)
+  cmake_policy(SET CMP0167 NEW)
+endif()
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug)

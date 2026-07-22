@@ -87,6 +87,13 @@ int main(int argc, char **argv) {
     std::cout << "Providing the following graph slice as input:" << std::endl;
     g.print_pretty();
 
+    std::cout << "----- Configuration -----" << std::endl;
+    std::cout << "Client: " << cid << std::endl;
+    std::cout << "Local graph size |V|+|E|: " << g.size << std::endl;
+    std::cout << "Local nodes |V|: " << g.nodes << std::endl;
+    std::cout << "Bits: " << bits << std::endl;
+    std::cout << "#Clients: " << clients << std::endl << std::endl;
+
     auto network = setup::setupNetwork(P0, cid, clients, true, opts);
 
     /* Send shares*/
@@ -109,6 +116,7 @@ int main(int argc, char **argv) {
             assert(result[i] == 0);
         }
     }
+    std::cout << std::endl;
     std::cout << "unformatted result vector: ";
     setup::print_vec(result);
 

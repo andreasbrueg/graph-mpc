@@ -157,7 +157,8 @@ int main(int argc, char **argv) {
     std::cout << "Graph size |V|+|E|: " << graph.size << std::endl;
     std::cout << "Nodes |V|: " << graph.nodes << std::endl;
     std::cout << "Bits: " << bits << std::endl;
-    std::cout << "Storing preprocessing values on disk: " << ssd << std::endl;
+    std::cout << "#Clients: " << clients << std::endl;
+    std::cout << "Storing preprocessing values on disk: " << ssd << std::endl << std::endl;
 
     Circuit *circ;
     switch (algorithm) {
@@ -168,7 +169,7 @@ int main(int argc, char **argv) {
         case Algorithm::PI_R: circ = new PiRCircuit(conf); break;
         case Algorithm::CUSTOM: circ = new CustomCircuit(conf); break;
     }
-    std::cout << "Running algorithm " << algorithm << " " << algo_description((Algorithm) algorithm) << std::endl;
+    std::cout << "Running algorithm " << algorithm << " " << algo_description((Algorithm) algorithm) << std::endl << std::endl;
     circ->provide_outputs_in_input_order();
     circ->build();
 

@@ -140,6 +140,9 @@ class Graph {
                     file >> next_val;
                     data = next_val;
                     g.add_list_entry(src, dst, 1, data);
+                } else {
+                    data = 0;
+                    g.add_list_entry(src, dst, 1, data);
                 }
             } else if (type == 'e' || type == 'E') {
                 file >> src >> dst;

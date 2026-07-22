@@ -55,7 +55,7 @@ class Graph {
     std::vector<Ring> dst;
     std::vector<Ring> isV;
     std::vector<Ring> data;
-    bool is_shared;
+    bool is_shared = false;
 
     /* Specifically for Message-Passing */
     std::vector<std::vector<Ring>> src_bits;

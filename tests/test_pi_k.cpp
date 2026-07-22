@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
         const size_t nodes = 4;
         const size_t depth = 4;
         const size_t bits = std::ceil(std::log2(nodes + 2));
-        bool ssd = true;
+        bool ssd = false;
 
         ProtocolConfig conf = {id, size, nodes, depth, bits, ssd};
         auto network = setup::setupNetwork(opts);

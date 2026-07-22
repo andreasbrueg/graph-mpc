@@ -18,10 +18,10 @@ class InputServer {
 
     ~InputServer() = default;
 
-    Graph recv_graph() {
+    Graph recv_graph(size_t bits) {
+        this->bits = bits;
         /* Receive n_vertices */
         size_t nodes_total = recv_nodes();
-        bits = std::ceil(std::log2(nodes_total + 2));
 
         /* Receive contents */
         std::vector<Packet> pkts;

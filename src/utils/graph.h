@@ -82,6 +82,17 @@ class Graph {
         std::cout << std::endl;
     }
 
+    void print_pretty() {
+        for (size_t i = 0; i < size; ++i) {
+            if (isV[i]) {
+                std::cout << "node " << src[i] << " (data " << data[i] << ")" << std::endl;
+            } else {
+                std::cout << "edge " << src[i] << " -> " << dst[i] << std::endl;
+            }
+        }
+        std::cout << std::endl;
+    }
+
     static Graph parse(const std::string &filename) {
         Graph g;
 
@@ -97,6 +108,49 @@ class Graph {
 
         if (!file.eof()) {
             std::cerr << "Warning: Format of graph file may be incorrect." << std::endl;
+        }
+
+        return g;
+    }
+
+    static Graph parse_simplified_format(const std::string &filename) {
+        Graph g;
+
+        std::ifstream file(filename);
+        if (!file) {
+            throw std::invalid_argument("Error: Could not open graph file " + filename);
+        }
+
+        char type;
+        while (file >> type) {
+            Ring src, dst, data;
+            if (type == 'n' || type == 'N' || type == 'v' || type == 'V') {
+                Ring next_val;
+                if (! (file >> next_val)) throw std::runtime_error("Missing node ID after node entry");
+                src = next_val;
+                dst = next_val;
+                char next;
+                if (! (file >> next)) {
+                    // End of file reached
+                    g.add_list_entry(src, dst, 1, 0);
+                    return g;
+                }
+                file.putback(next);
+                if (next >= '0' && next <= '9') {
+                    file >> next_val;
+                    data = next_val;
+                    g.add_list_entry(src, dst, 1, data);
+                }
+            } else if (type == 'e' || type == 'E') {
+                file >> src >> dst;
+                g.add_list_entry(src, dst, 0);
+            } else {
+                throw std::runtime_error("Unexpected subgraph file format");
+            }
+        }
+
+        if (!file.eof()) {
+            throw std::runtime_error("Unexpected end of subgraph file.");
         }
 
         return g;

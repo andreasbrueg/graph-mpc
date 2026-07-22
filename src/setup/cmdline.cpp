@@ -10,7 +10,7 @@ void setup::print_vec(std::vector<Ring> &vec) {
     }
 }
 
-bpo::options_description setup::programOptionsBenchmark() { // TODO remove, kinda duplicate
+bpo::options_description setup::programOptionsBenchmark() {
     bpo::options_description desc(
         "Following options are supported by config file too.");
 
@@ -166,6 +166,48 @@ std::shared_ptr<io::NetIOMP> setup::setupNetwork(const bpo::variables_map &opts,
     return std::make_shared<io::NetIOMP>(net_conf, force_connect);
 }
 
+std::shared_ptr<io::NetIOMP> setup::setupNetwork(Party pid, size_t client_id, size_t num_clients, bool is_client, const bpo::variables_map &opts) {
+    size_t parties = 3;
+    int id;
+
+    if (is_client) {
+        id = 3 + client_id;
+    } else {
+        id = pid;
+    }
+
+    int port = opts["port"].as<int>();
+    auto certificate_path = opts["certificate_path"].as<std::string>();
+    auto private_key_path = opts["private_key_path"].as<std::string>();
+    auto trusted_cert_path = opts["trusted_cert_path"].as<std::string>();
+    size_t BLOCK_SIZE = opts["BLOCK_SIZE"].as<size_t>();
+
+    std::vector<std::string> IP;
+    bool localhost;
+    if (opts["localhost"].as<bool>()) {
+        localhost = true;
+    } else {
+        std::ifstream fnet(opts["net-config"].as<std::string>());
+        if (!fnet.good()) {
+            fnet.close();
+            throw std::runtime_error("Could not open network config file");
+        }
+        json netdata;
+        fnet >> netdata;
+        fnet.close();
+
+        IP.resize(3);
+        for (size_t i = 0; i < 3; ++i) {
+            IP[i] = netdata[i].get<std::string>();
+        }
+        localhost = false;
+    }
+
+    NetworkConfig net_conf = {id, parties, num_clients, BLOCK_SIZE, port, IP, certificate_path, private_key_path, trusted_cert_path, localhost};
+    bool force_connect = num_clients > 0;
+    return std::make_shared<io::NetIOMP>(net_conf, force_connect);
+}
+
 void setup::setupClient(const bpo::variables_map &opts, size_t &start_idx, size_t &bits, std::string &input_file) {
     start_idx = opts["start"].as<size_t>();
     input_file = opts["input"].as<std::string>();
@@ -175,12 +217,13 @@ void setup::setupClient(const bpo::variables_map &opts, size_t &start_idx, size_
 void setup::setupServer(const bpo::variables_map &opts, Graph &g, std::shared_ptr<io::NetIOMP> network) {
     int id = opts["pid"].as<int>();
     size_t clients = opts["clients"].as<size_t>();
+    size_t bits = opts["bits"].as<size_t>();
 
     if (clients > 0) {
         if (id != D) {
             InputServer server(network, clients);
             std::cout << "Awaiting " << clients << " packets" << std::endl << std::endl;
-            g = server.recv_graph();
+            g = server.recv_graph(bits);
             std::cout << "Finished graph construction." << std::endl;
         } else {
             size_t nodes, size;

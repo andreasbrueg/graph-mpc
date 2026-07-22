@@ -70,13 +70,14 @@ int main(int argc, char **argv) {
 
     try {
         Party id = (Party)opts["pid"].as<int>();
+        const size_t bits = 3;
 
         Graph graph;
         auto network = setup::setupNetwork(opts, clients);
         if (id != D) {
             InputServer server(network, clients);
             std::cout << "Awaiting " << clients << " packets" << std::endl << std::endl;
-            graph = server.recv_graph();
+            graph = server.recv_graph(bits);
             std::cout << "Finished graph construction." << std::endl;
         } else {
             size_t nodes, size;
@@ -87,8 +88,7 @@ int main(int argc, char **argv) {
             graph.size = size;
         }
         const size_t depth = 4;
-        const size_t bits = 3;
-        bool ssd = true;
+        bool ssd = false;
 
         ProtocolConfig conf = {id, graph.size, graph.nodes, depth, bits, ssd};
 

@@ -77,7 +77,7 @@ class NetIOMP {
           ios(conf.n_parties + conf.n_clients),
           ios2(conf.n_parties + conf.n_clients),
           sent(conf.n_parties + conf.n_clients, false) {
-        std::cout << "Establishing connection to " << nP << " parties via port " << conf.port << " and ID: " << party << ". " << std::endl;
+        std::cout << "Establishing connection to " << nP << " parties (and potential clients) via port " << conf.port << " and ID: " << party << ". " << std::endl;
         if (force_init) {
             init_network();
         } else {

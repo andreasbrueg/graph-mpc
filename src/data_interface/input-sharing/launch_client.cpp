@@ -2,7 +2,7 @@
 #include <iostream>
 #include <thread>
 
-#include "../cmdline.h"
+#include "../../setup/cmdline.h"
 #include "input_client.h"
 
 void launch_client(std::shared_ptr<io::NetIOMP> network, emp::PRG rng, size_t start_idx, size_t bits, std::string input_file = "") {

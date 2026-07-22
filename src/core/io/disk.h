@@ -8,7 +8,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "../utils/types.h"
+#include "../../utils/types.h"
 
 class FileWriter {
    public:

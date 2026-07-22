@@ -40,7 +40,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include "../setup/configs.h"
+#include "../../data_interface/configs.h"
 #include "disk.h"
 
 #pragma GCC diagnostic push

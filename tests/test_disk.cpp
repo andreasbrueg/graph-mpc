@@ -2,7 +2,7 @@
 #include <iostream>
 #include <numeric>
 
-#include "../src/io/disk.h"
+#include "../src/core/io/disk.h"
 #include "../src/setup/configs.h"
 #include "../src/utils/permutation.h"
 #include "../src/utils/shuffle_preproc.h"

@@ -2,7 +2,7 @@
 
 #include <omp.h>
 
-#include "../io/netmp.h"
+#include "../core/io/netmp.h"
 #include "permutation.h"
 
 namespace share {

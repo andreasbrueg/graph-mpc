@@ -5,7 +5,7 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
-#include "../io/netmp.h"
+#include "../core/io/netmp.h"
 
 struct TimePoint {
     using timepoint_t = std::chrono::high_resolution_clock::time_point;

@@ -10,7 +10,7 @@
 #include <cassert>
 #include <vector>
 
-#include "../setup/configs.h"
+#include "../data_interface/configs.h"
 #include "permutation.h"
 #include "sharing.h"
 

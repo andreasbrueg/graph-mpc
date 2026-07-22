@@ -3,7 +3,7 @@
 #include <cassert>
 #include <future>
 
-#include "../../io/netmp.h"
+#include "../../core/io/netmp.h"
 #include "../../utils/graph.h"
 
 class InputServer {

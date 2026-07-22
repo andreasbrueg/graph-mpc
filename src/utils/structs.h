@@ -3,8 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include "../io/disk.h"
-#include "../setup/configs.h"
+#include "../core/io/disk.h"
+#include "../data_interface/configs.h"
 #include "types.h"
 
 struct MPContext {

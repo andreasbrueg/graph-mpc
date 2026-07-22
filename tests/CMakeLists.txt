@@ -32,6 +32,5 @@ add_dependencies(tests ${testbin})
 
 
 file(COPY ../certs DESTINATION ${PROJECT_BINARY_DIR}/tests)
-file(COPY ../config DESTINATION ${PROJECT_BINARY_DIR}/tests)
 file(COPY subgraph_0.data DESTINATION ${PROJECT_BINARY_DIR}/tests)
 file(COPY subgraph_1.data DESTINATION ${PROJECT_BINARY_DIR}/tests)

@@ -3,7 +3,7 @@
 #include <thread>
 
 #include "setup/cmdline.h"
-#include "setup/input-sharing/input_client.h"
+#include "data_interface/input-sharing/input_client.h"
 
 void launch_client(std::shared_ptr<io::NetIOMP> network, emp::PRG rng, size_t client_id, size_t start_idx, size_t bits, std::string input_file = "") {
     Graph g;

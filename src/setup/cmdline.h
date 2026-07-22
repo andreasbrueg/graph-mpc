@@ -11,12 +11,12 @@
 
 using json = nlohmann::json;
 
-#include "../io/netmp.h"
+#include "../core/io/netmp.h"
 #include "../utils/comm.h"
 #include "../utils/graph.h"
 #include "../utils/random_generators.h"
-#include "configs.h"
-#include "input-sharing/input_server.h"
+#include "../data_interface/configs.h"
+#include "../data_interface/input-sharing/input_server.h"
 
 namespace bpo = boost::program_options;
 

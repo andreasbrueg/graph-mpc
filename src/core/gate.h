@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../io/disk.h"
+#include "./io/disk.h"
 #include "../utils/sharing.h"
 #include "../utils/types.h"
 

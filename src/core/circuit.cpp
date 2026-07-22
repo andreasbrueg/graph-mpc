@@ -317,7 +317,8 @@ SIMD_wire_id Circuit::input() {
 }
 
 void Circuit::output(SIMD_wire_id &input) {
-    SIMD_wire_id output;
+    SIMD_wire_id output = n_wires;
+    n_wires++;
     gates.push_back(std::make_shared<Gate>(Output, gates.size(), input, output));
 }
 

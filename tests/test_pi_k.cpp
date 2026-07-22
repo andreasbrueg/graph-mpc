@@ -63,21 +63,21 @@ class TestPiK : public Test {
         return g_shared;
     }
 
-    void run_assertions(std::vector<Ring> &result, size_t &bytes_sent_pre, size_t &bytes_sent_eval) override {
+    void run_assertions(std::vector<Ring> &result, [[maybe_unused]] size_t &bytes_sent_pre, [[maybe_unused]] size_t &bytes_sent_eval) override {
         if (conf.id == D) {
-            size_t expected_pre = 4 * (24 * conf.size * conf.bits + 64 * conf.size - 12 + 8 * conf.size * conf.depth) +
+            [[maybe_unused]] size_t expected_pre = 4 * (24 * conf.size * conf.bits + 64 * conf.size - 12 + 8 * conf.size * conf.depth) +
                                   2 * sizeof(size_t);  // one element per party always sent to synchronize vector sizes
             expected_pre += 2 * (sizeof(size_t) + 3 * 2 * sizeof(uint64_t)); // initial PRF seed distribution (to 2 parties, #seeds and 3 seeds, each consisting of 2 uint64_t)
-            size_t expected_eval = 0;
+            [[maybe_unused]] size_t expected_eval = 0;
 
             assert(bytes_sent_pre == expected_pre);
             assert(bytes_sent_eval == expected_eval);
         } else {
-            size_t expected_pre = 0;
+            [[maybe_unused]] size_t expected_pre = 0;
             if (conf.id == P0) {
                 expected_pre += 2 * sizeof(uint64_t); // initial PRF seed distribution, 1 seed to P1
             }
-            size_t expected_eval = 4 * (18 * conf.size * conf.bits + 58 * conf.size - 24 + 4 * conf.size * conf.depth);
+            [[maybe_unused]] size_t expected_eval = 4 * (18 * conf.size * conf.bits + 58 * conf.size - 24 + 4 * conf.size * conf.depth);
             assert(bytes_sent_pre == expected_pre);
             assert(bytes_sent_eval == expected_eval);
             result = share::reveal_vec(id, network, result);

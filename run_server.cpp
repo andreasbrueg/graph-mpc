@@ -168,6 +168,7 @@ int main(int argc, char **argv) {
         case Algorithm::PI_K: circ = new PiKCircuit(conf, weights); break;
         case Algorithm::PI_R: circ = new PiRCircuit(conf); break;
         case Algorithm::CUSTOM: circ = new CustomCircuit(conf); break;
+        default: return -1;
     }
     std::cout << "Running algorithm " << algorithm << " " << algo_description((Algorithm) algorithm) << std::endl << std::endl;
     circ->provide_outputs_in_input_order();

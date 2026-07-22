@@ -64,6 +64,7 @@ std::vector<Ring> share::random_share_vec_3P(Party id, RandomGenerators &rngs, s
             return sum;
         }
     }
+    return std::vector<Ring>(0); // unreachable, but to make the compiler happy
 }
 
 std::vector<Ring> share::reveal_vec(Party id, std::shared_ptr<io::NetIOMP> network, std::vector<Ring> &share) {

@@ -121,6 +121,4 @@ int main(int argc, char **argv) {
     setup::print_vec(result);
 
     return 0;
-
-    // TODO also output config data
 }

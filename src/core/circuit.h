@@ -144,9 +144,9 @@ class Circuit {
      * The default implementation returns std::nullopt, in which case the initial node states are
      * not set to static values, but instead are taken from the inputs.
      * 
-     * The recommended use is to simply utilize TODO to initialize the node states to a fixed
-     * vector of size 'nodes'. Note that when this method is called, it can be assumed that all
-     * nodes are sorted, so the vector entries should be arranged appropriately.
+     * The recommended use is to simply utilize set_const_vector() to initialize the node states to
+     * a fixed vector of size 'nodes'. Note that when this method is called, it can be assumed that
+     * all nodes are sorted, so the vector entries should be arranged appropriately.
      * 
      * @param column id of the column to be initialized, so that multi-column algorithms can use
      *                  different starting values for different columns.

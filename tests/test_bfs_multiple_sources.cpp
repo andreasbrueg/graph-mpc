@@ -114,7 +114,7 @@ class TestBFS : public Test {
 int main(int argc, char **argv) {
     auto prog_opts(setup::programOptionsTest());
 
-    bpo::options_description cmdline("Test for the secure computation of the Reach Score."); // TODO fix here and elsewhere!
+    bpo::options_description cmdline("Test for the secure computation of BFS where the inputs include multiple BFS sources.");
     cmdline.add(prog_opts);
     cmdline.add_options()("config,c", bpo::value<std::string>(), "configuration file for easy specification of cmd line arguments")("help,h",
                                                                                                                                     "produce help message");
@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
         const size_t size = 21;
         const size_t nodes = 7;
         const size_t depth = 1;
-        const size_t bits = std::ceil(std::log2(nodes + 2)); // TODO should likely be changed for weirder node ids
+        const size_t bits = std::ceil(std::log2(nodes + 2));
         bool ssd = false;
 
         ProtocolConfig conf = {id, size, nodes, depth, bits, ssd};

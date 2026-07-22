@@ -41,10 +41,8 @@ int main(int argc, char **argv) {
     auto network = setup::setupNetwork(opts);
     setup::setupClient(opts, start_idx, bits, input_file);
 
-    /* Dummy PRG */
-    emp::PRG rng;
-    auto seed_block = emp::makeBlock(14132, 68436); // TODO ??? security?
-    rng.reseed(&seed_block, 0);
+    /* Local PRG */
+    emp::PRG rng; // Constructor uses cryptographically secure random seed
 
     launch_client(network, rng, start_idx, bits, input_file);
 }

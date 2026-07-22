@@ -12,31 +12,12 @@ void setup::print_vec(std::vector<Ring> &vec) {
 
 bpo::options_description setup::programOptionsBenchmark() { // TODO remove, kinda duplicate
     bpo::options_description desc(
-        "Following options are supported by config file too. Regarding seeds, "
-        "all, 01, 02, and 12 need to be equal among the parties using them. "
-        "Other parties, e.g., party 2 for seed 01 can take any value and in "
-        "fact must not know the value that 0 and 1 use");
+        "Following options are supported by config file too.");
 
     desc.add_options()(
         "pid,p", bpo::value<int>()->default_value(0), "Party ID.")(
         "isclient", bpo::bool_switch(), "Defines if user is a client.")(
         "parties", bpo::value<size_t>()->default_value(3), "Number of parties running the protocol.")(
-        "seed_self_h", bpo::value<uint64_t>()->default_value(100), "Value of the private random seed, high bits.")(
-        "seed_self_l", bpo::value<uint64_t>()->default_value(0), "Value of the private random seed, low bits (will add pid if 0/default).")(
-        "seed_D0_recv_h", bpo::value<uint64_t>()->default_value(4), "Value of the D0-shared random seed for evaluate_recv, high bits.")(
-        "seed_D0_recv_l", bpo::value<uint64_t>()->default_value(8), "Value of the D0-shared random seed for evaluate_recv, low bits.")(
-        "seed_D1_recv_h", bpo::value<uint64_t>()->default_value(15), "Value of the D1-shared random seed for evaluate_recv, high bits.")(
-        "seed_D1_recv_l", bpo::value<uint64_t>()->default_value(16), "Value of the D1-shared random seed for evaluate_recv, low bits.")(
-        "seed_01_h", bpo::value<uint64_t>()->default_value(23), "Value of the 01-shared random seed, high bits.")(
-        "seed_01_l", bpo::value<uint64_t>()->default_value(42), "Value of the 01-shared random seed, low bits.")(
-        "seed_D0_send_h", bpo::value<uint64_t>()->default_value(108), "Value of the D0-shared random seed for evaluate_send, high bits.")(
-        "seed_D0_send_l", bpo::value<uint64_t>()->default_value(1337), "Value of the D0-shared random seed for evaluate_send, low bits.")(
-        "seed_D1_send_h", bpo::value<uint64_t>()->default_value(21108), "Value of the D1-shared random seed for evaluate_send, high bits.")(
-        "seed_D1_send_l", bpo::value<uint64_t>()->default_value(211337), "Value of the D1-shared random seed for evaluate_send, low bits.")(
-        "seed_D0_prep_h", bpo::value<uint64_t>()->default_value(1108), "Value of the D0-shared random seed for preprocessing, high bits.")(
-        "seed_D0_prep_l", bpo::value<uint64_t>()->default_value(11337), "Value of the D0-shared random seed for preprocessing, low bits.")(
-        "seed_D1_prep_h", bpo::value<uint64_t>()->default_value(1111108), "Value of the D1-shared random seed for preprocessing, high bits.")(
-        "seed_D1_prep_l", bpo::value<uint64_t>()->default_value(11111337), "Value of the D1-shared random seed for preprocessing, low bits.")(
         "net-config", bpo::value<std::string>(), "Path to JSON file containing network details of all parties.")(
         "localhost", bpo::bool_switch(), "All parties are on same machine.")(
         "size,s", bpo::value<size_t>()->default_value(10), "Number of graph entries.")(
@@ -64,21 +45,21 @@ bpo::options_description setup::programOptionsTest() {
 
     desc.add_options()(
         "pid,p", bpo::value<int>()->default_value(0), "Party ID.")(
-        "isclient", bpo::bool_switch(), "Defines if user is a client.")( // TODO remove, should be other executable
+        "isclient", bpo::bool_switch(), "Defines if user is a client.")(
         "net-config", bpo::value<std::string>(), "Path to JSON file containing network details of all parties.")(
         "localhost", bpo::bool_switch(), "All parties are on same machine.")(
         "certificate_path", bpo::value<std::string>()->default_value("certs/cert1.pem"), "Path to full certificate chain file for TLS server connections")(
         "private_key_path", bpo::value<std::string>()->default_value("certs/key1.pem"), "Path to private key for TLS server connections")(
         "trusted_cert_path", bpo::value<std::string>()->default_value("certs/cert_ca.pem"), "Path with trusted certificate for TLS client connections")(
         "port", bpo::value<int>()->default_value(10000), "Base port for networking.")(
-        "parties", bpo::value<size_t>()->default_value(3), "Number of parties running the protocol.")( // TODO is there any other option? Remove?
-        "BLOCK_SIZE", bpo::value<size_t>()->default_value(100000), "BLOCK_SIZE for sending messages over the network.")( // TODO add better doc
-        "ssd", bpo::bool_switch(), "Preprocessing values are stored on disk before they are sent.")( // TODO better doc
-        "input,i", bpo::value<std::string>(), "File specifying the graph.")( // TODO investigate
-        "clients", bpo::value<size_t>()->default_value(0), "Number of clients participating in input-sharing.")( // TODO zero leads to errors!!
-        "size,s", bpo::value<size_t>()->default_value(10), "Number of graph entries.")( // TODO why default?
-        "nodes", bpo::value<size_t>()->default_value(0), "Number of nodes for benchmarking graph algorithms")( // TODO why default?
-        "depth,d", bpo::value<size_t>()->default_value(0), "search depth parameter D"); // TODO why default?
+        "parties", bpo::value<size_t>()->default_value(3), "Number of parties running the protocol.")(
+        "BLOCK_SIZE", bpo::value<size_t>()->default_value(100000), "BLOCK_SIZE for sending messages over the network.")(
+        "ssd", bpo::bool_switch(), "Preprocessing values are stored on disk before they are sent.")(
+        "input,i", bpo::value<std::string>(), "File specifying the graph.")(
+        "clients", bpo::value<size_t>()->default_value(0), "Number of clients participating in input-sharing.")(
+        "size,s", bpo::value<size_t>()->default_value(10), "Number of graph entries.")(
+        "nodes", bpo::value<size_t>()->default_value(0), "Number of nodes for benchmarking graph algorithms")(
+        "depth,d", bpo::value<size_t>()->default_value(0), "search depth parameter D");
 
     return desc;
 }
@@ -200,7 +181,6 @@ void setup::setupServer(const bpo::variables_map &opts, Graph &g, std::shared_pt
             InputServer server(network, clients);
             std::cout << "Awaiting " << clients << " packets" << std::endl << std::endl;
             g = server.recv_graph();
-            // g.init_mp((Party)id); // TODO remove
             std::cout << "Finished graph construction." << std::endl;
         } else {
             size_t nodes, size;
@@ -213,7 +193,7 @@ void setup::setupServer(const bpo::variables_map &opts, Graph &g, std::shared_pt
     }
 }
 
-ProtocolConfig setup::setupProtocol(const bpo::variables_map &opts, std::shared_ptr<io::NetIOMP> network) {
+ProtocolConfig setup::setupProtocol(const bpo::variables_map &opts, std::shared_ptr<io::NetIOMP> /*network*/) {
     int pid;
     size_t size, nodes, depth, bits;
     bool ssd;

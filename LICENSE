@@ -1,8 +1,10 @@
 MIT License
 
-Copyright (c) 2025 Simon Brunnauer
-Based on the implementation for MultiCent, Copyright (c) 2024 Andreas Brüggemann, Joachim Schmidt, Maximilian Stillger,
-provided under MIT License as well.
+Copyright (c) 2026 Andreas Brüggemann and Simon Brunnauer.
+This codebase is partially based on the implementation of MultiCent (Copyright
+(c) 2024 Andreas Brüggemann, Joachim Schmidt, Maximilian Stillger) that is
+based on the implementation of Graphiti (Copyright (c) 2024 Bhavish Raj Gopal),
+both also provided under the MIT license.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -19,7 +19,6 @@ add_benchmark(benchmark_bfs)
 add_benchmark(benchmark_pi_r)
 add_benchmark(benchmark_pi_k)
 add_benchmark(benchmark_pi_m)
-#add_benchmark(benchmark_circ) # TODO ???
 
 add_custom_target(benchmarks)
 add_dependencies(benchmarks ${benchbin})

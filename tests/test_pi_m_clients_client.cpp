@@ -29,12 +29,13 @@ void launch_client(std::shared_ptr<io::NetIOMP> network, emp::PRG rng, size_t cl
         assert(result[0] == 20820072);
         assert(result[1] == 31030096);
     }
+    std::cout << "test_pi_m_clients passed." << std::endl;
 }
 
 int main(int argc, char **argv) {
     auto prog_opts(setup::clientProgramOptions());
 
-    bpo::options_description cmdline("Launching a client that sends part of the full graph.");
+    bpo::options_description cmdline("(Client-side) test for the secure computation of the Multilayer Truncated Katz Score where the input graph is provided by clients.");
     cmdline.add(prog_opts);
 
     cmdline.add_options()("config,c", bpo::value<std::string>(), "configuration file for easy specification of cmd line arguments")("help,h",
@@ -61,10 +62,8 @@ int main(int argc, char **argv) {
 
     auto network = setup::setupNetwork(opts, 2);
 
-    /* Dummy PRG */
-    emp::PRG rng; // TODO ??? security?
-    auto seed_block = emp::makeBlock(14132, 68436);
-    rng.reseed(&seed_block, 0);
+    /* Local PRG */
+    emp::PRG rng; // Constructor uses cryptographically secure random seed
 
     launch_client(network, rng, client_id, start_idx, bits, input_file);
 }

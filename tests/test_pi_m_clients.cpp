@@ -39,7 +39,7 @@ class TestPiMClients : public Test {
             assert(bytes_sent_pre == expected_pre);
             assert(bytes_sent_eval == expected_eval);
 
-            /* Sending the result to the clients --> Has some bug regarding NetIOMP */ // TODO check!
+            /* Sending the result to the clients */
             for (int i = 0; i < (network->n_total - network->nP); ++i) {
                 network->send_result(i, result);
             }
@@ -52,7 +52,6 @@ class TestPiMClients : public Test {
             assert(result[8] == 31030096);  // 3 of length 1, 10 of length 2, 30 of length 3,  96 of length 4
             assert(result[7] == 20820072);  // 2 of length 1,  8 of length 2, 20 of length 3,  72 of length 4
 
-            // TODO client test should also run assertions!
             std::cout << "test_pi_m_clients passed." << std::endl;
         }
     }
@@ -61,7 +60,7 @@ class TestPiMClients : public Test {
 int main(int argc, char **argv) {
     auto prog_opts(setup::programOptionsTest());
 
-    bpo::options_description cmdline("Test for the secure computation of the Reach Score.");
+    bpo::options_description cmdline("(Server-side) test for the secure computation of the Multilayer Truncated Katz Score where the input graph is provided by clients.");
     cmdline.add(prog_opts);
     cmdline.add_options()("config,c", bpo::value<std::string>(), "configuration file for easy specification of cmd line arguments")("help,h",
                                                                                                                                     "produce help message");

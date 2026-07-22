@@ -104,7 +104,7 @@ class TestBFS3Parallel : public Test {
             assert(result[6] == 1);
             assert(result[7] == 0);
             // v2:
-            assert(result[1 * 18 + 0] == 1); // TODO looks ugly
+            assert(result[1 * 18 + 0] == 1);
             assert(result[1 * 18 + 1] == 1);
             assert(result[1 * 18 + 2] == 1);
             assert(result[1 * 18 + 3] == 1);
@@ -130,7 +130,7 @@ class TestBFS3Parallel : public Test {
 int main(int argc, char **argv) {
     auto prog_opts(setup::programOptionsTest());
 
-    bpo::options_description cmdline("Test for the secure computation of the Reach Score.");
+    bpo::options_description cmdline("Test for the secure computation of three parallel BFS instances.");
     cmdline.add(prog_opts);
     cmdline.add_options()("config,c", bpo::value<std::string>(), "configuration file for easy specification of cmd line arguments")("help,h",
                                                                                                                                     "produce help message");
@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
         const size_t size = 18;
         const size_t nodes = 8;
         const size_t depth = 3;
-        const size_t bits = std::ceil(std::log2(nodes + 2)); // TODO should likely be changed for weirder node ids
+        const size_t bits = std::ceil(std::log2(nodes + 2));
         bool ssd = false;
 
         ProtocolConfig conf = {id, size, nodes, depth, bits, ssd};

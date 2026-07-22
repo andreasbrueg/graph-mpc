@@ -31,7 +31,7 @@ class InputClient {
             size_t n_vertices = share.nodes;
             send(dst, n_vertices);
             send_packet(dst, pkt);
-            // TODO where is the PRF stuff??
+            // TODO could be optimized by just sending PRF seed to one of the servers
         }
         /* Dealer needs to know |V| and n */
         send_nodes(D, g.nodes);

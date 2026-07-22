@@ -97,7 +97,7 @@ class TestPiM : public Test {
 int main(int argc, char **argv) {
     auto prog_opts(setup::programOptionsTest());
 
-    bpo::options_description cmdline("Test for the secure computation of the Reach Score.");
+    bpo::options_description cmdline("Test for the secure computation of the Multilayer Truncated Katz Score.");
     cmdline.add(prog_opts);
     cmdline.add_options()("config,c", bpo::value<std::string>(), "configuration file for easy specification of cmd line arguments")("help,h",
                                                                                                                                     "produce help message");
@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
         const size_t size = 14;
         const size_t nodes = 4;
         const size_t depth = 4;
-        const size_t bits = std::ceil(std::log2(nodes + 2)); // TODO should likely be changed for weirder node ids
+        const size_t bits = std::ceil(std::log2(nodes + 2));
         bool ssd = false;
 
         ProtocolConfig conf = {id, size, nodes, depth, bits, ssd};

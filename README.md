@@ -177,37 +177,21 @@ n13 <-- n14 <-- n15 <-- n16
 Alice now also sees that in addition to the prior experiment, node 8 has been reached, which was only
 possible using a path that first went over to Bob's subgraph and then back to Alice's subgraph.
 
-```sh
-# Compiling MultiCent
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j8 benchmarks
-cd benchmarks # Not cd benchmark (without the s)!
+#### Next Steps:
 
-# Testing that installation successful by starting all three parties (with their pids 0, 1, 2)
-# for testing pi_3 with D=2, 10 nodes and a total graph size of 20
-./pi_3_benchmark --localhost --depth 2 --nodes 10 --size 20 --pid 0 > /dev/null &
-./pi_3_benchmark --localhost --depth 2 --nodes 10 --size 20 --pid 2 > /dev/null &
-./pi_3_benchmark --localhost --depth 2 --nodes 10 --size 20 --pid 1
+To experiment around, you can, e.g., try the other algorithms. All available algorithms can be listed
+using ```./run_server --help```. Also, you may make changes to the input files of Alice and Bob.
+Note that cmake copies them from the main directory into the build directory, so you need to directly
+edit those in the build directory to change the graph inputs.
 
-# Running small benchmarks
-./small_LAN_benchmarks.sh # Will take approx. 1 hour
-./small_WAN_benchmarks.sh # Will take approx. 40 minutes
+For a more detailed description of the different options, and instructions on how to implement your
+own custom graph algorithm, check out the rest of the documentation in this readme file!
 
-# Plotting benchmark results
-cd ../../evaluation_scripts
-python3 dataset_plots.py altScale
-python3 scalability_plots_betterspacing.py altScale
-python3 extended_scalability_plots.py altScale
-python3 network_plots.py altScale
-# Results are written to PDFs inside evaluation_scripts
-# Only run times for smaller graphs are benchmarked and hence plotted to require less RAM,
-# still, communication is analytically computed to show scalability beyond possible benchmarks.
-```
 
-## External Dependencies
+## Installing PPGA
 
-In order to successfully build the source code, the following external libraries need to be installed on the system.
+PPGA has the following external dependencies, which are already included in our Dockerfile, but need
+to manually be installed if PPGA is not used from a docker container:
 
 * [GMP](https://gmplib.org)
 * [Boost](https://www.boost.org)
@@ -216,51 +200,177 @@ In order to successfully build the source code, the following external libraries
 * [nlohmann_json](https://github.com/nlohmann/json)
 * [OpenMP](https://www.openmp.org)
 
-## Compiling
-``mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && make -j8``
-
-
-
-./test_pi_m_clients für 3 Server
-setup/input_sharing/launch_client.cpp
-in /config auch die Arguments
-
-```
-n 1 --> n 2 --> n 3 --> n 4
- |       ^
- v       |
-n 5 <-- n 6 <-- n 7 <-- n 8
- ^       |      | ^      ^
- |       v      v |      |
-n 9 --> n10 --> n11 --> n12
- |       ^               |
- v       |               v
-n13 <-- n14 <-- n15 <-- n16
+GMP, Boost, OpenSSL, nlohmann_json, and OpenMP are available from standard package repositories on
+many distributions. For EMP tool, it usually suffices to install it at a freely chosen path as follows:
+```sh
+git clone https://github.com/emp-toolkit/emp-tool.git
+cd emp-tool
+git checkout 8052d95
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .
+make -j8
+make install
 ```
 
-# MultiCent
+Instead, for local tests in a Docker container, the environment can simply be set up via
+```sh
+sudo docker buildx build -t PPGA .
+sudo docker run -it -v $(pwd):$(pwd) -w $(pwd) --cap-add=NET_ADMIN PPGA
+```
+and using
+```sh
+TODO
+```
+to spawn additional terminals as needed.
 
-This is the implementation of MultiCent, a framework of MPC protocols to compute centrality measures on (multi)graphs.
-The framework enables to run message-passing algorithms with a linear aggregation function on (multi)graphs.
-It includes the instantiation of three specific centrality measures within the framework, but allows for relatively easy extension.
+PPGA has been tested on Arch and Ubuntu for x86-64 architecture, and on MacOS on AppleSilicon.
 
-**Check out [our paper](https://eprint.iacr.org/2025/652), accepted at PETs'25, for details!**
+To compile PPGA (also required in the Docker container), do the following:
+```sh
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make -j8
+```
 
-:warning: This code is a prototype implementation and should not be used in production.
 
-### Framework for Message-Passing Algorithms
+## Running PPGA
 
-This repository is a fork of [Graphiti](https://github.com/Bhavishrg/Graphiti) ([paper](https://eprint.iacr.org/2024/1756)).
-Graphiti introduces a framework for efficiently evaluating message-passing algorithms with a linear aggregation function in MPC.
-In such algorithms, nodes hold some state and multiple iterations then
-- propagate these states to outgoing edges,
-- linearly gather/aggregate data over all incoming edges to any node,
-- and use the gathered data to update the node's state according to a customizable update function.
-Compared to Graphiti, this framework
-- fixes many correctness and security issues in the circuit representation, communication channels, and protocol implementations,
-- provides a full solution whereas Graphiti's code is only usable for micro-benchmarking of some components,
-- improves the protocol by instantiating required sorting in a more suitable and scalable fashion,
-- and supports multigraphs whereas Graphiti was designed with only standard graphs in mind.
+PPGA is easiest to run using the *run_client* and *run_server* binaries, explained in the following.
+
+**Warning:** Except for *pid*, *cid*, *inputfile*, and *offset*, all servers and clients must use the
+same arguments. In case of mismatches, random faults, crashes, etc. may occur as PPGA currently makes it
+solely the user's responsibility to check that servers and clients run on compatible settings.
+
+#### Running Servers Using *run_server*
+
+PPGA requires to run three different servers separately. Each server can be started via *run_server*,
+taking the following mandatory arguments (documentation is also shown when running ```./run_server --help```):
+
+- *algorithm* (e.g., ```--algorithm 0```): This is the ID of the graph algorithm to be executed. Options are
+    - 0: BFS. This is a simple breadth-first search. Source node(s) are specified by the client inputs.
+    - 1: BFS, 3 parallel. This runs three BFS instances in parallel, each starting from one of the first
+        three nodes as source. Note that PPGA currently only supports to output the results of the first
+        instance to clients.
+    - 2: Pi_M. This is the multilayer truncated Katz centrality score, see Section 2.2
+        [here](https://eprint.iacr.org/2025/652) for a description. Note that this behaves like the
+        standard truncated Katz centrality score for simple graphs, i.e., graphs where there are no
+        duplicate edges. Pi_M **requires to also pass weights** as a CLI argument, described later.
+    - 3: Pi_K. This is the truncated Katz centrality score, see Section 2.2
+        [here](https://eprint.iacr.org/2025/652) for a description. On simple graphs, this is
+        equivalent to Pi_M; hence, if it is known that a graph is simple, Pi_M is preferrable as it
+        has lower cost. For multigraphs, Pi_K removes any duplicate edges first to ensure that Katz
+        centrality still is computed correctly. Pi_K **requires to also pass weights** as a CLI
+        argument, described later.
+    - 4: Pi_R. Reach centrality score. This simply counts for each nodes how many nodes are reachable
+        from that node within the given depth.
+    - 5: Custom. This is an interface to run a custom user-defined algorithm without the need of changing
+        the *run_server* binary. For more explanation, see TODO.
+- *depth* (e.g., ```--depth 3```): This is the iteration depth, i.e., the number of message-passing iterations to be run.
+- *pid* (e.g., ```--pid 0```): Server ID. This specifies the unique role of the server. PPGA requires
+        to start compute servers with IDs 0 and 1 and an additional dealer server with ID 2.
+- *localhost* (```--localhost```) or *net-config* (e.g., ```--net-config ../ip-addresses.json```):
+        This specifies how the servers and clients connect to eachother.
+    - Using *localhost* without any value lets all servers and clients connect via localhost. This is
+        intended for local testing.
+    - Using *net-config*, a path to a JSON file is specified containing the IP addresses of all servers
+        and clients. The format is as follows: ```["Server 0 IP",  "Server 1 IP", "Server 2 IP", "Client 1 IP", "Client 2 IP", ...]```
+
+Further important arguments:
+
+- *weights* (e.g., ```--weights {3,2,1}```): List of weights with a length that must match **depth**.
+            These are the weight parameters to the (multilayer) truncated Katz score Pi_M/Pi_K.
+- *bits* (e.g., ```--bits 10```): Number of bits required to represent all node IDs, i.e., each node
+            ID needs to be smaller than 2^*bits*. By default, this is set to 32, but any smaller
+            possible value can greatly increase performance. It is assumed that clients and servers
+            coordinate in advance how many bits are needed for representing nodes.
+            *Note that PPGA always uses unsigned 32 bit ints for representing values in the algorithm!*
+            This argument simply specifies the practically used bits for IDs, rendering specific
+            subcomponents (the underlying radix-sort) of the message-passing more efficient.
+- *clients* (e.g., ```--clients 2```): The number of clients. If not specified, this defaults to 1.
+- *ssd* (```--ssd```): Lets servers store part of their preprocessing information on disk instead of
+                        RAM. **Attention!** While this can greatly decrease RAM utilization, note that
+                        each protocol run needs to generate fresh preprocessing information, and this
+                        can quickly become tens of GiB each run. Using this option can hence be
+                        harmful to SSD lifetime, use with caution!
+
+Other arguments:
+
+- *port* (e.g., ```--port 10000```): Base port for connections between the servers.
+- *input-port* (e.g., ```--port 4242```): Server ports for receiving input shares from clients.
+- *certificate_path* (e.g., ```--certificate_path certs/cert1.pem```): Path to full certificate chain
+                        file for TLS server connections.
+- *private_key_path* (e.g., ```--private_key_path certs/key1.pem```): Path to private key for TLS server connections.
+- *trusted_cert_path* (e.g., ```--trusted_cert_path certs/cert_ca.pem```): Path to trusted root certificate for TLS connections.
+- *BLOCK_SIZE* (e.g., ```--BLOCK_SIZE 100000```): Maximum number of 32bit values to be sent at once
+                to remain below TCP buffer sizes. Can be increased for faster communication if appropriately
+                larger buffer sizes are set in the OS.
+
+Example: (on three different terminals)
+```sh
+./run_server --algorithm 0 --depth 3 --localhost --pid 0 --clients 2
+./run_server --algorithm 0 --depth 3 --localhost --pid 1 --clients 2
+./run_server --algorithm 0 --depth 3 --localhost --pid 2 --clients 2
+```
+
+#### Running Clients Using *run_client*
+
+Clients can be started via *run_client*, taking the following mandatory arguments (documentation is
+also shown when running ```./run_client --help```):
+
+- *cid* (e.g., ```--cid 0```): Client ID. Clients need to be numbered 0, 1, 2, ...
+- *localhost* (```--localhost```) or *net-config* (e.g., ```--net-config ../ip-addresses.json```):
+        This specifies how the servers and clients connect to eachother.
+    - Using *localhost* without any value lets all servers and clients connect via localhost. This is
+        intended for local testing.
+    - Using *net-config*, a path to a JSON file is specified containing the IP addresses of all servers
+        and clients. The format is as follows: ```["Server 0 IP",  "Server 1 IP", "Server 2 IP", "Client 1 IP", "Client 2 IP", ...]```
+
+Further important arguments:
+
+- *inputfile* (e.g., ```--inputfile subgraph_0.data```): This is the graph input provided by the client.
+                For a detailed explanation of the format, please refer to TODO. If not set, this
+                defaults to 'subgraph_[cid].data'
+- *offset* (e.g., ```--offset 10```): Each client contributes a part to the graph in list form.
+            The offset specifies at which position in the merged list the input provided by this client
+            should start. 0 by default.
+- *bits* (e.g., ```--bits 10```): Number of bits required to represent all node IDs, i.e., each node
+            ID needs to be smaller than 2^*bits*. By default, this is set to 32, but any smaller
+            possible value can greatly increase performance. It is assumed that clients and servers
+            coordinate in advance how many bits are needed for representing nodes.
+            *Note that PPGA always uses unsigned 32 bit ints for representing values in the algorithm!*
+            This argument simply specifies the practically used bits for IDs, rendering specific
+            subcomponents (the underlying radix-sort) of the message-passing more efficient.
+- *clients* (e.g., ```--clients 2```): The number of clients. If not specified, this defaults to 1.
+
+Other arguments:
+
+- *port* (e.g., ```--port 10000```): Base port for connections between the servers.
+- *input-port* (e.g., ```--port 4242```): Server ports for receiving input shares from clients.
+- *certificate_path* (e.g., ```--certificate_path certs/cert1.pem```): Path to full certificate chain
+                        file for TLS server connections.
+- *private_key_path* (e.g., ```--private_key_path certs/key1.pem```): Path to private key for TLS server connections.
+- *trusted_cert_path* (e.g., ```--trusted_cert_path certs/cert_ca.pem```): Path to trusted root certificate for TLS connections.
+- *BLOCK_SIZE* (e.g., ```--BLOCK_SIZE 100000```): Maximum number of 32bit values to be sent at once
+                to remain below TCP buffer sizes. Can be increased for faster communication if appropriately
+                larger buffer sizes are set in the OS.
+
+Example: (on 2 different terminals)
+Next, we run Alice, also changing the number of clients:
+```sh
+./run_client --cid 0 --localhost --clients 2
+ ./run_client --cid 1 --localhost --clients 2 --offset 16
+```
+
+#### Testing Different Network Settings
+
+To locally or in a LAN simulate different other network settings, bandwidth and RTT can be set using
+[tc](https://www.man7.org/linux/man-pages/man8/tc.8.html).
+
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+TODO: also sources for algos
+TODO: Certificates
+TODO input file format, offset!
 
 ### Centrality measures
 
@@ -284,232 +394,9 @@ We also translate the protocols from [the prior work](https://doi.org/10.1145/30
 * [Repository Content](#repository-content): Outline of which code parts to find where
 
 
-# TL;DR
-
-This section provides a brief walkthrough, installing MultiCent inside a Docker container and running benchmarks locally on your machine.
-You should have 12 GB RAM available for that to ensure that no benchmarks run out of memory.
-```sh
-# Setting up and running container
-sudo docker buildx build -t multicent . # See Environment Section below for alternative that imports an already built image
-sudo docker run -it -v $(pwd):$(pwd) -w $(pwd) --cap-add=NET_ADMIN multicent
-# Proceed working inside the container...
-
-# Compiling MultiCent
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j8 benchmarks
-cd benchmarks # Not cd benchmark (without the s)!
-
-# Testing that installation successful by starting all three parties (with their pids 0, 1, 2)
-# for testing pi_3 with D=2, 10 nodes and a total graph size of 20
-./pi_3_benchmark --localhost --depth 2 --nodes 10 --size 20 --pid 0 > /dev/null &
-./pi_3_benchmark --localhost --depth 2 --nodes 10 --size 20 --pid 2 > /dev/null &
-./pi_3_benchmark --localhost --depth 2 --nodes 10 --size 20 --pid 1
-
-# Running small benchmarks
-./small_LAN_benchmarks.sh # Will take approx. 1 hour
-./small_WAN_benchmarks.sh # Will take approx. 40 minutes
-
-# Plotting benchmark results
-cd ../../evaluation_scripts
-python3 dataset_plots.py altScale
-python3 scalability_plots_betterspacing.py altScale
-python3 extended_scalability_plots.py altScale
-python3 network_plots.py altScale
-# Results are written to PDFs inside evaluation_scripts
-# Only run times for smaller graphs are benchmarked and hence plotted to require less RAM,
-# still, communication is analytically computed to show scalability beyond possible benchmarks.
-```
-
-For plotting original benchmark results our outputting tables with full data, further information can be found [here](#parsing-and-processing-benchmark-data).
-If you wish to run tests, go [here](#running-tests).
 
 
-# Environment
 
-We provide information how to set up the environment for MultiCent using Docker or standalone.
-Please note that our benchmarks were conducted using the standalone method, running each party on a separate server.
-
-## Using Docker
-
-We provide a Dockerfile to set up the environment in a more simple manner.
-
-Run the following command to build the image yourself:
-```sh
-sudo docker buildx build -t multicent .
-```
-
-Alternatively, you can also download the image from the latest release's assets on the [GitHub releases page](https://github.com/encryptogroup/MultiCent/releases).
-This specific build of course is architecture specific. It was build on x86_64 and *should* work on most common and sufficiently modern CPUs of that architecture.
-Load this image as follows from the directory where you downloaded it to:
-```sh
-sudo docker load < [IMAGE_FILE_NAME].tar.gz 
-```
-Then, make sure to go back to the main directory of the downloaded repository.
-
-Then, run the image as follows (```--cap-add=NET_ADMIN``` is required for emulating realistic network behavior later):
-```sh
-sudo docker run -it -v $(pwd):$(pwd) -w $(pwd) --cap-add=NET_ADMIN multicent
-```
-
-## Standalone
-
-The protocol is implemented in C++17 and [CMake](https://cmake.org/) is used as the build system.
-It has been tested on Arch Linux (plain and Manjaro Linux) with GCC 14.2.1 and on x86_64 architecture.
-
-The following libraries need to be installed separately and should be available to the build system and compiler:
-- [GMP](https://gmplib.org/)
-- [NTL](https://www.shoup.net/ntl/) (11.0.0 or later)
-- [Boost](https://www.boost.org/) (1.72.0 or later)
-- [Nlohmann JSON](https://github.com/nlohmann/json)
-- [OpenSSL](https://github.com/openssl/openssl)
-- [EMP Tool](https://github.com/emp-toolkit/emp-tool)
-- To parse benchmark output data and reproduce the plots from our paper, we additionally require python3 and matplotlib.
-
-All except for EMP Tool should be possible to install from standard repositiories.
-For EMP Tool, please follow the instructions from their github page.
-
-Note that for testing different network settings, depending on your testbed, it might be required to simulate network behaviour.
-This can be achieved using [tc](https://www.man7.org/linux/man-pages/man8/tc.8.html).
-[local_demo](local_demo) contains examples to achieve our considered network settings if all parties are running on the same server.
-For setups using multiple servers, these scripts would need to be modified according to the specific networking interfaces etc.
-
-
-# Compiling
-
-To compile (inside a docker or standalone environment), run the following commands from the root directory of the repository.
-
-```sh
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-
-make -j8 benchmarks
-```
-
-For testing purposes, the build type should be changed from ```Release``` to ```Debug```.
-
-
-# Running the Protocols
-
-All binaries will be written to build/benchmarks.
-Set up any network environment simulation if needed, e.g., using [tc](https://www.man7.org/linux/man-pages/man8/tc.8.html).
-If running all parties on the same machine, you can use the scripts inside [local_demo](local_demo) to do that.
-For any of the binaries, use the ```-h``` flag to show the required CLI arguments.
-
-Example:
-```sh
-./pi_3_benchmark --localhost --depth 2 --nodes 10 --size 20 --pid [PID]
-```
-will start a benchmark for pi_3^D as party PID (0: helper, 1/2: other parties), expecting the other parties to run on the same machine (```--localhost```), and using depth D=2, 10 nodes, size 20 (nodes + edges, i.e., 10 directed edges in addition to the nodes).
-**Please note that this command needs to be executed for PIDs 0 1 and 2, so either run each instance with ```&``` appended to run in the background, or use multiple shell windows.**
-If one PID is missing, the other processes will stall until all parties are available.
-
-If you run the parties on different machines, copy [net_config.json](net_config.json) into build/benchmarks and replace the placeholders inside by the actual IPs of the three parties.
-This can then be used automatically as follows:
-```sh
-./pi_3_benchmark --net-config netconfig.json --depth 2 --nodes 10 --size 20 --pid [PID]
-```
-
-The benchmarks include the following targets:
-* pi_3, pi_2, pi_1 are the different centrality measures
-* the _ref version corresponds to the prior [WWW'17 protocol]((https://doi.org/10.1145/3038912.3052602)) which we implemented in our setting for a fair comparison
-* the _test prefix corresponds to a test instance where the correctness of the output and the communication is checked
-* the _benchmark prefix corresponds to a benchmark instance for variable sized graphs, where only the communication is checked
-* there also are additional tests test, shuffle, doubleshuffle, compaction, sort, equalszero to test some of the used primitives standalone
-
-
-# Reproducing our Benchmarks
-
-In our paper, we provide benchmarks of our protocols.
-These were done on one dedicated server per party, each server equipped with an Intel Core i9-7960X CPU @ 2.8 GHz, 128 GB of DDR4 RAM @ 2666 MHz.
-We considered a LAN setting with 1 ms RTT and 1 GBit/s bandwidth, and a WAN setting with 100 ms RTT and 100 MBit/s bandwidth.
-
-## Datasets
-
-Note that our MPC protocols are parametrized by the number of nodes and total graph size only.
-They are oblivious of the exact graph structure which must not be leaked by the control flow.
-Hence, it is not required to provide actual graph instances as input, any graph with the same parameters will lead to the same performance.
-For the datasets in Table 2 of the paper, we simply generate a synthetic graph with the same dimensions.
-For undirected graphs, for each edge {v,w} we insert directed edges (v,w) and (w,v), doubling the number of edges.
-This is only for benchmarking purposes; our code of course also supports providing customized graphs as inputs, as can be seen,
-e.g., [here](benchmark/pi_3_test.cpp), starting at line 102, for a small graph instance example.
-
-## Smaller Local Demo Benchmarks
-
-As our full benchmarks require up to 120 GB RAM per party and to be run on three separate machines, we provide a downscaled demo.
-This demo is carefully designed so that RAM utilization per party remains below 4 GB.
-Hence, with 12 GB RAM available for the benchmarks, all three parties can be started on the same machine, locally emulating a network.
-Also, it just does 3 iterations for each configuration.
-
-Note that starting a benchmark will first delete any prior results from the same benchmark if the benchmark has been started before.
-This is to avoid any duplicate datapoints which would otherwise lead to problems when parsing the data later.
-
-Now, run the LAN benchmarks.
-Our script will automatically enable the network simulation and disable it in the end again.
-If you terminate the script early, simply run ```./network_off.sh``` to stop the artificial network simulation again.
-We recommend working in the Docker container as this will momentarily change the behavior of your loopback interface.
-Running this script will take approx. 1 hour.
-```sh
-./small_LAN_benchmarks.sh
-```
-After the LAN benchmarks finished, you can proceed with the WAN benchmarks.
-Running this script will take approx. 40 minutes.
-```sh
-./small_WAN_benchmarks.sh
-```
-
-## Full Benchmarks as Done in the Paper
-
-First, we strongly advise **not** to use our full benchmark scripts in their current state as they may swiftly exhaust system resources.
-We measures **up to 120 GB RAM utilization on each server** by testing the limits of our scalability, these numbers can also be found in Appendix C of [our paper](https://eprint.iacr.org/2025/652).
-Instead, the full scripts document how exactly we conducted the benchmarks and can serve as a basis for modified benchmark scripts tailored to your system resources.
-
-The scripts are [evaluation_scripts/run_LAN_benchmarks.sh](evaluation_scripts/run_LAN_benchmarks.sh) and [evaluation_scripts/run_WAN_benchmarks.sh](evaluation_scripts/run_WAN_benchmarks.sh), designed for using three different machines for the evaluation.
-They are automatically copied into your build directory when compiling the project and need to be run from there.
-Please ensure first that the network setting is simulated correctly and that ```net_config.json``` has been extended by the IPs of all servers and copied into build/benchmarks.
-Then, party PID (0, 1, 2) can be started as follow from within build/benchmarks:
-```sh
-./run_LAN_benchmarks.sh [PID]
-```
-The WAN benchmarks work the same, swapping out the respective script.
-Note that both scripts are protected by a warning and subsequent termination as a safeguard due to high RAM utilization.
-Hence, the first line of each script needs to be removed before running the full benchmarks.
-
-
-# Parsing and Processing Benchmark Data
-
-Running the benchmarks will create and populate directories p0, p1, p2 inside of build/benchmarks.
-If you run local benchmarking as documented [here](#Smaller-Local-Demo-Benchmarks), these should afterwards all exist.
-If you run different parties on different machines, you have to collect these directories inside build/benchmarks of one of the machines first from which you then also follow the next steps.
-
-Navigate into directory evaluation_scripts.
-This contains multiple python scripts intended to parse and process the generated benchmark data, aggregating over the numbers collected by each individual party.
-They assume that each of the displayed benchmarks have been executed at least to some degree, if this is not the case, you may get a missing file error.
-
-The plots are generated as follows:
-- ```python3 dataset_plots.py``` will draw the plots from Fig. 7 of the paper, displaying efficiency for different values D and different datasets.
-- ```python3 scalability_plots_betterspacing.py``` will draw the plots from Fig. 8 of the paper, displaying efficiency for different graph sizes.
-- ```python3 extended_scalability_plots.py``` will draw the plots from Fig. 9 of the paper, displaying efficiency for different larger graph sizes for pi_3, divided into total and online cost.
-- ```python3 network_plots.py``` will draw the plots from Fig. 21 (Appendix C) of the paper, comparing LAN to WAN performance.
-If used from within the Docker container, the plots will not be displayed, but anyway written to a pdf in the same directory which can then be opened from the host system.
-All of these scripts draw run time depending on which data points were included in the benchmarks.
-Using the [smaller demo benchmarks](#Smaller-Local-Demo-Benchmarks), parts of the plots may hence be missing if the RAM utilization otherwise would be too high.
-Communication is computed analytically according to Table 4 in the paper to show communication even where benchmarks could not be run.
-By calling, e.g., ```python3 scalability_plots_betterspacing.py altScale```, the scale of the plot can be changed from the original used in the paper to whatever fits the actually benchmarked datapoints best.
-```altScale``` is supported for all scripts.
-We recommend using it if the scaling otherwise makes it hard to see the plots.
-
-Furthermore, the data also shown in the tables in Appendix C of the paper can be viewed using:
-- ```python3 analyze.py datasets_large```: Data from Table 5
-- ```python3 analyze.py datasets_small```: Data from Table 6
-- ```python3 analyze.py scalability_pi3```: Data from Table 7
-- ```python3 analyze.py scalability_pi3_WAN```: Data from Table 8
-- ```python3 analyze.py scalability_pi2```: Data from Table 9
-- ```python3 analyze.py scalability_pi1```: Data from Table 10
-
-Any of the plotting and table scripts also allows to add another flag ```original```, e.g., ```python3 dataset_plots.py original```.
-This will ignore your benchmarking data and instead use the data from evaluation_scripts/raw_benchmark_outputs.
-This data is the output of our original benchmarks that all reported benchmarking data in the paper is based on.
 
 
 # Running Tests

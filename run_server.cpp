@@ -108,6 +108,10 @@ int main(int argc, char **argv) {
         std::cout << "ERROR: Expected weights 'weights' for the specified algorithm." << std::endl;
         error = true;
     }
+    if (error) {
+        std::cout << "Run './run_server --help' to display help page." << std::endl;
+        return 1;
+    }
     std::vector<Ring> weights(0);
     if (algorithm == Algorithm::PI_M || algorithm == Algorithm::PI_K) {
         weights = opts["weights"].as<std::vector<Ring>>();

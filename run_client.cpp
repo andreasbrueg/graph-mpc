@@ -105,13 +105,7 @@ int main(int argc, char **argv) {
     auto result = client.recv_result(g.size);
     for (size_t i = 0; i < g.size; ++i) {
         if (g.isV[i]) {
-            std::cout << "node " << g.src[i] << " ";
-            if (result[i] == 0) {
-                std::cout << "not reached (state 0)" << std::endl;
-            } else {
-                assert(result[i] == 1);
-                std::cout << "reached     (state 1)" << std::endl;
-            }
+            std::cout << "node " << g.src[i] << " state " << result[i] << std::endl;
         } else {
             assert(result[i] == 0);
         }

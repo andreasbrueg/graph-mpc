@@ -25,7 +25,7 @@ enum Algorithm { BFS = 0, BFS3P = 1, PI_M = 2, PI_K = 3, PI_R = 4, CUSTOM = 5, N
 std::string algo_description(Algorithm algo) {
     switch (algo) {
         case Algorithm::BFS: return std::string("BFS (user provided inputs, 1 on source nodes, 0 on others).");
-        case Algorithm::BFS3P: return std::string("BFS (ignoring user input), running 3 parallel instances, each from one of the first three nodes.");
+        case Algorithm::BFS3P: return std::string("BFS (ignoring user input), running 3 parallel instances, each from one of the first three nodes. (Currently only supports to output the results of the first BFS to the clients.)");
         case Algorithm::PI_M: return std::string("Multilayer truncated Katz centrality score. This is equivalent to the standard truncated Katz centrality score if no duplicate edges exist in the input.");
         case Algorithm::PI_K: return std::string("Truncated Katz score (supporting multilayer graphs). For graphs without duplicate edges, this is equivalent to the Multilayer score PI_M, but PI_M is more efficient, so that should be used.");
         case Algorithm::PI_R: return std::string("Reach centrality score.");

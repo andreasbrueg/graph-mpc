@@ -3,7 +3,7 @@ FROM ubuntu:22.04
 # Install dependencies from repositories
 RUN apt update
 RUN apt --yes upgrade
-RUN apt install --yes cmake libboost-all-dev git nlohmann-json3-dev libssl-dev libgmp3-dev libomp-dev
+RUN apt install --yes cmake libboost-all-dev git nlohmann-json3-dev libssl-dev libgmp3-dev libomp-dev build-essential
 
 # emp-tool
 WORKDIR /home

@@ -50,13 +50,14 @@ multiple terminals to observe the behavior of all servers and clients at the sam
 
 First, we set up and run the Docker container as follows:
 ```sh
-sudo docker buildx build -t PPGA .
-sudo docker run -it -v $(pwd):$(pwd) -w $(pwd) --cap-add=NET_ADMIN PPGA
+sudo docker buildx build -t ppga .
+sudo docker run -it -v $(pwd):$(pwd) -w $(pwd) --cap-add=NET_ADMIN ppga
 ```
 For our example, it is best to use five separate terminals. In each new terminal, you can simply
 access the running container as follows:
 ```sh
-TODO
+sudo docker ps # to list running containers and retrieve name of the running ppga container
+sudo docker exec -it [container name] bash # using the previously obtained container name
 ```
 Proceed by compiling the code as follows in one of the terminals:
 ```sh
@@ -65,6 +66,7 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j8
 ```
 Perfect, everything is now ready to run graph algorithms!
+First, make sure to also ```cd build``` on all other terminals.
 
 Suppose you are Alice and want to outsource computation on your private graph which looks as follows:
 ```
@@ -168,7 +170,7 @@ Next, we run Alice, also changing the number of clients:
 ```
 Now, in the fifth terminal, we run Bob:
 ```sh
- ./run_client --cid 1 --localhost --clients 2 --offset 16
+./run_client --cid 1 --localhost --clients 2 --offset 16
 ```
 Note that besides Bob's client id, this also specifies an offset. Here, it matches the graph size
 provided by Alice (not the graph content), i.e., the number of nodes plus the number of edges.
@@ -232,12 +234,13 @@ make install
 
 Instead, for local tests in a Docker container, the environment can simply be set up via
 ```sh
-sudo docker buildx build -t PPGA .
-sudo docker run -it -v $(pwd):$(pwd) -w $(pwd) --cap-add=NET_ADMIN PPGA
+sudo docker buildx build -t ppga .
+sudo docker run -it -v $(pwd):$(pwd) -w $(pwd) --cap-add=NET_ADMIN ppga
 ```
 and using
 ```sh
-TODO
+sudo docker ps # to list running containers and retrieve name of the running ppga container
+sudo docker exec -it [container name] bash # using the previously obtained container name
 ```
 to spawn additional terminals as needed.
 
